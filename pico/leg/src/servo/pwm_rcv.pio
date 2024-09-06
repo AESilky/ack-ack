@@ -1,0 +1,54 @@
+;
+; Copyright 2024 AESilky
+;  SPDX-License-Identifier: MIT License
+;
+
+; Pulse width count is (SM-Clk / 2)
+; Value pushed to input is 4,294,967,295 (32bits-1) - pulse_width_count
+;
+
+.program pwm_rcv
+    set y, 0
+    jmp y-- wait_for_idle  ; get y set to maximum value
+.wrap_target
+wait_for_idle:
+    mov x, y
+    wait 0 pin 0            ; wait for the idle state
+wait_for_pulse:
+    wait 1 pin 0            ; wait for pulse to start
+pulse_active:
+    jmp x-- check_pulse
+    jmp wait_for_idle       ; pulse was too long, start over
+check_pulse:
+    jmp pin pulse_active    ; pulse still active, decrement count
+pulse_done:
+    mov isr, x              ; set the input value
+    push
+
+% c-sdk {
+static inline void pwm_rcv_program_init(PIO pio, uint sm, uint offset, float clkdiv, uint pin) {
+    // Set the GPIO function of the pin (connect the PIO to the pad)
+    pio_gpio_init(pio, pin);
+
+    // Set the pin direction to `input` at the PIO and a single pin
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
+
+    // Create a new state machine configuration
+    pio_sm_config c = pwm_rcv_program_get_default_config(offset);
+
+    // configure the Input Shift Register
+    sm_config_set_in_shift(&c, true, false, 32); // Shift right (doesn't matter), No Autopush, 32 bits
+
+    // join the FIFOs to make a single large receive FIFO
+    sm_config_set_fifo_join (&c, PIO_FIFO_JOIN_RX);
+
+    // Map the IN pin group to one pin
+    sm_config_set_in_pins(&c, pin);
+
+    // Map the JMP pin to the `pin` parameter of this function.
+    sm_config_set_jmp_pin(&c, pin);
+
+    sm_config_set_clkdiv(&c, clkdiv);
+    pio_sm_init(pio, sm, offset, &c);
+}
+%}

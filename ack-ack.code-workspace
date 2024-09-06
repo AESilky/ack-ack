@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"cSpell.words": [
+			"ARDUPILOT",
+			"CHNL",
+			"decidegree",
+			"multicore",
+			"pmsg",
+			"rcchannel",
+			"servoctl",
+			"tdegree"
+		],
+		"files.associations": {
+			"display_oled1106.h": "c",
+			"system_defs.h": "c"
+		}
+	}
+}

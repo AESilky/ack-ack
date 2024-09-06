@@ -1,0 +1,37 @@
+# IDE/OS files
+.DS_Store
+core
+
+# Build and Output
+build/
+
+# Generated / Intermediate
+**/CMakeCache.txt
+**/CMakePresets.json
+**/CTestTestfile.cmake
+**/CPackConfig.cmake
+**/cmake_install.cmake
+**/install_manifest.txt
+**/compie_commands.json
+
+# PCB
+*/#auto_saved_files#
+*/#auto_saved_files#/*
+*/_autosave-*.kicad_pcb
+*/*-bak
+*/*-backups/*
+*/_reports/*
+*.dsn
+Fp-info-cache
+
+# temporary
+~$*.docx
+*.bak
+*.tmp
+*.temp
+
+# Local info
+*.private
+*.private.c
+*.private.h
+*.private.cmake
