@@ -103,7 +103,7 @@ static void _handle_os_initialized(cmt_msg_t* msg) {
 static void _handle_input_switch_pressed(cmt_msg_t* msg) {
     // Check that it's still pressed...
     if (user_switch_pressed()) {
-        debug_printf("Input switch pressed\n");
+        debug_printf("Input switch pressed");
     }
 }
 
@@ -116,7 +116,7 @@ static void _handle_input_switch_pressed(cmt_msg_t* msg) {
  * @param msg Nothing in the data of this message.
  */
 static void _handle_input_switch_released(cmt_msg_t* msg) {
-    debug_printf("Input switch released\n");
+    debug_printf("Input switch released");
 }
 
 // ============================================

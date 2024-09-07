@@ -39,6 +39,7 @@
 #include "board.h"
 #include "debug_support.h"
 #include "cmt/multicore.h"
+#include "pwrmon/pwrmon_3221.h"
 #include "servo/receiver.h"
 #include "servo/servo.h"
 #include "util/util.h"
@@ -120,6 +121,10 @@ int board_init() {
     disp_string(4, 0, "Init: MC", false, true);
     multicore_module_init();
 
+    //
+    // Functional Hardware
+    //
+
     // Initialize the servo subsystem
     disp_row_clear(4, false);
     disp_string(4, 0, "Init: Servos", false, true);
@@ -128,6 +133,11 @@ int board_init() {
     disp_row_clear(4, false);
     disp_string(4, 0, "Init: Receiver", false, true);
     receiver_module_init();
+    // Initialize the power monitor
+    disp_row_clear(4, false);
+    disp_string(4, 0, "Init: Power-Mon", false, true);
+    pwrmon_module_init();
+
 
     disp_row_clear(4, false);
     disp_string(4, 0, "Leg Ready", false, true);
@@ -151,7 +161,7 @@ void _tone_sound_duration_cont(void *user_data) {
     tone_on(false);
 }
 void tone_sound_duration(int ms) {
-    debug_printf("tone_sound_duration(%d)\n", ms);
+    debug_printf("tone_sound_duration(%d)", ms);
     // tone_on(true);
     // if (!cmt_message_loop_0_running()) {
     //     sleep_ms(ms);
@@ -267,8 +277,8 @@ void debug_printf(const char* format, ...) {
         va_start(xArgs, format);
         index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
         va_end(xArgs);
-        printf(buf);
         disp_string(disp_info_char_lines()-1, 0, buf, false, true);
+        printf("%s\n", buf);
     }
 }
 
@@ -280,8 +290,8 @@ void error_printf(const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    printf(buf);
     disp_string(disp_info_char_lines()-1, 0, buf, false, true);
+    printf("%s\n", buf);
 }
 
 void info_printf(const char* format, ...) {
@@ -292,8 +302,8 @@ void info_printf(const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    printf(buf);
     disp_string(disp_info_char_lines()-1, 0, buf, false, true);
+    printf("%s\n", buf);
 }
 
 void warn_printf(const char* format, ...) {
@@ -304,7 +314,7 @@ void warn_printf(const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    printf(buf);
     disp_string(disp_info_char_lines()-1, 0, buf, false, true);
+    printf("%s\n", buf);
 }
 

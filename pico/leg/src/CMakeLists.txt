@@ -39,6 +39,7 @@ add_subdirectory(config)
 add_subdirectory(display)
 add_subdirectory(fl)
 add_subdirectory(os)
+add_subdirectory(pwrmon)
 add_subdirectory(servo)
 add_subdirectory(test)
 add_subdirectory(util)
@@ -95,6 +96,7 @@ target_link_libraries(leg
   fl
   fonts
   os
+  pwrmon
   servo
   util
   hardware_adc

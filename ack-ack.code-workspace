@@ -11,6 +11,8 @@
 			"decidegree",
 			"multicore",
 			"pmsg",
+			"pwrchan",
+			"pwrmon",
 			"rcchannel",
 			"servoctl",
 			"tdegree"

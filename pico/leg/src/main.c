@@ -16,6 +16,12 @@
 //
 #include "display/display.h"
 
+#include "pwrmon/pwrmon_3221.h"
+#include "servo/receiver.h"
+#include "servo/servo.h"
+
+#include <stdio.h>
+
 #define DOT_MS 60 // Dot at 20 WPM
 #define UP_MS  DOT_MS
 #define DASH_MS (2 * DOT_MS)
@@ -34,7 +40,7 @@ static const int32_t say_hi[] = {
     DOT_MS,
     UP_MS,
     DOT_MS,
-    1000, // Pause before repeating
+    500, // Pause before repeating
     0 };
 
 int main()
@@ -55,7 +61,7 @@ int main()
     int ss = sizeof(short);
     int si = sizeof(int);
     int sl = sizeof(long);
-    debug_printf("Size of char: %d  short: %d  int: %d  long: %d\n", sc, ss, si, sl);
+    debug_printf("Size of char: %d  short: %d  int: %d  long: %d", sc, ss, si, sl);
     // Uncomment to force starting in Debug Mode
     //debug_mode_enable(true);
 
@@ -66,12 +72,11 @@ int main()
     debug_mode_enable(true);
 
     // ZZZ - Test servo
-    #include "servo/servo.h"
-    #include "servo/receiver.h"
     int32_t inc = 15;
     int32_t tangle = 0;
     servo_enable(0);
     channel_enable(0);
+    uint32_t last = now_ms();
     while(true) {
         if (tangle >= 890) {
             tangle = 890;
@@ -85,8 +90,17 @@ int main()
         tangle += inc;
         int32_t chang = channel_get_angle(0);
         uint32_t chns = channel_get_ns(0);
-        debug_printf("% 3d:%4u", (chang/10), (chns/1000));
-        sleep_us(100);
+        if (chns > 0) {
+            //debug_printf("% 3d:% 5u", (chang/10), (chns/1000));
+            servo_set_angle(0, chang * 2);
+            sleep_us(100);
+        }
+        if (now_ms() - last >= 1000) {
+            int32_t micro_amps = pwrmon_current(PWRCH1);
+            int32_t micro_volts_bus = pwrmon_bus_voltage(PWRCH1);
+            printf("CH1 Current: % 7duA % 7duV\n", micro_amps, micro_volts_bus);
+            last = now_ms();
+        }
     }
 
     // Set up the OS (needs to be done before starting the Functional-Level)

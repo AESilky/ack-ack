@@ -87,7 +87,7 @@ static void _scheduled_msg_init() {
     }
     bool success = add_repeating_timer_us((1000 - _SM_OVERHEAD_US_PER_MS), _schd_msg_timer_callback, NULL, &_schd_msg_timer_data);
     if (!success) {
-        error_printf("CMT - Could not create repeating timer for scheduled messages.\n");
+        error_printf("CMT - Could not create repeating timer for scheduled messages.");
         panic("CMT - Could not create repeating timer for scheduled messages.");
     }
 }
