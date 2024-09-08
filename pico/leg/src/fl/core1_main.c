@@ -20,7 +20,7 @@
 #include "pico/multicore.h"
 
 void core1_main() {
-    info_printf("CORE-%d Started\n", get_core_num());
+    info_printf("CORE-%d Started", get_core_num());
 
     // Set up the Functional-Level
     fl_module_init();

@@ -141,13 +141,13 @@ extern void tone_on_off(const int32_t* pattern);
  */
 extern bool user_switch_pressed();
 
-/** @brief Printf like function that includes the type prefix */
+/** @brief Printf like function that only prints in debug mode, includes a 'D:' prefix and appends NL */
 extern void debug_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
-/** @brief Printf like function that includes the type prefix */
+/** @brief Printf like function that includes a 'E:' prefix and appends NL */
 extern void error_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
-/** @brief Printf like function that includes the type prefix */
+/** @brief Printf like function that includes a 'I:' prefix and appends NL */
 extern void info_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
-/** @brief Printf like function that includes the type prefix */
+/** @brief Printf like function that includes a 'W:' prefix and appends NL */
 extern void warn_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 
 #ifdef __cplusplus

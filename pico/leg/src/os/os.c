@@ -121,7 +121,7 @@ static void _handle_os_test(cmt_msg_t* msg) {
         uint64_t last_time = msg->data.ts_us;
         int64_t error = ((now - last_time) - (period * 1000 * 1000));
         float error_per_ms = ((error * 1.0) / (period * 1000.0));
-        info_printf("\n%5.5d - Scheduled msg delay error us/ms:%5.2f\n", times, error_per_ms);
+        info_printf("\n%5.5d - Scheduled msg delay error us/ms:%5.2f", times, error_per_ms);
     }
     msg_time.data.ts_us = now_us(); // Get the 'next' -> 'last_time' fresh
     schedule_msg_in_ms((period * 1000), &msg_time);
