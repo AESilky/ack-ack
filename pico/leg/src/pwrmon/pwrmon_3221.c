@@ -142,8 +142,24 @@
 // Operating Mode (SHIFT Bits 0-2)
 #define INA3221_MODE_SHIFT               0
 //
-// Mask/Enable Register MASK values. Use the MASK after reading the Configuration
-// value and then use the SHIFT.
+// Mask/Enable Register BIT values. One value from each category (..._MEBV_n)
+// can be OR'ed together to generate a value to be written to the register.
+//
+// For reading, see the MASK and SHIFT values below.
+//
+// cat-1 Bit 14 : Channel 1 shunt voltage added to the sum value
+#define INA3221_CH1_SCC_MEBV_1          _u(0x4000)      // CH1 contributes to the summation value
+// cat-2 Bit 13 : Channel 2 shunt voltage added to the sum value
+#define INA3221_CH2_SCC_MEBV_2          _u(0x2000)      // CH2 contributes to the summation value
+// cat-3 Bit 12 : Channel 3 shunt voltage added to the sum value
+#define INA3221_CH3_SCC_MEBV_3          _u(0x1000)      // CH3 contributes to the summation value
+// cat-4 Bit 11 : Warning alert latch enable (otherwise transparent (not latched))
+#define INA3221_WARN_LATCH_EN_MEBV_4    _u(0x0800)      // When set, the WARN bits are latched until the register is read
+// cat-3 Bit 10 : Critical alert latch enable (otherwise transparent (not latched))
+#define INA3221_CRIT_LATCH_EN_MEBV_3    _u(0x0400)      // When set, the CRITICAL bits are latched until the register is read
+//
+// Mask/Enable Register MASK values. Use the MASK after reading the
+// register value and then use the SHIFT.
 //
 // Sum CH 1 Enable (MASK Bit 14)
 #define INA3221_CH1_SUM_EN_MASK          _u(0x4000)
@@ -179,6 +195,45 @@
 #define INA3221_TIM_CTRL_ALRT_MASK       _u(0x0002)
 // Power Valid Alert Flag (MASK Bit 0)
 #define INA3221_CONVERSION_RDY_MASK      _u(0x0001)
+//
+// Mask/Enable Register SHIFT values. Shift right after
+// reading and masking.
+//
+// Sum CH 1 Enable SHIFT
+#define INA3221_CH1_SUM_EN_SHIFT         14
+// Sum CH 2 Enable SHIFT
+#define INA3221_CH2_SUM_EN_SHIFT         13
+// Sum CH 3 Enable SHIFT
+#define INA3221_CH3_SUM_EN_SHIFT         12
+// Warn Alert Latch Enable SHIFT
+#define INA3221_WARN_ALRT_LATCH_EN_SHIFT 11
+// Critical Alert Latch Enable SHIFT
+#define INA3221_CRIT_ALRT_LATCH_EN_SHIFT 10
+// Critical Alert Flag CH1 SHIFT
+#define INA3221_CRIT_ALRT_CH1_SHIFT       9
+// Critical Alert Flag CH2 SHIFT
+#define INA3221_CRIT_ALRT_CH2_SHIFT       8
+// Critical Alert Flag CH3 SHIFT
+#define INA3221_CRIT_ALRT_CH3_SHIFT       7
+// Critical Alert Flags ALL SHIFT
+#define INA3221_CRIT_ALRT_ALL_SHIFT       7
+// Summation Alert Flag SHIFT
+#define INA3221_SUM_ALRT_SHIFT            6
+// Warning Alert Flag CH1 SHIFT
+#define INA3221_WARN_ALRT_CH1_SHIFT       5
+// Warning Alert Flag CH2 SHIFT
+#define INA3221_WARN_ALRT_CH2_SHIFT       4
+// Warning Alert Flag CH3 SHIFT
+#define INA3221_WARN_ALRT_CH3_SHIFT       3
+// Warning Alert Flags ALL SHIFT
+#define INA3221_WARN_ALRT_ALL_SHIFT       3
+// Power Valid Alert Flag SHIFT
+#define INA3221_PWR_VALID_ALRT_SHIFT      2
+// Timing Control Alert Flag SHIFT
+#define INA3221_TIM_CTRL_ALRT_SHIFT       1
+// Power Valid Alert Flag SHIFT
+#define INA3221_CONVERSION_RDY_SHIFT      0
+
 
 typedef struct _init_pair_ {
     uint8_t reg;
@@ -200,6 +255,9 @@ static init_pair_t _init_pairs[] = {
     {INA3221_CH2_WARN_LIM_R, (10000 / 5)},   // Warn = 10mA (value is µA/5)
     {INA3221_CH3_CRIT_LIM_R, (100000 / 5)},  // Critical = 100mA (value is µA/5)
     {INA3221_CH3_WARN_LIM_R, (10000 / 5)},   // Warn = 10mA (value is µA/5)
+    {INA3221_MASK_ENABLE_R,
+        INA3221_WARN_LATCH_EN_MEBV_4 |
+        INA3221_CRIT_LATCH_EN_MEBV_3},
 };
 
 typedef struct _chnl_regs {
@@ -209,8 +267,26 @@ typedef struct _chnl_regs {
     uint8_t warn_limit;
 } channel_regs_t;
 
+/**
+ * @brief Holds the WARN & CRITICAL condition triggered status.
+ *
+ * The condition triggered bits in the device are cleared then the register
+ * is read. It is possible that more than one channel could be in a condition
+ * triggered state. Therefore, when the register is read, the state of all
+ * of the flags needs to be saved (for each of the channels).
+ */
+typedef struct _chnl_cond_flags {
+    /** @brief True if this channel triggered a critical condition. */
+    bool crit_triggered;
+    /** @brief True if this channel triggered a warning condition. */
+    bool warn_triggered;
+} channel_condition_flags_t;
+
 /** @brief Array of the channel specific registers. Initialized with values for the 3 channels */
-static channel_regs_t _channel_regs[3];
+static channel_regs_t _channels_regs[3];
+
+/** @brief Array of the channel specific condition flags. */
+static channel_condition_flags_t _channels_conditions[3];
 
 static inline uint8_t _highbyte(uint16_t d) {
     return ((d & 0xFF00) >> 8);
@@ -235,7 +311,7 @@ static uint32_t _read_register(uint8_t reg) {
 }
 
 int32_t pwrmon_current(pwrchan_t channel) {
-    channel_regs_t *chregs = &_channel_regs[channel];
+    channel_regs_t *chregs = &_channels_regs[channel];
     int16_t rawval = _read_register(chregs->shunt_volts);
     int32_t adjval = rawval;
     // If rawval is negative, we must do adjustments before converting to µA
@@ -256,7 +332,7 @@ int32_t pwrmon_current(pwrchan_t channel) {
 }
 
 int32_t pwrmon_bus_voltage(pwrchan_t channel) {
-    channel_regs_t *chregs = &_channel_regs[channel];
+    channel_regs_t *chregs = &_channels_regs[channel];
     int16_t rawval = _read_register(chregs->bus_volts);
     int32_t adjval = rawval;
     // If rawval is negative, we must do adjustments before converting to µA
@@ -286,18 +362,23 @@ void pwrmon_module_init(void) {
     //printf("%04X\n", d);
 
     // Set up our structures
-    _channel_regs[PWRCH1].bus_volts = INA3221_CH1_BUS_V_R;
-    _channel_regs[PWRCH2].bus_volts = INA3221_CH2_BUS_V_R;
-    _channel_regs[PWRCH3].bus_volts = INA3221_CH3_BUS_V_R;
-    _channel_regs[PWRCH1].shunt_volts = INA3221_CH1_SHUNT_V_R;
-    _channel_regs[PWRCH2].shunt_volts = INA3221_CH2_SHUNT_V_R;
-    _channel_regs[PWRCH3].shunt_volts = INA3221_CH3_SHUNT_V_R;
-    _channel_regs[PWRCH1].crit_limit = INA3221_CH1_CRIT_LIM_R;
-    _channel_regs[PWRCH2].crit_limit = INA3221_CH2_CRIT_LIM_R;
-    _channel_regs[PWRCH3].crit_limit = INA3221_CH3_CRIT_LIM_R;
-    _channel_regs[PWRCH1].warn_limit = INA3221_CH1_WARN_LIM_R;
-    _channel_regs[PWRCH2].warn_limit = INA3221_CH2_WARN_LIM_R;
-    _channel_regs[PWRCH3].warn_limit = INA3221_CH3_WARN_LIM_R;
+    _channels_regs[PWRCH1].bus_volts = INA3221_CH1_BUS_V_R;
+    _channels_regs[PWRCH2].bus_volts = INA3221_CH2_BUS_V_R;
+    _channels_regs[PWRCH3].bus_volts = INA3221_CH3_BUS_V_R;
+    _channels_regs[PWRCH1].shunt_volts = INA3221_CH1_SHUNT_V_R;
+    _channels_regs[PWRCH2].shunt_volts = INA3221_CH2_SHUNT_V_R;
+    _channels_regs[PWRCH3].shunt_volts = INA3221_CH3_SHUNT_V_R;
+    _channels_regs[PWRCH1].crit_limit = INA3221_CH1_CRIT_LIM_R;
+    _channels_regs[PWRCH2].crit_limit = INA3221_CH2_CRIT_LIM_R;
+    _channels_regs[PWRCH3].crit_limit = INA3221_CH3_CRIT_LIM_R;
+    _channels_regs[PWRCH1].warn_limit = INA3221_CH1_WARN_LIM_R;
+    _channels_regs[PWRCH2].warn_limit = INA3221_CH2_WARN_LIM_R;
+    _channels_regs[PWRCH3].warn_limit = INA3221_CH3_WARN_LIM_R;
+
+    for (int i=0; i<3; i++) {
+        _channels_conditions[PWRCH1+i].crit_triggered = false;
+        _channels_conditions[PWRCH1+i].warn_triggered = false;
+    }
 
     // Now reset the module
     _write_register(INA3221_CONFIGURATION_R, INA3221_CFG_RESET_BV);
