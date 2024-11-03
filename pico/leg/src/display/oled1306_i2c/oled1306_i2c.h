@@ -1,7 +1,6 @@
 /**
- * Copyright 2023-24 AESilky
+ * SPDX-FileCopyrightText: Copyright 2023-24 AESilky
  * Portions copyright (c) 2021 Raspberry Pi (Trading) Ltd.
- *
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
