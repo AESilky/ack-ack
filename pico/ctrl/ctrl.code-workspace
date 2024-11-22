@@ -1,0 +1,41 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"curswitch.h": "c",
+			"cmt.h": "c",
+			"hwos.h": "c",
+			"core1_main.h": "c",
+			"string.h": "c",
+			"font.h": "c",
+			"display_i.h": "c",
+			"multicore.h": "c",
+			"dcs.h": "c",
+			"servo.h": "c"
+		},
+		"cSpell.words": [
+			"BSPKT",
+			"BSSP",
+			"cntx",
+			"corenum",
+			"curswitch",
+			"expio",
+			"fstart",
+			"fullscreen",
+			"hbit",
+			"hndlr",
+			"hwctrl",
+			"hwos",
+			"lbit",
+			"multicore",
+			"rxstatus",
+			"srvo",
+			"txval",
+			"UART"
+		]
+	}
+}

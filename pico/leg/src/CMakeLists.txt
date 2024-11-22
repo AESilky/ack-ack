@@ -43,6 +43,7 @@ add_subdirectory(pwrmon)
 add_subdirectory(servo)
 add_subdirectory(test)
 add_subdirectory(util)
+add_subdirectory(lib)
 
 # Add executable.
 add_executable(leg
