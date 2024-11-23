@@ -18,7 +18,6 @@
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #define SM_OVERHEAD_US_PER_MS_ (20)

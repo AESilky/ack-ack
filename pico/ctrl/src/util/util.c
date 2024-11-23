@@ -6,12 +6,14 @@
  *
 */
 #include "util.h"
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "pico/printf.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
+#include "pico/malloc.h"
+
+#include <ctype.h>
+#include <string.h>
+#include <stdlib.h>
 
 static const uint8_t DAYS_IN_MONTH[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
 

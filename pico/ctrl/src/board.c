@@ -42,6 +42,8 @@
 #include "spi_ops.h"
 #include "util/util.h"
 
+#include <stdio.h>
+
 // Internal function declarations
 
 static int _format_printf_datetime(char* buf, size_t len);

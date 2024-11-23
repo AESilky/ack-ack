@@ -163,6 +163,19 @@ typedef struct _ili_disp_info_ {
 } ili_disp_info_t;
 
 /**
+ * @brief Get information about the display hardare & configuration.
+ * @ingroup display
+ */
+extern ili_disp_info_t* ili_disp_info(void);
+
+/**
+ * @brief Initialize the display.
+ * @ingroup display
+ */
+extern ili_controller_type ili_module_init(void);
+
+
+/**
  * @brief Send a command byte to the controller.
  * @ingroup display
  *
@@ -200,166 +213,6 @@ extern void ili_send_command_wd(uint8_t cmd, uint8_t* data, size_t count);
  * Second, run through all 64k colors, going from 0 to 65,535.
  */
 extern void ili_colors_show();
-
-/**
- * @brief Get a pointer to a buffer large enough to hold
- * one scan line for the ILI display.
- * @ingroup display
- *
- * This can be used to put RGB data into to be written to the
- * screen. The `ili_line_paint` can be called to put the
- * line on the screen.
- *
- * The buffer holds `ILI_WIDTH` rgb18_t values.
- */
-extern rgb18_t* ili_get_line_buf();
-
-/**
- * @brief Get information about the display hardare & configuration.
- * @ingroup display
-*/
-extern ili_disp_info_t* ili_info(void);
-
-/**
- * @brief Initialize the display.
- * @ingroup display
-*/
-extern ili_controller_type ili_module_init(void);
-
-/**
- * @brief Paint a buffer of rgb18_t values to one horizontal line
- * of the screen. The buffer passed in must be at least `ILI_WIDTH`
- * rgb18_t values in size.
- * @ingroup display
- *
- * @param line 0-based line number to paint (must be less than `ILI_HEIGHT`).
- * @param buf pointer to a rgb18_t buffer of data (must be at least 'ILI_WIDTH`)
- */
-extern void ili_line_paint(uint16_t line, rgb18_t* buf);
-
-/**
- * @brief Clear the entire screen using a single color.
- * @ingroup display
- *
- * @param color The color to fill the screen with.
- * @param force True to force a write to the screen. Otherwise, the screen is written
- *              to only if the screen is thought to be 'dirty'.
- */
-extern void ili_screen_clr(rgb18_t color, bool force);
-
-/**
- * @brief Clear the entire screen using a single color.
- * @ingroup display
- *
- * @param color The Color-16 (color number) to fill the screen with.
- * @param force True to force a write to the screen. Otherwise, the screen is written
- *              to only if the screen is thought to be 'dirty'.
- */
-extern void ili_screen_clr_c16(colorn16_t color, bool force);
-
-/**
- * @brief The height of the display screen (pixel lines).
- * @ingroup display
- *
- * @return uint16_t Pixel lines
- */
-extern uint16_t ili_screen_height();
-
-/**
- * @brief Turn the screen (display) on/off.
- * @ingroup display
- *
- * @param on True to turn on, false to turn off
- */
-extern void ili_screen_on(bool on);
-
-/**
- * @brief Paint the screen with the RGB-18 contents of a buffer.
- * @ingroup display
- *
- * Uses the buffer of RGB data to paint the screen into the screen window.
- * Set the screen window using `ili_window_set_area`.
- *
- * @param data RGB-18 pixel data buffer (1 rgb value for each pixel to paint)
- * @param pixels Number of pixels (size of the data buffer in rgb_t's)
- */
-extern void ili_screen_paint(const rgb18_t* rgb_pixel_data, uint16_t pixels);
-
-/**
- * @brief The width of the display screen (pixel columns).
- * @ingroup display
- *
- * @return uint16_t Pixel columns
- */
-extern uint16_t ili_screen_width();
-
-/**
- * @brief Exit scroll mode to normal mode.
- * @ingroup display
- *
- * This puts the screen back into normal display mode (no scroll area) and
- * sets the window to full screen.
- */
-extern void ili_scroll_exit(void);
-
-/**
- * @brief Set the scroll area. It is between the top fixed area and the
- * bottom fixed area.
- * @ingroup display
- *
- * NOTE: Hardware scrolling only works when the display is in portrait mode
- * (MADCTL MV (bit 5) = 0)
- *
- * @see ili_scroll_set_start
- *
- * @param top_fixed_lines Number of fixed lines at the top of the screen
- * @param bottom_fixed_lines Number of fixed lines at the bottom of the screen
- */
-extern void ili_scroll_set_area(uint16_t top_fixed_lines, uint16_t bottom_fixed_lines);
-
-/**
- * @brief Set the frame memory start line for the scroll area.
- * @ingroup display
- *
- * ILI9341:
- * The ILI9341 datasheet doesn't do a great job of describing the scroll functionality
- * and this value, as there is only an example for when the top and bottom fixed areas
- * are 0. For that case, this value needs to range from 0 to 319 (the display height
- * in portrait mode (MADCTL-MV (bit 5) = 0) a requirement of the ILI9341)),
- * and it defines the frame memory line that is displayed at the top of the
- * display (line 0 of the display).
- *
- * ILI9488:
- * ZZZ
- *
- * When the top, and/or bottom fixed areas are non-zero, the scroll start needs to be
- * greater than the top fixed line and less than the bottom fixed line. If it is set
- * within either the top or bottom fixed areas it is the same as being set at the
- * minimum or maximum limit.
- *
- * @see ili_scroll_set_area
- *
- * @param line The line within the frame memory to display at the top of the scroll area.
- */
-extern void ili_scroll_set_start(uint16_t line);
-
-/**
- * @brief Set the screen update window and position the start at x,y.
- * @ingroup display
- *
- * Sets the update window area on the screen. This is the area that RGB data
- * will be updated into using `ili_screen_paint`.
- */
-extern void ili_window_set_area(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-
-/**
- * @brief Set the screen update window to the full screen, and position the
- * start at 0,0.
- * @ingroup display
- *
- * Sets the update window to the full screen and positions the start at 0,0.
-*/
-extern void ili_window_set_fullscreen(void);
 
 
 #ifdef __cplusplus

@@ -98,33 +98,13 @@ typedef struct _tp_config {
     int smpl_size;
     uint16_t display_height;
     uint16_t display_width;
-    long x_factor;
-    int16_t x_offset;
-    long y_factor;
-    int16_t y_offset;
+    uint16_t x_min;
+    uint16_t x_max;
+    uint16_t y_min;
+    uint16_t y_max;
+    float fx;           // X Factor from panel point to display point
+    float fy;           // Y Factor from panel point to display point
 } tp_config_t;
-
-/**
- * @brief Configuration used for reads from the touch panel controller.
- * @ingroup touch_panel
- *
- * This controls the type, resolution, and other parameters used to read a value
- * from the touch panel.
- *
- * This **MUST** be called before the first read.
- *
- * This can also be called at any later point, and the new config will be used
- * for subsequent reads.
- *
- * @param sample_size The number of times to sample when reading a touch. Must be at least 3.
- * @param display_height The height of the display in pixels
- * @param display_width The width of the display in pixels
- * @param x_factor  The factor to multiply a panel 'x' value by to get a display 'x' value
- * @param x_offset The 'x' offset between the panel and the display
- * @param y_factor  The factor to multiply a panel 'y' value by to get a display 'y' value
- * @param y_offset The 'y' offset between the panel and the display
- */
-extern void tp_module_init(int sample_size, uint16_t display_height, uint16_t display_width, uint64_t x_factor, int16_t x_offset, uint64_t y_factor, int16_t y_offset);
 
 /**
  * @brief Touch interrupt handler. Should be called when the touch panel signals a touch.
@@ -138,6 +118,17 @@ extern void tp_module_init(int sample_size, uint16_t display_height, uint16_t di
 extern void tp_irq_handler(uint gpio, uint32_t events);
 
 /**
+ * @brief The bounds (min/max points) observed during operation of the panel.
+ * @ingroup touch_panel
+ *
+ * The minimum and maximum points observed are maintained. The panel should be allowed
+ * to operate for some time to allow values to be collected.
+ *
+ * @return const gfx_rect* The bounds observed since the panel was initialized
+ */
+extern const gfx_rect* tp_bounds_observed();
+
+/**
  * @brief Check for a touch on the display. If touched,
  *  return the point on the display corresponding to the touch.
  * @ingroup touch_panel
@@ -147,7 +138,7 @@ extern void tp_irq_handler(uint gpio, uint32_t events);
  *
  * @return gfx_point* The point on the display being touched or NULL
  */
-extern gfx_point* tp_check_display_point();
+extern const gfx_point* tp_check_display_point();
 
 /**
  * @brief Check for a touch on the panel. If touched, return the point on the panel.
@@ -158,7 +149,7 @@ extern gfx_point* tp_check_display_point();
  *
  * @return gfx_point* The point on the touch panel being touched or NULL
  */
-extern gfx_point* tp_check_panel_point();
+extern const gfx_point* tp_check_panel_point();
 
 /**
  * @brief Check the force value on the panel.
@@ -184,7 +175,7 @@ extern const tp_config_t* tp_config();
  *
  * @return gfx_point* The last read display point
  */
-extern gfx_point* tp_last_display_point();
+extern const gfx_point* tp_last_display_point();
 
 /**
  * @brief Get the last panel (raw) point read. This does not perform a read operation.
@@ -192,7 +183,7 @@ extern gfx_point* tp_last_display_point();
  *
  * @return gfx_point* The last read panel (raw) point
  */
-extern gfx_point* tp_last_panel_point();
+extern const gfx_point* tp_last_panel_point();
 
 /**
  * @brief Get the last force value read. This does not perform a read operation.
@@ -251,6 +242,30 @@ extern uint8_t tp_read_adc8_trimmed_mean(tsc_adc_sel_t adc);
  * @return uint16_t The trimmed mean result of the readings (12 bits: 0-4095).
  */
 extern uint16_t tp_read_adc12_trimmed_mean(tsc_adc_sel_t adc);
+
+
+/**
+ * @brief Configuration used for reads from the touch panel controller.
+ * @ingroup touch_panel
+ *
+ * This controls the type, resolution, and other parameters used to read a value
+ * from the touch panel.
+ *
+ * This **MUST** be called before the first read.
+ *
+ * This can also be called at any later point, and the new config will be used
+ * for subsequent reads.
+ *
+ * @param sample_size The number of times to sample when reading a touch. Must be at least 3.
+ * @param display_height The height of the display in pixels
+ * @param display_width The width of the display in pixels
+ * @param panel_min_x Minimum x value reported by the panel (from test/calibration)
+ * @param panel_max_x Maximum x value reported by the panel (from test/calibration)
+ * @param panel_min_y Minimum y value reported by the panel (from test/calibration)
+ * @param panel_max_y Maximum y value reported by the panel (from test/calibration)
+ */
+extern void tp_module_init(int sample_size, uint16_t display_height, uint16_t display_width, uint16_t panel_min_x, uint16_t panel_max_x, uint16_t panel_min_y, uint16_t panel_max_y);
+
 
 #ifdef __cplusplus
 }

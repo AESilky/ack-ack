@@ -15,17 +15,20 @@
 
 #include "cmt/cmt.h"
 #include "curswitch/curswitch.h"
-#include "display/display.h"
+#include "display/display.h"                        // For character/line based operations
+#include "display/display_rgb18/display_rgb18.h"    // For pixel/graphics based operations
 #include "rotary_encoder/re_pbsw.h"
 #include "rotary_encoder/rotary_encoder.h"
 #include "rover/rover.h"
 #include "servo/servo_mh.h"
 #include "servo/servos.h"
+#include "touch_panel/touch.h"
 #include "util/util.h"
 
 #include "hardware/rtc.h"
 
-#include <stdlib.h>
+#include "pico/stdlib.h"
+#include "pico/printf.h"
 
 #define _HWOS_STATUS_PULSE_PERIOD 6999
 
@@ -122,12 +125,33 @@ static void _hwos_idle_function_2() {
  * @param msg Nothing important in the message.
  */
 static void _handle_hwos_housekeeping(cmt_msg_t* msg) {
+    static gfx_point last_touch = {0,0};
+
     // Do cleanup, status updates, heartbeat, etc.
     if (_dcs_started) {
         curswitch_trigger_read();  // Read the switch banks
     }
     servos_housekeeping();
     rover_housekeeping();
+    // Read the touch panel
+    const gfx_point* dp = tp_check_display_point();
+    if (dp) {
+        if (dp->x != last_touch.x || dp->y != last_touch.y) {
+            // Store the values and print that we were touched.
+            last_touch.x = dp->x;
+            last_touch.y = dp->y;
+            const gfx_point* pp = tp_last_panel_point();
+            const gfx_rect* bounds = tp_bounds_observed();
+            scr_position_t sp = disp_lc_from_point(dp);
+            char buf[64];
+            snprintf(buf, 63, "T Dx=%3d Dy=%3d Px=%4d Py=%4d", last_touch.x, last_touch.y, pp->x, pp->y);
+            disp_string_color(0, 0, buf, C16_LT_BLUE, C16_BLACK, No_Paint);
+            snprintf(buf, 63, "B: (%4d,%4d , %4d,%4d)", bounds->p1.x, bounds->p1.y, bounds->p2.x, bounds->p2.y);
+            disp_string_color(1, 0, buf, C16_LT_BLUE, C16_BLACK, Paint);
+            snprintf(buf, 63, "SCR: Line:%2d Col:%2d", sp.line, sp.column);
+            disp_string_color(2, 0, buf, C16_LT_BLUE, C16_BLACK, Paint);
+        }
+    }
 }
 
 static void _handle_hwos_test(cmt_msg_t* msg) {
@@ -300,10 +324,13 @@ void hwos_started() {
     //
     // Setup the screen with a fixed top area with enough room for 2 status lines.
     disp_print_wrap_len_set(4);
-    disp_scroll_area_define(2, 0);
+    disp_scroll_area_define(3, 0);
     disp_cursor_home();
     disp_clear(Paint);
     disp_cursor_show(true);
+    //
+    // Touch Panel initialization
+    tp_module_init(5, gfxd_screen_height(), gfxd_screen_width(), 121, 2520, 122, 2603);
     //
     // Start the Rover processing.
     rover_start();

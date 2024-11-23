@@ -17,6 +17,8 @@
  extern "C" {
 #endif
 
+#include "gfx/gfx.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -25,119 +27,6 @@
 #define DISP_CHAR_INVERT_BIT 0x80
 /** @brief Mask to AND with a character to remove invert (display white char on black background) */
 #define DISP_CHAR_NORMAL_MASK 0x7F
-
-/**
- * @brief RGB 18-bit Color Structure (6R,6G,6B)
- * @ingroup display
- *
- * ILI Controller chips use a structure with the six bits of each color
- * in the upper 6 bits of each of the R, G, and B bytes. Therefore,
- * the lower 2 bits of each byte are 0. As such, the values will be like
- * 0, 4, 8, C, 10, 14, 18, 1C, 24, 20, 28, 2C, 30, 34, 38, 3C, etc.
- */
-typedef struct RGB18_BYTES_ {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-} rgb18_t;
-
-/** @brief BLACK RGB-18 Constant */
-extern const rgb18_t RGB18_BLACK;
-/** @brief BLUE RGB-18 Constant */
-extern const rgb18_t RGB18_BLUE;
-/** @brief GREEN RGB-18 Constant */
-extern const rgb18_t RGB18_GREEN;
-/** @brief CYAN RGB-18 Constant */
-extern const rgb18_t RGB18_CYAN;
-/** @brief RED RGB-18 Constant */
-extern const rgb18_t RGB18_RED;
-/** @brief MAGENTA RGB-18 Constant */
-extern const rgb18_t RGB18_MAGENTA;
-/** @brief BROWN RGB-18 Constant */
-extern const rgb18_t RGB18_BROWN;
-/** @brief WHITE RGB-18 Constant */
-extern const rgb18_t RGB18_WHITE;
-/** @brief GREY RGB-18 Constant */
-extern const rgb18_t RGB18_GREY;
-/** @brief LIGHT BLUE RGB-18 Constant */
-extern const rgb18_t RGB18_LT_BLUE;
-/** @brief LIGHT GREEN RGB-18 Constant */
-extern const rgb18_t RGB18_LT_GREEN;
-/** @brief LIGHT CYAN RGB-18 Constant */
-extern const rgb18_t RGB18_LT_CYAN;
-/** @brief ORANGE RGB-18 Constant */
-extern const rgb18_t RGB18_ORANGE;
-/** @brief LIGHT MAGENTA RGB-18 Constant */
-extern const rgb18_t RGB18_LT_MAGENTA;
-/** @brief YELLOW RGB-18 Constant */
-extern const rgb18_t RGB18_YELLOW;
-/** @brief WHITE (BRIGHT) RGB-18 Constant */
-extern const rgb18_t RGB18_BR_WHITE;
-
-/** @brief Blank element (R, G, or B) for an RGB-18 value */
-#define RGB18_ELM_BLANK (0x00)
-
-/**
- * @brief Create rgb18 data value from individual Red, Green, and Blue values.
- * @ingroup display
- *
- * The rgb18 values are 6 bits each, so valid element values are 0-63. Element
- * values greater than 64 may result in unexpected colors.
- *
- * @param r Red element value (0-63)
- * @param g Green element value (0-63)
- * @param b Blue element value (0-63)
- * @return rgb18_t Generated RGB-18 structure
- */
-static inline rgb18_t rgb_to_rgb18(uint8_t r, uint8_t g, uint8_t b) {
-    rgb18_t rgb18 = {r<<2,g<<2,b<<2};
-    return rgb18;
-}
-
-/**
- * @brief Get the Red element of an RGB-18 adjusted to the 0-63 range.
- * @ingroup display
- *
- * RGB-18 values store the elements shifted 2 bits up. This returns the
- * element value adjusted down to the range 0-64.
- *
- * @param rgb RGB-18 value
- * @return uint8_t The adjusted element value
- */
-static inline uint8_t red_from_rgb18(rgb18_t rgb) {
-    return (rgb.r >> 2);
-}
-
-/**
- * @brief Get the Green element of an RGB-18 adjusted to the 0-63 range.
- * @ingroup display
- *
- * RGB-18 values store the elements shifted 2 bits up. This returns the
- * element value adjusted down to the range 0-64.
- *
- * @param rgb RGB-18 value
- * @return uint8_t The adjusted element value
- */
-static inline uint8_t green_from_rgb18(rgb18_t rgb) {
-    return (rgb.g >> 2);
-}
-
-/**
- * @brief Get the Blue element of an RGB-18 adjusted to the 0-63 range.
- * @ingroup display
- *
- * RGB-18 values store the elements shifted 2 bits up. This returns the
- * element value adjusted down to the range 0-64.
- *
- * @param rgb RGB-18 value
- * @return uint8_t The adjusted element value
- */
-static inline uint8_t blue_from_rgb18(rgb18_t rgb) {
-    return (rgb.b >> 2);
-}
-
-// /** @brief Red-5-bits Green-6-bits Blue-5-bits (16 bit unsigned) */
-// typedef uint16_t rgb16_t; // R5G6B5
 
 /** @brief Background color number (4 bit), Forground color number (4 bit) */
 typedef uint8_t colorbyte_t; // BG4FG4
@@ -213,14 +102,6 @@ extern colorn16_t fg_from_cb(colorbyte_t cb);
  * @param cb Color-byte value
  */
 extern colorn16_t bg_from_cb(colorbyte_t cb);
-
-/**
- * @brief Get a RGB-18 (R6G6B6) value from a Color-16 (0-15 Color number)
- * @ingroup display
- *
- * @param cn16 Color-16 number to get a RGB-16 (R5G6B5) value for
- */
-extern rgb18_t rgb18_from_color16(colorn16_t cn16);
 
 /**
  * @brief Get the current cursor position
@@ -403,6 +284,17 @@ extern uint16_t disp_info_fixed_bottom_lines();
  * @return uint16_t The number of text lines that scroll
  */
 extern uint16_t disp_info_scroll_lines();
+
+/**
+ * @brief Get the character line and column containing the specified point.
+ * @ingroup display
+ *
+ * If the point is outside of the bounds of the display, the nearest character position will be returned.
+ *
+ * @param p A point on the screen
+ * @return scr_position_t The character line and column containing the point
+ */
+extern scr_position_t disp_lc_from_point(const gfx_point* p);
 
 /**
  * @brief Clear the character line.

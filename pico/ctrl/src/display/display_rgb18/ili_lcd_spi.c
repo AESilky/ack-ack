@@ -18,8 +18,8 @@
 #include "spi_ops.h"
 
 #include "pico/stdlib.h"
+#include "pico/malloc.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #define DISP_OP_CMD 0       // Set the D/C- pin low for command mode
@@ -156,7 +156,7 @@ static void _write_area(const rgb18_t* rgb_pixel_data, uint16_t pixels) {
  * Show all of the colors.
  */
 void ili_colors_show() {
-    ili_screen_clr(RGB18_BLACK, false);
+    gfxd_screen_clr(RGB18_BLACK, false);
     _op_begin();
     {
         // Do each color 4x4
@@ -219,14 +219,14 @@ void ili_send_command_wd(uint8_t cmd, uint8_t* data, size_t count) {
     _op_end();
 }
 
-rgb18_t* ili_get_line_buf() {
+rgb18_t* gfxd_get_line_buf() {
     return (_ili_line_buf);
 }
 
 /**
  * Read information about the display status and the current configuration.
 */
-ili_disp_info_t* ili_info(void) {
+ili_disp_info_t* ili_disp_info(void) {
     // The info/status reads require that a command be sent,
     // then a 'dummy' byte read, then one or more data reads.
     //
@@ -279,11 +279,11 @@ ili_disp_info_t* ili_info(void) {
     return (&_ili_disp_info);
 }
 
-uint16_t ili_screen_height() {
+uint16_t gfxd_screen_height() {
     return _screen_height;
 }
 
-void ili_screen_on(bool on) {
+void gfxd_screen_on(bool on) {
     _op_begin();
     {
         if (on) {
@@ -296,7 +296,7 @@ void ili_screen_on(bool on) {
     _op_end();
 }
 
-void ili_screen_paint(const rgb18_t* rgb_pixel_data, uint16_t pixels) {
+void gfxd_screen_paint(const rgb18_t* rgb_pixel_data, uint16_t pixels) {
     _op_begin();
     {
         _write_area(rgb_pixel_data, pixels);
@@ -305,11 +305,11 @@ void ili_screen_paint(const rgb18_t* rgb_pixel_data, uint16_t pixels) {
     _screen_dirty = true;
 }
 
-uint16_t ili_screen_width() {
+uint16_t gfxd_screen_width() {
     return _screen_width;
 }
 
-void ili_scroll_exit(void) {
+void gfxd_scroll_exit(void) {
     _op_begin();
     {
         _send_command(ILI_DISPOFF);
@@ -320,7 +320,7 @@ void ili_scroll_exit(void) {
     _op_end();
 }
 
-void ili_scroll_set_area(uint16_t top_fixed_lines, uint16_t bottom_fixed_lines) {
+void gfxd_scroll_set_area(uint16_t top_fixed_lines, uint16_t bottom_fixed_lines) {
     uint16_t words[3];
     _op_begin();
     {
@@ -337,7 +337,7 @@ void ili_scroll_set_area(uint16_t top_fixed_lines, uint16_t bottom_fixed_lines) 
     _op_end();
 }
 
-void ili_scroll_set_start(uint16_t row) {
+void gfxd_scroll_set_start(uint16_t row) {
     _op_begin();
     {
         _send_command(ILI_VSCRSADD);
@@ -346,7 +346,7 @@ void ili_scroll_set_start(uint16_t row) {
     _op_end();
 }
 
-void ili_window_set_area(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+void gfxd_window_set_area(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
     _op_begin();
     {
         _set_window(x, y, w, h);
@@ -354,7 +354,7 @@ void ili_window_set_area(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
     _op_end();
 }
 
-void ili_window_set_fullscreen(void) {
+void gfxd_window_set_fullscreen(void) {
     _op_begin();
     {
         _set_window(0, 0, _screen_width, _screen_height);
@@ -362,7 +362,7 @@ void ili_window_set_fullscreen(void) {
     _op_end();
 }
 
-void ili_line_paint(uint16_t line, rgb18_t* buf) {
+void gfxd_line_paint(uint16_t line, rgb18_t* buf) {
     if (line >= _screen_height) {
         return;
     }
@@ -374,7 +374,7 @@ void ili_line_paint(uint16_t line, rgb18_t* buf) {
     _op_end();
 }
 
-void ili_screen_clr(rgb18_t color, bool force) {
+void gfxd_screen_clr(rgb18_t color, bool force) {
     if (force || _screen_dirty) {
         rgb18_buf_fill(_ili_line_buf, color, _screen_width);
         _op_begin();
@@ -392,13 +392,13 @@ void ili_screen_clr(rgb18_t color, bool force) {
         // but people expect a call to clear to set the
         // window to the full screen. Check and set if needed.
         if (_old_x1 != 0 || _old_y1 != 0 || _old_x2 != (_screen_width - 1) || _old_y2 != (_screen_height - 1)) {
-            ili_window_set_fullscreen();
+            gfxd_window_set_fullscreen();
         }
     }
 }
 
-void ili_screen_clr_c16(colorn16_t color, bool force) {
-    ili_screen_clr(rgb18_from_color16(color), force);
+void gfxd_screen_clr_c16(colorn16_t color, bool force) {
+    gfxd_screen_clr(rgb18_from_color16(color), force);
 }
 
 ili_controller_type ili_module_init(void) {
@@ -417,7 +417,7 @@ ili_controller_type ili_module_init(void) {
 
     // See which controller we have 9341 or 9488  (or none) so we can initialize appropriately.
     bool ZZZ = false; // Temp flag to force 9341 (true) or 9488 (false)
-    ili_disp_info_t* info = ili_info();
+    ili_disp_info_t* info = ili_disp_info();
     if (ZZZ || (info->lcd_id4_ic_model1 == ILI9341_ID_MODEL1 && info->lcd_id4_ic_model2 == ILI9341_ID_MODEL2)) {
         _ili_controller_type = ILI_CONTROLLER_9341;
         init_cmd_data = ili9341_init_cmd_data;

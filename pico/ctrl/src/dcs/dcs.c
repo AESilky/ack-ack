@@ -18,7 +18,7 @@
 #include "cmt/multicore.h"
 #include "util/util.h"
 
-#include <stdlib.h>
+#include "pico/stdlib.h"
 
 #define _DCS_STATUS_PULSE_PERIOD 6999
 

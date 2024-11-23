@@ -21,6 +21,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 #include "display.h"
+#include "display_rgb18/display_rgb18.h"
 #include "fonts/font.h"
 
 /**

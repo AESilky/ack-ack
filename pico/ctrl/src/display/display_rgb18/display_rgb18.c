@@ -3,7 +3,10 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#include <stdlib.h>
+#include "pico/stdlib.h"
+#include "pico/malloc.h"
+#include <malloc.h>
+
 #include "system_defs.h"
 #include "display_rgb18.h"
 #include "../display_i.h"
@@ -159,8 +162,8 @@ static void _disp_char_colorbyte(uint16_t aline, uint16_t col, char c, uint8_t c
         uint16_t y = aline * font_height;
         uint16_t w = font_width;
         uint16_t h = font_height;
-        ili_window_set_area(x, y, w, h);
-        ili_screen_paint(_scr_ctx->render_buf, (font_width * font_height));
+        gfxd_window_set_area(x, y, w, h);
+        gfxd_screen_paint(_scr_ctx->render_buf, (font_width * font_height));
     }
     else {
         _scr_ctx->dirty_text_lines[aline] = true;
@@ -251,8 +254,8 @@ static void _disp_line_paint(uint16_t aline) {
         }
     }
     // Write the pixel screen row to the display
-    ili_window_set_area(0, screen_line, _scr_ctx->cols * font_width, font_height);
-    ili_screen_paint(_scr_ctx->render_buf, _scr_ctx->cols * font_width * font_height);
+    gfxd_window_set_area(0, screen_line, _scr_ctx->cols * font_width, font_height);
+    gfxd_screen_paint(_scr_ctx->render_buf, _scr_ctx->cols * font_width * font_height);
 }
 
 /**
@@ -361,7 +364,7 @@ void disp_clear(paint_control_t paint) {
     disp_cursor_home();
     if (paint) {
         display_backlight_on(false);    // Turning off the backlight helps this from being distracting
-        ili_screen_clr_c16(_scr_ctx->color_bg_default, false);
+        gfxd_screen_clr_c16(_scr_ctx->color_bg_default, false);
         display_backlight_on(true);
     }
 }
@@ -432,9 +435,26 @@ uint16_t disp_info_scroll_lines() {
     return (_scr_ctx->scroll_size);
 }
 
+scr_position_t disp_lc_from_point(const gfx_point* p) {
+    uint16_t x = _max(p->x, 0);
+    x = _min(x, gfxd_screen_width());
+    uint16_t y = _max(p->y, 0);
+    y = _min(y, gfxd_screen_height());
+    const font_info_t* fi = &font_10_16;
+
+    uint16_t col = x / fi->width;
+    uint16_t line = y / fi->height;
+    scr_position_t pos;
+    pos.line = line;
+    pos.column = col;
+
+    return (pos);
+}
+
 bool disp_ready(void) {
     return _display_ready;
 }
+
 
 /*! @brief Initialize the display
  *  \ingroup display
@@ -465,7 +485,7 @@ void disp_module_init(void) {
     // run through the complete initialization process
 
     ili_controller_type ctrl_type = ili_module_init();
-    ili_disp_info_t* disp_info = ili_info();
+    ili_disp_info_t* disp_info = ili_disp_info();
 
     // If in debug mode, print info about the display...
     if (debug_mode_enabled()) {
@@ -568,7 +588,7 @@ void disp_print_crlf(int16_t add_lines, paint_control_t paint) {
         // blank out what will be the cursor line
         aline = _translate_cursor_line(new_cp.line);
         _disp_line_clear(aline, paint);
-        ili_scroll_set_start(ss * _scr_ctx->font_info->height);
+        gfxd_scroll_set_start(ss * _scr_ctx->font_info->height);
     }
     else {
         // blank out what will be the cursor line
@@ -794,8 +814,8 @@ bool disp_screen_new() {
     scr_context->color_bg_default = C16_BLACK;
     scr_context->color_fg_default = C16_WHITE;
     // Figure out how many lines and columns we have
-    int16_t cols = ili_screen_width() / fi->width;
-    int16_t lines = ili_screen_height() / fi->height;
+    int16_t cols = gfxd_screen_width() / fi->width;
+    int16_t lines = gfxd_screen_height() / fi->height;
     info_printf(true, "Display size: %hdx%hd (cols x lines)\n", cols, lines);
     size_t chars = lines * cols;
     scr_context->cols = cols;
@@ -841,8 +861,8 @@ void disp_scroll_area_define(uint16_t top_fixed_size, uint16_t bottom_fixed_size
     _scr_ctx->fixed_area_top_size = top_fixed_size;
     _scr_ctx->fixed_area_bottom_size = bottom_fixed_size;
     _scr_ctx->scroll_size = screen_lines - (top_fixed_size + bottom_fixed_size);
-    ili_scroll_set_area(top_fixed_size * _scr_ctx->font_info->height, bottom_fixed_size * _scr_ctx->font_info->height);
-    ili_scroll_set_start(_scr_ctx->scroll_start);
+    gfxd_scroll_set_area(top_fixed_size * _scr_ctx->font_info->height, bottom_fixed_size * _scr_ctx->font_info->height);
+    gfxd_scroll_set_start(_scr_ctx->scroll_start);
     disp_cursor_home();
 }
 

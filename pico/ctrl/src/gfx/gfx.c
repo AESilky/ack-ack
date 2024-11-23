@@ -10,8 +10,23 @@
  */
 #include "gfx.h"
 
-static inline int _max(int a, int b) {return (a > b ? a : b);}
-static inline int _min(int a, int b) {return (a < b ? a : b);}
+bool gfx_bounds_add_point(gfx_rect* bounds, gfx_point* p) {
+    bool expanded = false;
+    int smx, smy, lgx, lgy;
+
+    gfx_rect_normalize(bounds);
+    smx = _min(bounds->p1.x, p->x);
+    smy = _min(bounds->p1.y, p->y);
+    lgx = _max(bounds->p2.x, p->x);
+    lgy = _max(bounds->p2.y, p->y);
+    expanded = (smx != bounds->p1.x || smy != bounds->p1.y || lgx != bounds->p2.x || lgy != bounds->p2.y);
+    bounds->p1.x = smx;
+    bounds->p1.y = smy;
+    bounds->p2.x = lgx;
+    bounds->p2.y = lgy;
+
+    return (expanded);
+}
 
 void gfx_rect_normalize(gfx_rect* rect) {
     int smx, smy, lgx, lgy;
@@ -21,7 +36,7 @@ void gfx_rect_normalize(gfx_rect* rect) {
     smy = _min(rect->p1.y, rect->p2.y);
     lgx = _max(rect->p1.x, rect->p2.x);
     lgy = _max(rect->p1.y, rect->p2.y);
-    // Update the rectange with the new points
+    // Update the rectangle with the new points
     rect->p1.x = smx;
     rect->p1.y = smy;
     rect->p2.x = lgx;

@@ -15,7 +15,9 @@
 			"display_i.h": "c",
 			"multicore.h": "c",
 			"dcs.h": "c",
-			"servo.h": "c"
+			"servo.h": "c",
+			"stdio.h": "c",
+			"printf.h": "c"
 		},
 		"cSpell.words": [
 			"BSPKT",

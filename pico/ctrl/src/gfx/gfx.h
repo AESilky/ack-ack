@@ -14,6 +14,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /**
@@ -36,11 +37,27 @@ typedef struct _gfx_rect_ {
     gfx_point p2;
 } gfx_rect;
 
+static inline int _max(int a, int b) { return (a > b ? a : b); }
+static inline int _min(int a, int b) { return (a < b ? a : b); }
+
+/**
+ * @brief Incorporate a point into a bounding rectangle.
+ * @ingroup gfx
+ *
+ * Increase the bounding rectangle as needed to include the point.
+ *
+ * @param rect The bounding rectangle (start with a zero size rectangle)
+ * @param point The point to incorporate
+ * @return true If the bounds were expanded
+ * @return false If the point was within the existing bounds
+ */
+extern bool gfx_bounds_add_point(gfx_rect *bounds, gfx_point *p);
+
 /**
  * @brief Order the corner points such that `p1` is to the upper left.
  * @ingroup gfx
  *
- * @param rect Pointer to the rectange to normalize.
+ * @param rect Pointer to the rectangle to normalize.
  */
 extern void gfx_rect_normalize(gfx_rect *rect);
 
