@@ -34,15 +34,13 @@
 
 #include "board.h"
 
-#include "cmt/multicore.h"
+#include "cmt/cmt.h"
 #include "curswitch/curswitch.h"
 #include "debug_support.h"
 #include "display/display.h"
 #include "expio/expio.h"
 #include "spi_ops.h"
 #include "util/util.h"
-
-#include <stdio.h>
 
 // Internal function declarations
 
@@ -208,8 +206,7 @@ int board_init() {
     // Initialize the Cursor Switches module.
     curswitch_module_init();
 
-    // Initialize the multicore subsystem
-    multicore_module_init(debug_mode_enabled());
+    // The PWM is used for a recurring interrupt in CMT. It will initialize it.
 
     return(retval);
 }
@@ -313,7 +310,7 @@ void debug_printf(bool incl_dts, const char* format, ...) {
         va_start(xArgs, format);
         index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
         va_end(xArgs);
-        printf(buf);
+        // printf(buf);
         if (disp_ready()) {
             text_color_pair_t cp;
             disp_text_colors_get(&cp);
@@ -335,7 +332,7 @@ void error_printf(bool inc_dts, const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    printf("%s\033[0m", buf);
+    // printf("%s\033[0m", buf);
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -356,7 +353,7 @@ void info_printf(bool incl_dts, const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    printf(buf);
+    // printf(buf);
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -377,7 +374,7 @@ void warn_printf(bool inc_dts, const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    printf(buf);
+    // printf(buf);
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);

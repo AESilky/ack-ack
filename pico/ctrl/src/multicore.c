@@ -8,26 +8,29 @@
  *
 */
 #include "multicore.h"
+
 #include "system_defs.h"
-#include "cmt.h"
-#include "core1_main.h"
 #include "board.h"
 #include "debug_support.h"
+
+#include "cmt/cmt_t.h"
+#include "dcs/core1_main.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#define CORE0_QUEUE_NP_ENTRIES_MAX 16
+#define CORE0_QUEUE_NP_ENTRIES_MAX 64
 #define CORE0_QUEUE_L9_ENTRIES_MAX 8
 #define CORE0_QUEUE_LP_ENTRIES_MAX 8
-#define CORE1_QUEUE_NP_ENTRIES_MAX 16
+#define CORE1_QUEUE_NP_ENTRIES_MAX 64
 #define CORE1_QUEUE_L9_ENTRIES_MAX 8
 #define CORE1_QUEUE_LP_ENTRIES_MAX 8
 
 static int32_t _msg_num;
 // Flag indicating that we don't want to panic if we can't add a message to a queue.
 static bool    _no_qadd_panic;
-static bool    _panic_dbg_printed;
+static int     _c0_reqmsg_post_errs;
+static int     _c1_reqmsg_post_errs;
 
 static queue_t _core0_np_queue;
 static queue_t _core0_l9_queue;
@@ -188,16 +191,10 @@ void post_to_core0(const cmt_msg_t* msg) {
     register bool posted = queue_try_add(q2use, &m);
     restore_interrupts(flags);
     if (!posted) {
+        _c0_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
-            panic("Req C1 msg could not post");
+            panic("Req C0 msg could not post");
         }
-        else if (!_panic_dbg_printed) {
-            warn_printf(false, "Req C1 msg could not post\n");
-            _panic_dbg_printed = true;
-        }
-    }
-    else {
-        _panic_dbg_printed = false;
     }
 }
 
@@ -235,16 +232,10 @@ void post_to_core1(const cmt_msg_t* msg) {
     register bool posted = queue_try_add(q2use, &m);
     restore_interrupts(flags);
     if (!posted) {
+        _c1_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
             panic("Req C1 msg could not post");
         }
-        else if (!_panic_dbg_printed) {
-            warn_printf(false, "Req C1 msg could not post\n");
-            _panic_dbg_printed = true;
-        }
-    }
-    else {
-        _panic_dbg_printed = false;
     }
 }
 
@@ -288,13 +279,13 @@ void multicore_module_init(bool no_qadd_panic) {
     _initialized = true;
     _msg_num = 0;
     _no_qadd_panic = no_qadd_panic;
-    _panic_dbg_printed = false;
+    _c0_reqmsg_post_errs = 0;
+    _c1_reqmsg_post_errs = 0;
     queue_init(&_core0_np_queue, sizeof(cmt_msg_t), CORE0_QUEUE_NP_ENTRIES_MAX);
     queue_init(&_core0_l9_queue, sizeof(cmt_msg_t), CORE0_QUEUE_L9_ENTRIES_MAX);
     queue_init(&_core0_lp_queue, sizeof(cmt_msg_t), CORE0_QUEUE_LP_ENTRIES_MAX);
-    queue_init(&_core1_np_queue, sizeof(cmt_msg_t), CORE0_QUEUE_NP_ENTRIES_MAX);
-    queue_init(&_core1_l9_queue, sizeof(cmt_msg_t), CORE0_QUEUE_L9_ENTRIES_MAX);
-    queue_init(&_core1_lp_queue, sizeof(cmt_msg_t), CORE0_QUEUE_LP_ENTRIES_MAX);
-    cmt_module_init();
+    queue_init(&_core1_np_queue, sizeof(cmt_msg_t), CORE1_QUEUE_NP_ENTRIES_MAX);
+    queue_init(&_core1_l9_queue, sizeof(cmt_msg_t), CORE1_QUEUE_L9_ENTRIES_MAX);
+    queue_init(&_core1_lp_queue, sizeof(cmt_msg_t), CORE1_QUEUE_LP_ENTRIES_MAX);
 }
 

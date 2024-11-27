@@ -1,7 +1,7 @@
 /**
  * hwctrl Cooperative Multi-Tasking.
  *
- * Containes message loop, scheduled message, and other CMT enablement functions.
+ * Contains message loop, scheduled message, and other CMT enablement functions.
  *
  * Copyright 2023-24 AESilky
  * SPDX-License-Identifier: MIT License
@@ -13,12 +13,18 @@
 #include "debug_support.h"
 #include "util/util.h"
 
+#include "hardware/clocks.h"
+#include "hardware/pwm.h"
 #include "hardware/structs/nvic.h"
+#include "pico/float.h"
 #include "pico/mutex.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
 #include <string.h>
+
+
+#define SCHEDULED_MESSAGES_MAX 16
 
 #define SM_OVERHEAD_US_PER_MS_ (20)
 #define SMD_FREE_INDICATOR_ (-1)
@@ -36,7 +42,6 @@ typedef struct _scheduled_msg_data_ {
 
 auto_init_mutex(sm_mutex);
 static _scheduled_msg_data_t _scheduled_message_datas[SCHEDULED_MESSAGES_MAX]; // Objects to use (no malloc/free)
-static repeating_timer_t _schd_msg_timer_data;
 
 static bool _msg_loop_0_running = false;
 static bool _msg_loop_1_running = false;
@@ -51,38 +56,40 @@ const msg_handler_entry_t cmt_sm_tick_handler_entry = { MSG_CMT_SLEEP, cmt_handl
 static uint8_t _housekeep_rt;  // Incremented each ms. Generates a Housekeeping msg every 16ms (62.5Hz)
 
 /**
- * @brief Repeating alarm callback handler.
- * Handles the repeating timer, adjusts the time left and posts a message to
- * the appropriate core when time hits 0.
+ * @brief Recurring Interrupt Handler (1ms from PWM).
  *
- * @see repeating_timer_callback_t
+ * Handles the PWM 'wrap' recurring interrupt. This adjusts the time left in scheduled messages
+ * (including our 'sleep') and posts a message to the appropriate core when time hits 0.
  *
- * \param rt repeating time structure containing information about the repeating time. (not used)
- * \return true to continue repeating, false to stop.
+ * This also posts a MSG_HOUSEKEEPING_RT message every 16ms (62.5Hz) that allows modules
+ * to perform regular operations without having to set up scheduled messages or timers
+ * of their own.
+ *
  */
-bool _schd_msg_timer_callback(repeating_timer_t* rt) {
-    for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (smd->remaining > 0) {
-            if (0 == --smd->remaining) {
-                if (0 == smd->corenum) {
-                    post_to_core0(smd->client_msg);
+static void _on_recurring_interrupt(void) {
+        // Adjust scheduled messages.
+        for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
+            _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
+            if (smd->remaining > 0) {
+                if (0 == --smd->remaining) {
+                    if (0 == smd->corenum) {
+                        post_to_core0(smd->client_msg);
+                    }
+                    else {
+                        post_to_core1(smd->client_msg);
+                    }
+                    smd->remaining = SMD_FREE_INDICATOR_;
                 }
-                else {
-                    post_to_core1(smd->client_msg);
-                }
-                smd->remaining = SMD_FREE_INDICATOR_;
             }
         }
-    }
-    _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
-    if (!_housekeep_rt) {
-        cmt_msg_t msg;
-        cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LP);
-        postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
-    }
-
-    return (true); // Repeat forever
+        _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
+        if (_housekeep_rt == 0) {
+            cmt_msg_t msg;
+            cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LP);
+            postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
+        }
+    // Clear the interrupt flag that brought us here so it can occur again.
+    pwm_clear_irq(CMT_PWM_RECINT_SLICE);
 }
 
 static void _scheduled_msg_init() {
@@ -90,11 +97,6 @@ static void _scheduled_msg_init() {
         // Initialize these as 'free'
         _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
         smd->remaining = SMD_FREE_INDICATOR_;
-    }
-    bool success = add_repeating_timer_us((1000 - SM_OVERHEAD_US_PER_MS_), _schd_msg_timer_callback, NULL, &_schd_msg_timer_data);
-    if (!success) {
-        error_printf(false, "CMT - Could not create repeating timer for scheduled messages.\n");
-        panic("CMT - Could not create repeating timer for scheduled messages.");
     }
 }
 
@@ -158,8 +160,6 @@ void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
             cs += psa.t_active;
             psa.t_idle = psa_sec->t_idle;
             cs += psa.t_idle;
-            psa.t_msg_retrieve = psa_sec->t_msg_retrieve;
-            cs += psa.t_msg_retrieve;
             psa.interrupt_status = psa_sec->interrupt_status;
             cs += psa.interrupt_status;
             psa.ts_psa = psa_sec->ts_psa;
@@ -170,7 +170,6 @@ void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
         psas->retrieved = psa.retrieved;
         psas->t_active = psa.t_active;
         psas->t_idle = psa.t_idle;
-        psas->t_msg_retrieve = psa.t_msg_retrieve;
         psas->interrupt_status = psa.interrupt_status;
         psas->ts_psa = psa.ts_psa;
         psas->cs = psa.cs;
@@ -361,9 +360,6 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
             psa_sec->t_idle = psa->t_idle;
             cs += psa_sec->t_idle;
             psa->t_idle = 0;
-            psa_sec->t_msg_retrieve = psa->t_msg_retrieve;
-            cs += psa_sec->t_msg_retrieve;
-            psa->t_msg_retrieve = 0;
             psa_sec->interrupt_status = nvic_hw->iser;
             cs += psa_sec->interrupt_status;
             psa_sec->core_temp = onboard_temp_c();
@@ -373,31 +369,32 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
         }
 
         if (get_msg_function(&msg)) {
-            uint64_t as = now_us();
-            psa->t_msg_retrieve += as - t_start;
             psa->retrieved++;
             // Find the handler
             //  Does the message designate a handler?
             if (msg.hndlr != NULL_MSG_HNDLR) {
+                gpio_put(PICO_DEFAULT_LED_PIN, 1);
                 msg.hndlr(&msg);
+                gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
             else {
                 const msg_handler_entry_t** handler_entries = loop_context->handler_entries;
                 while (*handler_entries) {
                     const msg_handler_entry_t* handler_entry = *handler_entries++;
                     if (msg.id == handler_entry->msg_id) {
+                        gpio_put(PICO_DEFAULT_LED_PIN, 1);
                         handler_entry->msg_handler(&msg);
+                        gpio_put(PICO_DEFAULT_LED_PIN, 0);
                     }
                 }
             }
             // No more handlers found for this message.
-            uint64_t ht = now_us() - as;
+            uint64_t ht = now_us() - t_start;
             psa->t_active += ht;
         }
         else {
             // No message available, allow next idle function to run
             uint64_t is = now_us();
-            psa->t_msg_retrieve += is - t_start;
             psa->idle++;
             const idle_fn idle_function = *idle_functions;
             if (idle_function) {
@@ -415,7 +412,32 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
 }
 
 void cmt_module_init() {
+    // PWM is used to generate a 100µs interrupt that is used for
+    // scheduled messages, sleep, and the regular housekeeping message.
+    // (the PWM outputs are not directed to GPIO pins)
+    //
+    pwm_config cfg = pwm_get_default_config();
+    // Calculate the clock divider to achieve a 1µs count rate.
+    uint32_t sys_freq = clock_get_hz(clk_sys);
+    float div = uint2float(sys_freq) / 1000000.0f;
+    pwm_config_set_clkdiv(&cfg, div);
+    pwm_config_set_wrap(&cfg, 1000);  // Reach 0 every millisecond
+    pwm_init(CMT_PWM_RECINT_SLICE, &cfg, false);
+    // These aren't used, but we set them...
+    //   Set output high for one cycle before dropping
+    pwm_set_chan_level(CMT_PWM_RECINT_SLICE, PWM_CHAN_A, 1);
+    pwm_set_chan_level(CMT_PWM_RECINT_SLICE, PWM_CHAN_B, 1);
+    // Mask our slice's IRQ output into the PWM block's single interrupt line,
+    // and register our interrupt handler
+    pwm_clear_irq(CMT_PWM_RECINT_SLICE);
+    pwm_set_irq_enabled(CMT_PWM_RECINT_SLICE, true);
+    irq_set_exclusive_handler(PWM_DEFAULT_IRQ_NUM(), _on_recurring_interrupt);
+
     mutex_enter_blocking(&sm_mutex);
     _scheduled_msg_init();
     mutex_exit(&sm_mutex);
+
+    // Enable the PWM and interrupts from it.
+    irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), true);
+    pwm_set_enabled(CMT_PWM_RECINT_SLICE, true);
 }

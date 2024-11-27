@@ -92,13 +92,6 @@ typedef struct DRIVE_SERVO_CTRL_ {
 
 
 // ############################################################################
-// Function Declarations
-// ############################################################################
-//
-static void _position_lf_mh(cmt_msg_t* msg);
-
-
-// ############################################################################
 // Data
 // ############################################################################
 //
@@ -107,9 +100,62 @@ static drv_servo_ctrl_t _drv_servos[6];
 
 
 // ############################################################################
+// Function Declarations
+// ############################################################################
+//
+static void _position_lf_mh(cmt_msg_t* msg);
+static bool _position_lf(uint16_t pos, uint16_t time);
+static void _position_lr_mh(cmt_msg_t* msg);
+static bool _position_lr(uint16_t pos, uint16_t time);
+static void _position_rf_mh(cmt_msg_t* msg);
+static bool _position_rf(uint16_t pos, uint16_t time);
+static void _position_rr_mh(cmt_msg_t* msg);
+static bool _position_rr(uint16_t pos, uint16_t time);
+
+
+// ############################################################################
+// Message Handlers
+// ############################################################################
+//
+static void _position_lf_mh(cmt_msg_t* msg) {
+    // Try positioning the left-front again.
+    _position_lf(msg->data.servo_params.pos, msg->data.servo_params.time);
+}
+
+static void _position_lr_mh(cmt_msg_t* msg) {
+    // Try positioning the left-rear again.
+    _position_lr(msg->data.servo_params.pos, msg->data.servo_params.time);
+}
+
+static void _position_rf_mh(cmt_msg_t* msg) {
+    // Try positioning the right-front again.
+    _position_rf(msg->data.servo_params.pos, msg->data.servo_params.time);
+}
+
+static void _position_rr_mh(cmt_msg_t* msg) {
+    // Try positioning the right-rear again.
+    _position_rr(msg->data.servo_params.pos, msg->data.servo_params.time);
+}
+
+
+// ############################################################################
 // Internal Functions
 // ############################################################################
 //
+
+/**
+ * @brief Dedicated function to control the Left-Front servo.
+ *
+ * The reason for this is to handle the case when the servo can't immediately
+ * be controlled (for example, if a servo read is in process). In that case,
+ * this posts a message to try the operation again. This keeps happening until
+ * the control is successful.
+ *
+ * @param pos Position to move to
+ * @param time The time to take to move it
+ * @return true The operation was performed
+ * @return false The operation couldn't be performed (will keep trying)
+ */
 static bool _position_lf(uint16_t pos, uint16_t time) {
     if (servo_move(&_dir_servos[SRVDIR_LF].servo, pos, time)) {
         return true;
@@ -123,13 +169,82 @@ static bool _position_lf(uint16_t pos, uint16_t time) {
     return false;
 }
 
-// ############################################################################
-// Message Handlers
-// ############################################################################
-//
-static void _position_lf_mh(cmt_msg_t *msg) {
-    // Try positioning the left-front again.
-    _position_lf(msg->data.servo_params.pos, msg->data.servo_params.time);
+/**
+ * @brief Dedicated function to control the Left-Rear servo.
+ *
+ * The reason for this is to handle the case when the servo can't immediately
+ * be controlled (for example, if a servo read is in process). In that case,
+ * this posts a message to try the operation again. This keeps happening until
+ * the control is successful.
+ *
+ * @param pos Position to move to
+ * @param time The time to take to move it
+ * @return true The operation was performed
+ * @return false The operation couldn't be performed (will keep trying)
+ */
+static bool _position_lr(uint16_t pos, uint16_t time) {
+    if (servo_move(&_dir_servos[SRVDIR_LR].servo, pos, time)) {
+        return true;
+    }
+    // Command couldn't be sent, post ourself a message to try again.
+    cmt_msg_t msg;
+    msg.data.servo_params.pos = pos;
+    msg.data.servo_params.time = time;
+    cmt_msg_init3(&msg, MSG_EXEC, MSG_PRI_NORM, _position_lr_mh);
+    postHWCtrlMsg(&msg);
+    return false;
+}
+
+/**
+ * @brief Dedicated function to control the Right-Front servo.
+ *
+ * The reason for this is to handle the case when the servo can't immediately
+ * be controlled (for example, if a servo read is in process). In that case,
+ * this posts a message to try the operation again. This keeps happening until
+ * the control is successful.
+ *
+ * @param pos Position to move to
+ * @param time The time to take to move it
+ * @return true The operation was performed
+ * @return false The operation couldn't be performed (will keep trying)
+ */
+static bool _position_rf(uint16_t pos, uint16_t time) {
+    if (servo_move(&_dir_servos[SRVDIR_LF].servo, pos, time)) {
+        return true;
+    }
+    // Command couldn't be sent, post ourself a message to try again.
+    cmt_msg_t msg;
+    msg.data.servo_params.pos = pos;
+    msg.data.servo_params.time = time;
+    cmt_msg_init3(&msg, MSG_EXEC, MSG_PRI_NORM, _position_rf_mh);
+    postHWCtrlMsg(&msg);
+    return false;
+}
+
+/**
+ * @brief Dedicated function to control the Right-Rear servo.
+ *
+ * The reason for this is to handle the case when the servo can't immediately
+ * be controlled (for example, if a servo read is in process). In that case,
+ * this posts a message to try the operation again. This keeps happening until
+ * the control is successful.
+ *
+ * @param pos Position to move to
+ * @param time The time to take to move it
+ * @return true The operation was performed
+ * @return false The operation couldn't be performed (will keep trying)
+ */
+static bool _position_rr(uint16_t pos, uint16_t time) {
+    if (servo_move(&_dir_servos[SRVDIR_LR].servo, pos, time)) {
+        return true;
+    }
+    // Command couldn't be sent, post ourself a message to try again.
+    cmt_msg_t msg;
+    msg.data.servo_params.pos = pos;
+    msg.data.servo_params.time = time;
+    cmt_msg_init3(&msg, MSG_EXEC, MSG_PRI_NORM, _position_rr_mh);
+    postHWCtrlMsg(&msg);
+    return false;
 }
 
 // ############################################################################
@@ -139,16 +254,16 @@ static void _position_lf_mh(cmt_msg_t *msg) {
 
 void servos_rip_position() {
     _position_lf(RIP_LFRR_POS, 800);
-    servo_move(&_dir_servos[SRVDIR_RR].servo, RIP_LFRR_POS, 800);
-    servo_move(&_dir_servos[SRVDIR_LR].servo, RIP_RFLR_POS, 800);
-    servo_move(&_dir_servos[SRVDIR_RF].servo, RIP_RFLR_POS, 800);
+    _position_rr(RIP_LFRR_POS, 800);
+    _position_lr(RIP_RFLR_POS, 800);
+    _position_rf(RIP_RFLR_POS, 800);
 }
 
 void servos_zero_position() {
-    servo_move(&_dir_servos[SRVDIR_LF].servo, DIRECTIONAL_SERVO_POS_CENTER, 800);
-    servo_move(&_dir_servos[SRVDIR_RR].servo, DIRECTIONAL_SERVO_POS_CENTER, 800);
-    servo_move(&_dir_servos[SRVDIR_LR].servo, DIRECTIONAL_SERVO_POS_CENTER, 800);
-    servo_move(&_dir_servos[SRVDIR_RF].servo, DIRECTIONAL_SERVO_POS_CENTER, 800);
+    _position_lf(DIRECTIONAL_SERVO_POS_CENTER, 800);
+    _position_rr(DIRECTIONAL_SERVO_POS_CENTER, 800);
+    _position_lr(DIRECTIONAL_SERVO_POS_CENTER, 800);
+    _position_rf(DIRECTIONAL_SERVO_POS_CENTER, 800);
 }
 
 
@@ -160,9 +275,22 @@ void servos_zero_position() {
 void servos_housekeeping(void) {
     // ZZZ - Temp, exercise the position servos
     static uint8_t hk_count = 0;
-
+    static uint8_t hk_srvo = 0;
     if (++hk_count % (62 * 3) == 0) {
-        // servo_position_read(&_dir_servos[SRVDIR_LF].servo);
+        switch (hk_srvo++ & 0x03) {
+            case 0:
+                servo_position_read(&_dir_servos[SRVDIR_LF].servo);
+                break;
+            case 1:
+                servo_position_read(&_dir_servos[SRVDIR_LR].servo);
+                break;
+            case 2:
+                servo_position_read(&_dir_servos[SRVDIR_RF].servo);
+                break;
+            case 3:
+                servo_position_read(&_dir_servos[SRVDIR_RR].servo);
+                break;
+        }
     }
 }
 

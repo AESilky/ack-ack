@@ -16,118 +16,10 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "curswitch/curswitch_t.h"
-#include "gfx/gfx.h"
-#include "servo/servo_t.h"
-
-#include "pico/types.h"
-
-typedef enum MSG_PRI_ {
-    MSG_PRI_NORM = 0,
-    MSG_PRI_L9,
-    MSG_PRI_LP
-} msg_priority_t;
-
-#define SCHEDULED_MESSAGES_MAX 16
-
-typedef enum MSG_ID_ {
-    // Common messages (used by both BE and UI)
-    MSG_COMMON_NOOP = 0x0000,
-    MSG_EXEC,               // General purpose message to use when specifying a handler.
-    MSG_CONFIG_CHANGED,
-    MSG_CMT_SLEEP,
-    MSG_DEBUG_CHANGED,
-    MSG_HOUSEKEEPING_RT,    // Housekeeping Repeating - Every 16ms (62.5Hz)
-    MSG_INPUT_SW_PRESS,
-    MSG_INPUT_SW_RELEASE,
-    MSG_SWITCH_ACTION,
-    MSG_SWITCH_LONGPRESS,
-    //
-    // Hardware-OS (HWOS) messages
-    MSG_HWOS_NOOP = 0x0100,
-    MSG_HWOS_TEST,
-    MSG_INPUT_SW_DEBOUNCE,
-    MSG_MAIN_USER_SWITCH_PRESS,
-    MSG_ROTARY_CHG,
-    MSG_SERVO_DATA_RCVD,
-    MSG_SERVO_DATA_RX_TO,
-    MSG_SERVO_READ_ERROR,
-    MSG_SERVO_STATUS_RCVD,
-    MSG_STDIO_CHAR_READY,
-    MSG_SW_LONGPRESS_DELAY,
-    MSG_TOUCH_PANEL,
-    MSG_DCS_STARTED,
-    //
-    // Drive Control System (DCS) messages
-    MSG_DCS_NOOP = 0x0200,
-    MSG_DCS_TEST,
-    MSG_HWOS_STARTED,
-    MSG_DISPLAY_MESSAGE,
-} msg_id_t;
-
-/**
- * @brief Function prototype for a sleep function.
- * @ingroup cmt
- */
-typedef void (*cmt_sleep_fn)(void* user_data);
-
-typedef struct cmt_sleep_data_ {
-    cmt_sleep_fn sleep_fn;
-    void* user_data;
-} cmt_sleep_data_t;
-
-// Declare the CMT Message structure so that we can declare the handler function.
-struct CMT_MSG_;
-
-/**
- * @brief Function prototype for a message handler.
- * @ingroup cmt
- *
- * @param msg The message to handle.
- */
-typedef void (*msg_handler_fn)(struct CMT_MSG_* msg);
-
-#define NULL_MSG_HNDLR ((msg_handler_fn)0)
-
-/**
- * @brief Message data.
- *
- * Union that can hold the data needed by the messages.
- */
-typedef union MSG_DATA_VALUE_ {
-    char c;
-    bool bv;
-    bool debug;
-    cmt_sleep_data_t cmt_sleep;
-    int16_t rotary_delta;
-    int32_t status;
-    char* str;
-    servo_params_t servo_params;
-    switch_action_data_t sw_action;
-    uint32_t ts_ms;
-    uint64_t ts_us;
-} msg_data_value_t;
-
-/**
- * @brief Structure containing a message ID and message data.
- *
- * @param id The ID (number) of the message.
- * @param data The data for the message.
- * @param priority The message priority.
- * @param hndlr A Handler function to use rather then the one registered (or null).
- * @param n The message number (set by the posting system)
- * @param t The millisecond time msg was posted (set by the posting system)
- */
-typedef struct CMT_MSG_ {
-    msg_id_t id;
-    msg_priority_t priority;
-    msg_data_value_t data;
-    msg_handler_fn hndlr;
-    int32_t n;
-    uint32_t t;
-} cmt_msg_t;
+#include "cmt_t.h"
 
 #include "multicore.h"
+
 
 // Define functional names for the 'Core' message queue functions (Camel-case to help flag as aliases).
 #define postHWCtrlMsg( pmsg )                   post_to_core0( pmsg )
@@ -136,30 +28,11 @@ typedef struct CMT_MSG_ {
 #define postDCSMsgDiscardable( pmsg )           post_to_core1_nowait( pmsg )
 #define postBothMsgDiscardable( pmsg )          post_to_cores_nowait( pmsg )
 
-/**
- * @brief Function prototype for an idle function.
- * @ingroup cmt
- */
-typedef void (*idle_fn)(void);
-
-/**
- * @brief Function prototype for the start function.
- * @ingroup cmt
- */
-typedef void (*start_fn)(void);
-
-
-typedef struct _MSG_HANDLER_ENTRY {
-    int msg_id;
-    msg_handler_fn msg_handler;
-} msg_handler_entry_t;
-
 typedef struct _PROC_STATUS_ACCUM_ {
     volatile int64_t cs;
     volatile uint64_t ts_psa;                       // Timestamp of last PS Accumulator/sec update
     volatile uint64_t t_active;
     volatile uint64_t t_idle;
-    volatile uint64_t t_msg_retrieve;
     volatile uint32_t retrieved;
     volatile uint32_t idle;
     volatile uint32_t interrupt_status;
@@ -171,14 +44,6 @@ typedef struct _MSG_LOOP_CNTX {
     const msg_handler_entry_t** handler_entries;    // NULL terminated list of message handler entries
     const idle_fn* idle_functions;                  // Null terminated list of idle functions
 } msg_loop_cntx_t;
-
-/**
- * @brief Handler Entry for the CMT Sleep. This is put in both message loop
- *      handler lists, so a sleep can be handled for either.
- * @ingroup cmt
- *
- */
-extern const msg_handler_entry_t cmt_sm_tick_handler_entry;
 
 /**
  * @brief Initialize a CMT Message with Normal Priority so that it is ready to be posted.

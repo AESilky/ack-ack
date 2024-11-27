@@ -20,14 +20,15 @@
 #include "rotary_encoder/re_pbsw.h"
 #include "rotary_encoder/rotary_encoder.h"
 #include "rover/rover.h"
-#include "servo/servo_mh.h"
 #include "servo/servos.h"
+#include "term/term.h"
 #include "touch_panel/touch.h"
 #include "util/util.h"
 
 #include "hardware/rtc.h"
 
 #include "pico/stdlib.h"
+#include "pico/float.h"
 #include "pico/printf.h"
 
 #define _HWOS_STATUS_PULSE_PERIOD 6999
@@ -57,11 +58,17 @@ static void _input_sw_irq_handler(uint32_t events);
 
 static const msg_handler_entry_t _hwos_housekeeping = { MSG_HOUSEKEEPING_RT, _handle_hwos_housekeeping };
 static const msg_handler_entry_t _hwos_test = { MSG_HWOS_TEST, _handle_hwos_test };
-static const msg_handler_entry_t _input_sw_debnce_handler_entry = { MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce };
+static const msg_handler_entry_t _input_sw_debounce_handler_entry = { MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce };
 static const msg_handler_entry_t _rotary_chg_handler_entry = { MSG_ROTARY_CHG, _handle_rotary_change };
 static const msg_handler_entry_t _switch_action_handler_entry = { MSG_SWITCH_ACTION, _handle_switch_action };
 static const msg_handler_entry_t _switch_longpress_handler_entry = { MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay };
 static const msg_handler_entry_t _dcs_started_handler_entry = { MSG_DCS_STARTED, _handle_dcs_started };
+
+// Include Message Handlers from other Modules
+//
+#include "cmt/cmt_mh.h"
+#include "servo/servo_mh.h"
+#include "term/term_mh.h"
 
 // For performance - put these in order that we expect to receive more often
 static const msg_handler_entry_t* _hwos_handler_entries[] = {
@@ -70,7 +77,9 @@ static const msg_handler_entry_t* _hwos_handler_entries[] = {
     & servo_rxd_handler_entry,
     & _switch_action_handler_entry,
     & _switch_longpress_handler_entry,
-    & _input_sw_debnce_handler_entry,
+    & _input_sw_debounce_handler_entry,
+    & term_switch_action_handler_entry,
+    & term_touch_handler_entry,
     & _rotary_chg_handler_entry,
     & _dcs_started_handler_entry,
     & _hwos_test,
@@ -126,7 +135,15 @@ static void _hwos_idle_function_2() {
  */
 static void _handle_hwos_housekeeping(cmt_msg_t* msg) {
     static gfx_point last_touch = {0,0};
+    // static int cnt = 0;
 
+    // if (++cnt % 625 == 0) {
+    //     // Every 10 seconds, print the count
+    //     char buf[32];
+    //     int s = float2int(int2float(cnt) / 62.5f);
+    //     snprintf(buf, 32, "Secs:%d", s);
+    //     disp_string_color(0, 0, buf, C16_LT_BLUE, C16_BLACK, Paint);
+    // }
     // Do cleanup, status updates, heartbeat, etc.
     if (_dcs_started) {
         curswitch_trigger_read();  // Read the switch banks
@@ -140,16 +157,21 @@ static void _handle_hwos_housekeeping(cmt_msg_t* msg) {
             // Store the values and print that we were touched.
             last_touch.x = dp->x;
             last_touch.y = dp->y;
-            const gfx_point* pp = tp_last_panel_point();
-            const gfx_rect* bounds = tp_bounds_observed();
-            scr_position_t sp = disp_lc_from_point(dp);
-            char buf[64];
-            snprintf(buf, 63, "T Dx=%3d Dy=%3d Px=%4d Py=%4d", last_touch.x, last_touch.y, pp->x, pp->y);
-            disp_string_color(0, 0, buf, C16_LT_BLUE, C16_BLACK, No_Paint);
-            snprintf(buf, 63, "B: (%4d,%4d , %4d,%4d)", bounds->p1.x, bounds->p1.y, bounds->p2.x, bounds->p2.y);
-            disp_string_color(1, 0, buf, C16_LT_BLUE, C16_BLACK, Paint);
-            snprintf(buf, 63, "SCR: Line:%2d Col:%2d", sp.line, sp.column);
-            disp_string_color(2, 0, buf, C16_LT_BLUE, C16_BLACK, Paint);
+            //
+            // Post a message with the touch
+            cmt_msg_t msg;
+            cmt_msg_init(&msg, MSG_TOUCH_PANEL);
+            postHWCtrlMsgDiscardable(&msg);
+            // const gfx_point* pp = tp_last_panel_point();
+            // const gfx_rect* bounds = tp_bounds_observed();
+            // scr_position_t sp = disp_lc_from_point(dp);
+            // char buf[64];
+            // snprintf(buf, 63, "T Dx=%3d Dy=%3d Px=%4d Py=%4d", last_touch.x, last_touch.y, pp->x, pp->y);
+            // disp_string_color(0, 0, buf, C16_LT_BLUE, C16_BLACK, No_Paint);
+            // snprintf(buf, 63, "B: (%4d,%4d , %4d,%4d)", bounds->p1.x, bounds->p1.y, bounds->p2.x, bounds->p2.y);
+            // disp_string_color(1, 0, buf, C16_LT_BLUE, C16_BLACK, Paint);
+            // snprintf(buf, 63, "SCR: Line:%2d Col:%2d", sp.line, sp.column);
+            // disp_string_color(2, 0, buf, C16_LT_BLUE, C16_BLACK, Paint);
         }
     }
 }
@@ -161,7 +183,8 @@ static void _handle_hwos_test(cmt_msg_t* msg) {
 
     uint64_t period = 60;
 
-    if (debug_mode_enabled()) {
+    bool ZZZ = false;
+    if (ZZZ && debug_mode_enabled()) {
         uint64_t now = now_us();
 
         uint64_t last_time = msg->data.ts_us;
@@ -272,9 +295,7 @@ void _gpio_irq_handler(uint gpio, uint32_t events) {
 }
 
 static void _input_sw_irq_handler(uint32_t events) {
-    // The user input switch and the infrared receiver B share the same GPIO.
     // The GPIO needs to be low for at least 80ms to be considered a button press.
-    // Anything shorter is probably the IR, which is handled by PIO.
     if (events & GPIO_IRQ_EDGE_FALL) {
         // Delay to see if it is user input or an IR received.
         // Check to see if we have already scheduled a debounce message.
@@ -298,42 +319,21 @@ static void _input_sw_irq_handler(uint32_t events) {
 
 
 // ====================================================================
-// Initialization functions
+// Initialization and Startup functions
 // ====================================================================
-
-
-void hwos_module_init() {
-    _input_sw_pressed = false;
-    re_pbsw_module_init();
-    rotary_encoder_module_init();
-    gpio_set_irq_enabled_with_callback(IRQ_ROTARY_TURN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &_gpio_irq_handler);
-    // gpio_set_irq_enabled(IRQ_rotary_SW, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
-    // gpio_set_irq_enabled(IRQ_TOUCH, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
-
-    // Init the rover control.
-    rover_module_init();
-
-    // Post a TEST to ourself in case we have any tests set up.
-    cmt_msg_t msg;
-    cmt_msg_init2(&msg, MSG_HWOS_TEST, MSG_PRI_LP);
-    postHWCtrlMsgDiscardable(&msg);
-}
 
 void hwos_started() {
     // Will be called by the CMT message loop processor when the message loop is ready.
     //
-    // Setup the screen with a fixed top area with enough room for 2 status lines.
-    disp_print_wrap_len_set(4);
-    disp_scroll_area_define(3, 0);
-    disp_cursor_home();
-    disp_clear(Paint);
-    disp_cursor_show(true);
-    //
+
     // Touch Panel initialization
-    tp_module_init(5, gfxd_screen_height(), gfxd_screen_width(), 121, 2520, 122, 2603);
+    tp_module_init(5, gfxd_screen_width(), false, gfxd_screen_height(), true, 121, 2520, 122, 2603);
     //
     // Start the Rover processing.
     rover_start();
+    //
+    // Start the Terminal
+    term_start();
     //
     // Done with the Hardware OS Startup - Let the DSC know.
     cmt_msg_t msg;
@@ -348,4 +348,25 @@ void start_hwos() {
     _started = true;
     // Enter into the message loop.
     message_loop(&hwos_msg_loop_cntx, hwos_started);
+}
+
+
+void hwos_module_init() {
+    _input_sw_pressed = false;
+    re_pbsw_module_init();
+    rotary_encoder_module_init();
+    gpio_set_irq_enabled_with_callback(IRQ_ROTARY_TURN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &_gpio_irq_handler);
+    // gpio_set_irq_enabled(IRQ_rotary_SW, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
+    // gpio_set_irq_enabled(IRQ_TOUCH, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
+
+    // Init the rover control.
+    rover_module_init();
+
+    // Init the terminal
+    term_module_init();
+
+    // Post a TEST to ourself in case we have any tests set up.
+    cmt_msg_t msg;
+    cmt_msg_init2(&msg, MSG_HWOS_TEST, MSG_PRI_LP);
+    postHWCtrlMsgDiscardable(&msg);
 }

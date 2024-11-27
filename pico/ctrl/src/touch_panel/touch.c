@@ -10,6 +10,7 @@
 #include "board.h"
 #include "spi_ops.h"
 
+#include "pico/float.h"
 #include "pico/time.h"
 #include "pico/stdlib.h"
 
@@ -43,7 +44,7 @@ static gfx_point _panel_point;
 /**
  * @brief Touch force value last measured.
  */
-static uint16_t _touch_force = 0;
+static uint32_t _touch_force = 0;
 
 /**
  * Set the chip select for the touch panel.
@@ -82,10 +83,16 @@ const gfx_point* tp_check_display_point() {
     if (pp) {
         int px = _max(pp->x - _config.x_min, 0);
         int py = _max(pp->y - _config.y_min, 0);
-        int ax = (int)((float)px / _config.fx);
-        int ay = (int)((float)py / _config.fy);
+        int ax = float2int(int2float(px) / _config.fx);
+        int ay = float2int(int2float(py) / _config.fy);
         int x = _min(ax, _config.display_width);
         int y = _min(ay, _config.display_height);
+        if (_config.invert_x) {
+            x = _config.display_width - x;
+        }
+        if (_config.invert_y) {
+            y = _config.display_height - y;
+        }
         _display_point.x = x;
         _display_point.y = y;
         retval = &_display_point;
@@ -116,17 +123,17 @@ const gfx_point* tp_check_panel_point() {
  * Rf = Rx * (Xpos/4096) * ((F2/F1)-1)
  * The force will be proportional to the inverse of the resistance.
  */
-uint16_t tp_check_touch_force() {
-    long fl;
+uint32_t tp_check_touch_force() {
+    int fl;
     float f, r, f1, f2, x;
 
-    x = (float)tp_read_adc12(TP_ADC_SEL_X);
-    f1 = (float)tp_read_adc12(TP_ADC_SEL_F1);
-    f2 = (float)tp_read_adc12(TP_ADC_SEL_F2);
+    x = int2float(tp_read_adc12(TP_ADC_SEL_X));
+    f1 = int2float(tp_read_adc12(TP_ADC_SEL_F1));
+    f2 = int2float(tp_read_adc12(TP_ADC_SEL_F2));
 
     r = (x/4096.0) * ((f2/f1) - 1.0);
     f = 1.0 / r;
-    fl = labs((long)(f - 20000.0));
+    fl = labs(float2int(f - 20000.0));
     _touch_force = fl;
 
     return (_touch_force);
@@ -144,7 +151,7 @@ const gfx_point* tp_last_panel_point() {
     return (&_panel_point);
 }
 
-uint16_t tp_last_touch_force() {
+uint32_t tp_last_touch_force() {
     return (_touch_force);
 }
 
@@ -186,10 +193,10 @@ uint16_t tp_read_adc12(tsc_adc_sel_t adc) {
 
 uint8_t tp_read_adc8_trimmed_mean(tsc_adc_sel_t adc) {
     int samples = _config.smpl_size; // `smpl_size` is forced to be >=3 when set
-    uint8_t retval = 0;
-    int16_t accum = 0;
-    int16_t high = 0;
-    int16_t low = ~0;
+    int retval = 0;
+    int accum = 0;
+    int high = 0;
+    int low = ~0;
 
     for (int i = 0; i < samples; i++) {
         uint8_t v = tp_read_adc8(adc);
@@ -198,18 +205,18 @@ uint8_t tp_read_adc8_trimmed_mean(tsc_adc_sel_t adc) {
         low = (low < v ? low : v);
     }
     accum -= (high + low);
-    float mean = ((float)accum / (float)(samples - 2.0));
-    retval = (uint8_t)mean;
+    float mean = (int2float(accum) / int2float(samples - 2));
+    retval = float2int(mean);
 
     return (retval);
 }
 
 uint16_t tp_read_adc12_trimmed_mean(tsc_adc_sel_t adc) {
     int samples = _config.smpl_size; // `smpl_size` is forced to be >=3 when set
-    uint16_t retval = 0;
-    int16_t accum = 0;
-    int16_t high = 0;
-    int16_t low = ~0;
+    int retval = 0;
+    int accum = 0;
+    int high = 0;
+    int low = ~0;
 
     for (int i = 0; i < samples; i++) {
         uint16_t v = tp_read_adc12(adc);
@@ -218,8 +225,8 @@ uint16_t tp_read_adc12_trimmed_mean(tsc_adc_sel_t adc) {
         low = (low < v ? low : v);
     }
     accum -= (high + low);
-    float mean = ((float)accum / (float)(samples - 2.0));
-    retval = (uint16_t)mean;
+    float mean = (int2float(accum) / int2float(samples - 2));
+    retval = float2int(mean);
 
     return (retval);
 }
@@ -240,10 +247,12 @@ void tp_irq_handler(uint gpio, uint32_t events) {
     }
 }
 
-void tp_module_init(int sample_size, uint16_t display_height, uint16_t display_width, uint16_t panel_min_x, uint16_t panel_max_x, uint16_t panel_min_y, uint16_t panel_max_y) {
+void tp_module_init(int sample_size, uint16_t display_width, bool invert_x, uint16_t display_height, bool invert_y, uint16_t panel_min_x, uint16_t panel_max_x, uint16_t panel_min_y, uint16_t panel_max_y) {
     _config.smpl_size = (sample_size > 3 ? sample_size : 3); // 3 minimum to allow for a trimmed mean
-    _config.display_height = display_height;
     _config.display_width = display_width;
+    _config.invert_x = invert_x;
+    _config.display_height = display_height;
+    _config.invert_y = invert_y;
     _config.x_min = panel_min_x;
     _config.x_max = panel_max_x;
     _config.y_min = panel_min_y;
@@ -257,8 +266,8 @@ void tp_module_init(int sample_size, uint16_t display_height, uint16_t display_w
     _bounds.p2.x = xd / 2;
     _bounds.p2.y = yd / 2;
     // Calculate the X and Y factors
-    float fx = (float)xd / (float)display_width;
-    float fy = (float)yd / (float)display_height;
+    float fx = int2float(xd) / int2float(display_width);
+    float fy = int2float(yd) / int2float(display_height);
     _config.fx = fx;
     _config.fy = fy;
 

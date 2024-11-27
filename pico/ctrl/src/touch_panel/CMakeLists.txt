@@ -5,6 +5,7 @@ target_sources(touch_panel INTERFACE
     touch.c
 )
 
-target_link_libraries(display INTERFACE
+target_link_libraries(touch_panel INTERFACE
+    pico_float
     pico_stdlib
 )

@@ -96,8 +96,10 @@ typedef enum _tsc_pwrdwn_mode_ {
 
 typedef struct _tp_config {
     int smpl_size;
-    uint16_t display_height;
     uint16_t display_width;
+    bool invert_x;
+    uint16_t display_height;
+    bool invert_y;
     uint16_t x_min;
     uint16_t x_max;
     uint16_t y_min;
@@ -158,9 +160,9 @@ extern const gfx_point* tp_check_panel_point();
  * Reads the force (pressure) of the current touch. If the panel isn't being
  * touched, zero is returned.
  *
- * @return uint16_t The force value.
+ * @return uint32_t The force value.
  */
-extern uint16_t tp_check_touch_force();
+extern uint32_t tp_check_touch_force();
 
 /**
  * @brief Get the current configuration of the touch screen controller.
@@ -189,9 +191,9 @@ extern const gfx_point* tp_last_panel_point();
  * @brief Get the last force value read. This does not perform a read operation.
  * @ingroup touch_panel
  *
- * @return uint16_t The last force value
+ * @return uint32_t The last force value
  */
-extern uint16_t tp_last_touch_force();
+extern uint32_t tp_last_touch_force();
 
 /**
  * @brief Read the value of one of the ADCs in the controller with 8 bit resolution.
@@ -257,14 +259,16 @@ extern uint16_t tp_read_adc12_trimmed_mean(tsc_adc_sel_t adc);
  * for subsequent reads.
  *
  * @param sample_size The number of times to sample when reading a touch. Must be at least 3.
- * @param display_height The height of the display in pixels
  * @param display_width The width of the display in pixels
+ * @param invert_x Invert the x (column) values returned from touch point
+ * @param display_height The height of the display in pixels
+ * @param invert_y Invert the y (row) values returned from touch point
  * @param panel_min_x Minimum x value reported by the panel (from test/calibration)
  * @param panel_max_x Maximum x value reported by the panel (from test/calibration)
  * @param panel_min_y Minimum y value reported by the panel (from test/calibration)
  * @param panel_max_y Maximum y value reported by the panel (from test/calibration)
  */
-extern void tp_module_init(int sample_size, uint16_t display_height, uint16_t display_width, uint16_t panel_min_x, uint16_t panel_max_x, uint16_t panel_min_y, uint16_t panel_max_y);
+extern void tp_module_init(int sample_size, uint16_t display_width, bool invert_x, uint16_t display_height, bool invert_y, uint16_t panel_min_x, uint16_t panel_max_x, uint16_t panel_min_y, uint16_t panel_max_y);
 
 
 #ifdef __cplusplus

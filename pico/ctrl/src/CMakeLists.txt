@@ -9,9 +9,10 @@ set(CMAKE_CXX_STANDARD 17)
 # (note this can come from environment, CMake cache etc)
 set(PICO_BOARD "pico")
 set(PICO_USE_MALLOC_MUTEX 1)
+set(PICO_QUEUE_MAX_LEVEL 1)
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
-if (PICO_SDK_VERSION_STRING VERSION_LESS "1.5.0")
+if (PICO_SDK_VERSION_STRING VERSION_LESS "1.5.1")
   message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.5.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 # Use fully-deoptimized debug build for true single-step and data viewing. Set to '0' for some optimizations
@@ -40,6 +41,7 @@ add_subdirectory(hwos)
 add_subdirectory(rotary_encoder)
 add_subdirectory(rover)
 add_subdirectory(servo)
+add_subdirectory(term)
 add_subdirectory(touch_panel)
 add_subdirectory(util)
 
@@ -48,16 +50,16 @@ add_executable(hwctrl
   main.c
   board.c
   debug_support.c
+  multicore.c
   spi_ops.c
 )
 
 pico_set_program_name(hwctrl "HWControl")
 pico_set_program_version(hwctrl "0.1")
 
-# Use the UART while using the Picoprobe
-# Use the USB for stdio. UART is used to communicate with ZigBee module.
-pico_enable_stdio_uart(hwctrl 1)
-pico_enable_stdio_usb(hwctrl 0)
+# Use the USB for stdio. UART is used to communicate with host for commands.
+pico_enable_stdio_uart(hwctrl 0)
+pico_enable_stdio_usb(hwctrl 1)
 
 # Add the required include file paths to the build
 include_directories(
@@ -79,6 +81,7 @@ include_directories(
 add_compile_definitions(
   PICO_MALLOC_PANIC
   PICO_USE_MALLOC_MUTEX
+  PICO_QUEUE_MAX_LEVEL
   PICO_USE_STACK_GUARDS
   PICO_STACK_SIZE=4096
   PICO_CORE1_STACK_SIZE=4096
@@ -102,6 +105,7 @@ target_link_libraries(hwctrl
   rotary_encoder
   rover
   servo
+  terminal
   touch_panel
   util
   hardware_adc
@@ -112,6 +116,7 @@ target_link_libraries(hwctrl
   hardware_rtc
   hardware_spi
   hardware_timer
+  pico_float
   pico_multicore
   pico_stdlib
 )

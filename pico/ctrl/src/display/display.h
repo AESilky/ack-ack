@@ -104,6 +104,12 @@ extern colorn16_t fg_from_cb(colorbyte_t cb);
 extern colorn16_t bg_from_cb(colorbyte_t cb);
 
 /**
+ * @brief Move the cursor to the beginning of the current line.
+ * @ingroup display
+ */
+extern void disp_cursor_bol();
+
+/**
  * @brief Get the current cursor position
  * @ingroup display
  *
@@ -341,7 +347,7 @@ extern void disp_print_crlf(int16_t add_lines, paint_control_t paint);
  * @brief Erase from the cursor position to the end of the print line.
  * @ingroup display
  *
- * This erases the text and background and leave the cursor in the current position.
+ * This erases the text and background and leaves the cursor in the current position.
  *
  * @param paint Controls painting of the screen after the operation.
  */

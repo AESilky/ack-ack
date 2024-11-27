@@ -11,7 +11,7 @@
 */
 #include "core1_main.h"
 
-#include "cmt.h"
+#include "cmt/cmt.h"
 #include "dcs/dcs.h"
 #include "multicore.h"
 

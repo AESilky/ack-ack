@@ -9,13 +9,12 @@
 */
 
 #include "dcs.h"
+#include "core1_main.h"
 
 #include "board.h"
 #include "debug_support.h"
 
 #include "cmt/cmt.h"
-#include "cmt/core1_main.h"
-#include "cmt/multicore.h"
 #include "util/util.h"
 
 #include "pico/stdlib.h"
@@ -105,7 +104,8 @@ static void _handle_dcs_test(cmt_msg_t* msg) {
 
     uint64_t period = 60;
 
-    if (debug_mode_enabled()) {
+    bool ZZZ = false;
+    if (ZZZ && debug_mode_enabled()) {
         uint64_t now = now_us();
 
         uint64_t last_time = msg->data.ts_us;

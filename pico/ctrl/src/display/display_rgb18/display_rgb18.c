@@ -18,23 +18,24 @@
 #include "string.h"
 
 // RGB-18 Color Constants that are used for the Color16 values.
-//
+//    RGB-18 Colors are 6 bits each. So; 0-63
+//           The hex values below are shifted left 2.
 const rgb18_t RGB18_BLACK = { 0x00,0x00,0x00 };      //  0 :   0,   0,   0
-const rgb18_t RGB18_BLUE = { 0x00,0x00,0xA8 };       //  1 :   0,   0, 170
-const rgb18_t RGB18_GREEN = { 0x38,0x44,0x00 };      //  2 :  78, 145,   0
-const rgb18_t RGB18_CYAN = { 0x00,0xE8,0xFC };       //  3 :   0, 250, 255
-const rgb18_t RGB18_RED = { 0xA8,0x00,0x00 };        //  4 : 170,   0,   0
-const rgb18_t RGB18_MAGENTA = { 0xFC,0x00,0xFC };    //  5 : 255,  64, 255
-const rgb18_t RGB18_BROWN = { 0x90,0x44,0x00 };      //  6 : 100,  17,   0
-const rgb18_t RGB18_WHITE = { 0x40,0x40,0x40 };      //  7 : 208, 208, 208
-const rgb18_t RGB18_GREY = { 0xE4,0xE4,0x68 };       //  8 : 121, 121,  90
-const rgb18_t RGB18_LT_BLUE = { 0x00,0x90,0xFC };    //  9 :   0, 100, 255
-const rgb18_t RGB18_LT_GREEN = { 0x00,0xE4,0x00 };   // 10 :   0, 249,   0
-const rgb18_t RGB18_LT_CYAN = { 0xCC,0xF4,0xFC };    // 11 : 115, 253, 255
-const rgb18_t RGB18_ORANGE = { 0xFC,0x2C,0x08 };     // 12 : 255,  75,   2
-const rgb18_t RGB18_LT_MAGENTA = { 0xFC,0x28,0x60 }; // 13 : 255, 138, 218
-const rgb18_t RGB18_YELLOW = { 0xFC,0x4C,0x00 };     // 14 : 255, 147,   0
-const rgb18_t RGB18_BR_WHITE = { 0xFC,0xFC,0xFC };      // 15 : 255, 255, 255
+const rgb18_t RGB18_BLUE = { 0x00,0x00,0xA8 };       //  1 :   0,   0,  42
+const rgb18_t RGB18_GREEN = { 0x38,0x44,0x00 };      //  2 :  14,  17,   0
+const rgb18_t RGB18_CYAN = { 0x00,0xE8,0xFC };       //  3 :   0,  58,  63
+const rgb18_t RGB18_RED = { 0xF4,0x00,0x0C };        //  4 :  61,   0,  12
+const rgb18_t RGB18_MAGENTA = { 0xFC,0x00,0xFC };    //  5 :  63,   0,  63
+const rgb18_t RGB18_BROWN = { 0x90,0x44,0x00 };      //  6 :  36,  17,   0
+const rgb18_t RGB18_WHITE = { 0x40,0x40,0x40 };      //  7 :  16,  16,  16
+const rgb18_t RGB18_GREY = { 0xE4,0xE4,0x68 };       //  8 :  57,  57,  26
+const rgb18_t RGB18_LT_BLUE = { 0x00,0x90,0xFC };    //  9 :   0,  36,  63
+const rgb18_t RGB18_LT_GREEN = { 0x00,0xE4,0x00 };   // 10 :   0,  57,   0
+const rgb18_t RGB18_LT_CYAN = { 0xCC,0xF4,0xFC };    // 11 :  51,  61,  63
+const rgb18_t RGB18_ORANGE = { 0xF8,0x7C,0x24 };     // 12 :  62,  31,   9
+const rgb18_t RGB18_LT_MAGENTA = { 0xFC,0x28,0x60 }; // 13 :  63,  10,  24
+const rgb18_t RGB18_YELLOW = { 0xFC,0x4C,0x00 };     // 14 :  63,  19,   0
+const rgb18_t RGB18_BR_WHITE = { 0xFC,0xFC,0xFC };   // 15 :  63,  63,  63
 
 static void _disp_char(uint16_t aline, uint16_t col, char c, paint_control_t paint);
 static void _disp_char_colorbyte(uint16_t aline, uint16_t col, char c, uint8_t color, paint_control_t paint);
@@ -256,6 +257,7 @@ static void _disp_line_paint(uint16_t aline) {
     // Write the pixel screen row to the display
     gfxd_window_set_area(0, screen_line, _scr_ctx->cols * font_width, font_height);
     gfxd_screen_paint(_scr_ctx->render_buf, _scr_ctx->cols * font_width * font_height);
+    _scr_ctx->dirty_text_lines[aline] = false;  // The line isn't dirty
 }
 
 /**
@@ -298,7 +300,12 @@ inline rgb18_t rgb18_from_color16(colorn16_t c16) {
     return (_color16_map[c16 & 0x0f]);
 }
 
-inline scr_position_t disp_cursor_get(void) {
+void disp_cursor_bol() {
+    // Move the cursor to the beginning of the current line.
+    _scr_ctx->cursor_pos.column = 0;
+}
+
+scr_position_t disp_cursor_get(void) {
     return _scr_ctx->cursor_pos;
 }
 
@@ -832,7 +839,7 @@ bool disp_screen_new() {
     scr_context->scroll_start = 0;
     scr_context->cursor_pos = (scr_position_t){ 0, 0 };
     scr_context->show_cursor = false; // Start with the cursor off (typical for dialogs)
-    scr_context->cursor_color = (rgb18_t){0x00,0x64,0x00};    // Custom Green so it doesn't match any of the 16 (0 45 0)
+    scr_context->cursor_color = (rgb18_t){0xF8,0x3C,0xD4}; // Custom Color so it doesn't match any of the CN16
     // Set this as the current context before calling other 'screen' functions.
     _scr_ctx = scr_context;
     disp_scroll_area_define(0, 0);   // This will configure the ILI for scrolling
@@ -852,7 +859,7 @@ void disp_scroll_area_define(uint16_t top_fixed_size, uint16_t bottom_fixed_size
     else if (scroll_lines == 0) {
         // To keep the `print...` functions working, while avoiding a bunch of special
         // case code, we treat this setting the same as full screen scroll.
-        // If we find a use case that truly requires the whole screen to be fixed, 
+        // If we find a use case that truly requires the whole screen to be fixed,
         // we will address this.
         top_fixed_size = 0;
         bottom_fixed_size = 0;
@@ -862,7 +869,7 @@ void disp_scroll_area_define(uint16_t top_fixed_size, uint16_t bottom_fixed_size
     _scr_ctx->fixed_area_bottom_size = bottom_fixed_size;
     _scr_ctx->scroll_size = screen_lines - (top_fixed_size + bottom_fixed_size);
     gfxd_scroll_set_area(top_fixed_size * _scr_ctx->font_info->height, bottom_fixed_size * _scr_ctx->font_info->height);
-    gfxd_scroll_set_start(_scr_ctx->scroll_start);
+    gfxd_scroll_set_start(_scr_ctx->scroll_start * _scr_ctx->font_info->height);
     disp_cursor_home();
 }
 

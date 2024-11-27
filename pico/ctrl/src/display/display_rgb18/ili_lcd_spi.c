@@ -19,6 +19,7 @@
 
 #include "pico/stdlib.h"
 #include "pico/malloc.h"
+#include <malloc.h>
 
 #include <string.h>
 

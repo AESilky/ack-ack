@@ -13,9 +13,10 @@
 extern "C" {
 #endif
 
+#include "cmt/cmt_t.h"
+
 #include "pico/multicore.h"
 #include "pico/util/queue.h"
-#include "cmt.h"
 
 /**
  * @file multicore.h

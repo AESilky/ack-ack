@@ -51,7 +51,7 @@ extern "C" {
 #define SPI_DISP_EXP_MOSI       19              // DP-25
 #define SPI_DISP_EXP_SCK        18              // DP-24
 #define SPI_DISP_CD             17              // DP-22
-#define SPI_DISP_EXP_SPEED      (4500 * 1000)   // 4.5MHz
+#define SPI_DISP_EXP_SPEED      (5500 * 1000)   // 5.5MHz
 
 // SPI 1 is used for the Touch Panel. Touch Panel SCL-RD 2.5MHz(400ns)
 // 2MHz will be used to provide margin.
@@ -133,6 +133,10 @@ extern "C" {
 #define SW_BANK_ADC             ADC_INPUT_2     // Switch bank is read using ADC-2
 #define SW_MAIN_USER_PRESSED     0              // Input (digital) is low when the main switch is pressed
 #define SW_MAIN_USER_RELEASED    1              // Input (digital) is high when the main switch is not pressed
+
+// PWM - Used for a recurring interrupt for scheduled messages, sleep, housekeeping
+//
+#define CMT_PWM_RECINT_SLICE     7              // RP2040 has 8 slices. Use the last one for this.
 
 // IRQ Inputs
 //
