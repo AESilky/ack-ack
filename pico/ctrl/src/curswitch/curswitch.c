@@ -182,7 +182,7 @@ void _read_bank_delayed(void* user_data) {
         // We need to read again...
         if (--_sw_bank_read_failsafe <= 0) {
             // We couldn't get consistant read values. Print a warning and give up.
-            warn_printf(true, "Read switch Bank failed to get consistant values.\n");
+            warn_printf("Read switch Bank failed to get consistant values.\n");
             _sw_bank_readinprogress = false;
             return;
         }

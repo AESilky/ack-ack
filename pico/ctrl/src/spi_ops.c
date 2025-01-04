@@ -26,7 +26,7 @@ static spi_dev_sem_t _dev_passkey;     // Passkey used to control singular acces
 static void _owns_passkey(spi_device_sel_t device) {
     // Check that the device owns the Passkey.
     if (!(device == _dev_passkey.device && get_core_num() == _dev_passkey.corenum && sem_available(&_dev_passkey.sem) == 0)) {
-        error_printf(true, "PANIC: SPI Device Op w/o passkey. %u:%u", device, _dev_passkey.device);
+        error_printf("PANIC: SPI Device Op w/o passkey. %u:%u", device, _dev_passkey.device);
         panic("SPI Device Op w/o passkey. %u:%u", device, _dev_passkey.device);
     }
 }

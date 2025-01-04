@@ -20,7 +20,7 @@
 #include "pico/multicore.h"
 
 void core1_main() {
-    info_printf(true, "CORE-%d - *** Started ***\n", get_core_num());
+    info_printf("CORE-%d - *** Started ***\n", get_core_num());
 
     // Enter into the (endless) Drive Control System Message Dispatching Loop
     message_loop(&dcs_msg_loop_cntx, (start_fn)0);

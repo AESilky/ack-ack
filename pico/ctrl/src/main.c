@@ -162,7 +162,7 @@ int main()
     start_hwos();
 
     // How did we get here?!
-    error_printf(true, "hwctrl - Somehow we are out of our endless message loop in `main()`!!!");
+    error_printf("hwctrl - Somehow we are out of our endless message loop in `main()`!!!");
     disp_clear(true);
     disp_string(1, 0, "!!!!!!!!!!!!!!!!", false, true);
     disp_string(2, 0, "! OS LOOP EXIT !", false, true);

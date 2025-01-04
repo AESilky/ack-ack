@@ -496,19 +496,19 @@ void disp_module_init(void) {
 
     // If in debug mode, print info about the display...
     if (debug_mode_enabled()) {
-        debug_printf(true, "Display ID1:         %02hhx\n", disp_info->lcd_id1_mfg);
-        debug_printf(true, "Display ID2:         %02hhx\n", disp_info->lcd_id2_ver);
-        debug_printf(true, "Display ID3:         %02hhx\n", disp_info->lcd_id3_drv);
-        debug_printf(true, "Display Status 1:    %02hhx\n", disp_info->status1);
-        debug_printf(true, "Display Status 2:    %02hhx\n", disp_info->status2);
-        debug_printf(true, "Display Status 3:    %02hhx\n", disp_info->status3);
-        debug_printf(true, "Display Status 4:    %02hhx\n", disp_info->status4);
-        debug_printf(true, "Display PWR Mode:    %02hhx\n", disp_info->pwr_mode);
-        debug_printf(true, "Display MADCTL:      %02hhx\n", disp_info->madctl);
-        debug_printf(true, "Display Pixel Fmt:   %02hhx\n", disp_info->pixelfmt);
-        debug_printf(true, "Display Image Fmt:   %02hhx\n", disp_info->imagefmt);
-        debug_printf(true, "Display Signal Mode: %02hhx\n", disp_info->signal_mode);
-        debug_printf(true, "Display Selftest:    %02hhx\n", disp_info->selftest);
+        debug_printf("Display ID1:         %02hhx\n", disp_info->lcd_id1_mfg);
+        debug_printf("Display ID2:         %02hhx\n", disp_info->lcd_id2_ver);
+        debug_printf("Display ID3:         %02hhx\n", disp_info->lcd_id3_drv);
+        debug_printf("Display Status 1:    %02hhx\n", disp_info->status1);
+        debug_printf("Display Status 2:    %02hhx\n", disp_info->status2);
+        debug_printf("Display Status 3:    %02hhx\n", disp_info->status3);
+        debug_printf("Display Status 4:    %02hhx\n", disp_info->status4);
+        debug_printf("Display PWR Mode:    %02hhx\n", disp_info->pwr_mode);
+        debug_printf("Display MADCTL:      %02hhx\n", disp_info->madctl);
+        debug_printf("Display Pixel Fmt:   %02hhx\n", disp_info->pixelfmt);
+        debug_printf("Display Image Fmt:   %02hhx\n", disp_info->imagefmt);
+        debug_printf("Display Signal Mode: %02hhx\n", disp_info->signal_mode);
+        debug_printf("Display Selftest:    %02hhx\n", disp_info->selftest);
     }
 
     if (_scr_ctx != NULL) {
@@ -816,14 +816,14 @@ bool disp_screen_new() {
     }
     // For now, we only have one font - get its info
     const font_info_t* fi = &font_10_16;
-    info_printf(true, "Display font: %s.\n", fi->name);
+    info_printf("Display font: %s.\n", fi->name);
     scr_context->font_info = fi;
     scr_context->color_bg_default = C16_BLACK;
     scr_context->color_fg_default = C16_WHITE;
     // Figure out how many lines and columns we have
     int16_t cols = gfxd_screen_width() / fi->width;
     int16_t lines = gfxd_screen_height() / fi->height;
-    info_printf(true, "Display size: %hdx%hd (cols x lines)\n", cols, lines);
+    info_printf("Display size: %hdx%hd (cols x lines)\n", cols, lines);
     size_t chars = lines * cols;
     scr_context->cols = cols;
     scr_context->lines = lines;

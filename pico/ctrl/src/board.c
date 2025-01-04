@@ -26,7 +26,6 @@
 #include "hardware/clocks.h"
 #include "hardware/i2c.h"
 #include "hardware/pio.h"
-#include "hardware/rtc.h"
 #include "hardware/spi.h"
 #include "hardware/timer.h"
 #include "hardware/uart.h"
@@ -174,6 +173,7 @@ int board_init() {
     // Initialize the display
     disp_module_init();
 
+#if PICO_RP2040
     // Initialize the board RTC.
     // Start on Sunday the 1st of January 2023 00:00:01
     datetime_t t = {
@@ -192,6 +192,7 @@ int board_init() {
     // clk_sys is >2000x faster than clk_rtc, so datetime is not updated immediately when rtc_set_datetime() is called.
     // tbe delay is up to 3 RTC clock cycles (which is 64us with the default clock settings)
     sleep_us(100);
+#endif
 
     disp_line_clear(4, false);
 
@@ -292,19 +293,10 @@ bool user_switch_pressed() {
 }
 
 
-int _format_printf_datetime(char* buf, size_t len) {
-    datetime_t t;
-    rtc_get_datetime(&t);
-    return (snprintf(buf, len, "%02d-%02d-%04d %02d:%02d:%02d ", t.month, t.day, t.year, t.hour, t.min, t.sec));
-}
-
-void debug_printf(bool incl_dts, const char* format, ...) {
+void debug_printf(const char* format, ...) {
     if (debug_mode_enabled()) {
         char buf[512];
         int index = 0;
-        if (incl_dts) {
-            index = _format_printf_datetime(buf, sizeof(buf));
-        }
         index += snprintf(&buf[index], sizeof(buf) - index, "D: ");
         va_list xArgs;
         va_start(xArgs, format);
@@ -321,12 +313,9 @@ void debug_printf(bool incl_dts, const char* format, ...) {
     }
 }
 
-void error_printf(bool inc_dts, const char* format, ...) {
+void error_printf(const char* format, ...) {
     char buf[512];
     int index = 0;
-    if (inc_dts) {
-        index = _format_printf_datetime(buf, sizeof(buf));
-    }
     index += snprintf(&buf[index], sizeof(buf) - index, "\033[91mE: ");
     va_list xArgs;
     va_start(xArgs, format);
@@ -342,12 +331,9 @@ void error_printf(bool inc_dts, const char* format, ...) {
     }
 }
 
-void info_printf(bool incl_dts, const char* format, ...) {
+void info_printf(const char* format, ...) {
     char buf[512];
     int index = 0;
-    if (incl_dts) {
-        index = _format_printf_datetime(buf, sizeof(buf));
-    }
     index += snprintf(&buf[index], sizeof(buf) - index, "I: ");
     va_list xArgs;
     va_start(xArgs, format);
@@ -363,12 +349,9 @@ void info_printf(bool incl_dts, const char* format, ...) {
     }
 }
 
-void warn_printf(bool inc_dts, const char* format, ...) {
+void warn_printf(const char* format, ...) {
     char buf[512];
     int index = 0;
-    if (inc_dts) {
-        index = _format_printf_datetime(buf, sizeof(buf));
-    }
     index += snprintf(&buf[index], sizeof(buf) - index, "W: ");
     va_list xArgs;
     va_start(xArgs, format);

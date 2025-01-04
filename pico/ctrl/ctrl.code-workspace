@@ -20,7 +20,10 @@
 			"printf.h": "c",
 			"nvic.h": "c",
 			"pwm.h": "c",
-			"clocks.h": "c"
+			"clocks.h": "c",
+			"stdlib.h": "c",
+			"float.h": "c",
+			"sf_table.h": "c"
 		},
 		"cSpell.words": [
 			"BSPKT",

@@ -17,6 +17,7 @@
 
 static const uint8_t DAYS_IN_MONTH[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
 
+#if PICO_RP2040
 static const char* DATETIME_MONTHS[12] = {
         "January",
         "February",
@@ -76,7 +77,7 @@ typedef enum _STRDATETIME_BIT_ {
 // SDTC_LONG_TXT_AT = 0x00C9, // date 'at' time (implies long text date and time)
 // SDTC_LONG_TXT_ON = 0x40A9, // time 'on' date (implies long text date, time befor date)
 // SDTC_YEAR_2DIGITS = 0x1008, // 2 digit year (implies date)
-
+#endif
 
 bool binary_from_int(int b) {
     return (0 == b ? 0 : 1);
@@ -210,6 +211,7 @@ int strcpynt(char* dest, const char* src, size_t maxchars) {
     return (n);
 }
 
+#if PICO_RP2040
 void strdatetime(char* buf, uint bufsize, datetime_t* dt, strdatetime_ctrl_t ctrl) {
     char time_str[12];
     int time_len = 0;
@@ -274,6 +276,7 @@ void strdatetime(char* buf, uint bufsize, datetime_t* dt, strdatetime_ctrl_t ctr
         snprintf(buf, bufsize, "%s", dort);
     }
 }
+#endif
 
 extern char* strnltonull(char* str){
     char* retstr = str;

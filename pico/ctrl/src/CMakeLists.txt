@@ -7,13 +7,14 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Initialize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
-set(PICO_BOARD "pico")
+set(PICO_PLATFORM "rp2350-arm-s")
+set(PICO_BOARD "pico2")
 set(PICO_USE_MALLOC_MUTEX 1)
 set(PICO_QUEUE_MAX_LEVEL 1)
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
-if (PICO_SDK_VERSION_STRING VERSION_LESS "1.5.1")
-  message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.5.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
+if (PICO_SDK_VERSION_STRING VERSION_LESS "2.1.0")
+  message(FATAL_ERROR "Raspberry Pi Pico SDK version 2.1.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 # Use fully-deoptimized debug build for true single-step and data viewing. Set to '0' for some optimizations
 set(PICO_DEOPTIMIZED_DEBUG 1)
@@ -64,17 +65,14 @@ pico_enable_stdio_usb(hwctrl 1)
 # Add the required include file paths to the build
 include_directories(
   ${CMAKE_CURRENT_LIST_DIR}
-  ${PICO_SDK_PATH}/src/common/pico_stdlib/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_adc/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_dma/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_spi/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_i2c/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_pio/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_pwm/include
-  ${PICO_SDK_PATH}/src/rp2_common/hardware_rtc/include
   ${PICO_SDK_PATH}/src/rp2_common/pico_cyw43_arch/include
   ${PICO_SDK_PATH}/src/rp2_common/pico_multicore/include
-  ${PICO_SDK_PATH}/src/rp2040/hardware_structs/include
 )
 
 # ZZZ Figure out how to set `PICO_DEBUG_MALLOC` only if 'debug build'
@@ -113,7 +111,6 @@ target_link_libraries(hwctrl
   hardware_exception
   hardware_i2c
   hardware_pio
-  hardware_rtc
   hardware_spi
   hardware_timer
   pico_float
@@ -126,6 +123,6 @@ target_link_libraries(hwctrl
 )
 endif()
 
-pico_set_linker_script(hwctrl ${CMAKE_SOURCE_DIR}/memmap_custom.ld)
+# pico_set_linker_script(hwctrl ${CMAKE_SOURCE_DIR}/memmap_custom.ld)
 
 pico_add_extra_outputs(hwctrl)

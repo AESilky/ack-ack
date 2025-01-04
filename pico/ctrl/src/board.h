@@ -117,13 +117,13 @@ extern float onboard_temp_f();
 extern bool user_switch_pressed();
 
 /** @brief Printf like function that includes the datetime and type prefix */
-extern void debug_printf(bool inc_dts, const char* format, ...) __attribute__((format(_printf_, 1, 2)));
+extern void debug_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 /** @brief Printf like function that includes the datetime and type prefix */
-extern void error_printf(bool inc_dts, const char* format, ...) __attribute__((format(_printf_, 1, 2)));
+extern void error_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 /** @brief Printf like function that includes the datetime and type prefix */
-extern void info_printf(bool inc_dts, const char* format, ...) __attribute__((format(_printf_, 1, 2)));
+extern void info_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 /** @brief Printf like function that includes the datetime and type prefix */
-extern void warn_printf(bool inc_dts, const char* format, ...) __attribute__((format(_printf_, 1, 2)));
+extern void warn_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 
 #ifdef __cplusplus
 }

@@ -6,5 +6,6 @@ target_sources(cmt INTERFACE
 )
 
 target_link_libraries(cmt INTERFACE
+  pico_float
   pico_stdlib
 )
