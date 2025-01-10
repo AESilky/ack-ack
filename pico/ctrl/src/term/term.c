@@ -282,12 +282,6 @@ void term_register_notify_on_input(msg_handler_fn notify_fn) {
 //
 
 void term_start() {
-    // Setup the screen with a fixed area with enough room for a keyboard.
-    disp_scroll_area_define(0, 0);
-    disp_text_colors_set(C16_BR_WHITE, C16_BLACK);
-    disp_clear(Paint);
-    disp_cursor_home();
-    disp_scroll_area_define(0,5);
     // Set the display to make wrap nicer (for now)
     disp_print_wrap_len_set(0);
     uint16_t kb_line_top = disp_info_lines() - KB_LINES;

@@ -32,7 +32,7 @@ scr_context_t* _peek_scr_context() {
 
 scr_context_t* _pop_scr_context() {
     if (_scr_contexts_peek < 0) {
-        error_printf(false, "Display - No screen context to pop.");
+        error_printf("Display - No screen context to pop.");
         return NULL;
     }
     return (_scr_contexts[_scr_contexts_peek--]);
@@ -43,7 +43,7 @@ bool _push_scr_context(scr_context_t* sc) {
         _scr_contexts[++_scr_contexts_peek] = sc;
         return (true);
     }
-    error_printf(false, "Display - Screen context stack is full.");
+    error_printf("Display - Screen context stack is full.");
     return (false);
 }
 

@@ -85,21 +85,21 @@ void get_core0_msg_blocking(cmt_msg_t* msg) {
     uint32_t flags = save_and_disable_interrupts();
     retrieved = queue_try_remove(&_core0_l9_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return;
     }
     retrieved = queue_try_remove(&_core0_np_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return;
     }
     retrieved = queue_try_remove(&_core0_lp_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return;
     }
     // No messages existed. Restore interrupts and block on the L9 queue.
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     queue_remove_blocking(&_core0_l9_queue,msg);
 }
 
@@ -110,16 +110,16 @@ bool get_core0_msg_nowait(cmt_msg_t* msg) {
     uint32_t flags = save_and_disable_interrupts();
     retrieved = queue_try_remove(&_core0_l9_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return (retrieved);
     }
     retrieved = queue_try_remove(&_core0_np_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return (retrieved);
     }
     retrieved = queue_try_remove(&_core0_lp_queue, msg);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     return (retrieved);
 }
 
@@ -130,21 +130,21 @@ void get_core1_msg_blocking(cmt_msg_t* msg) {
     uint32_t flags = save_and_disable_interrupts();
     retrieved = queue_try_remove(&_core1_l9_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return;
     }
     retrieved = queue_try_remove(&_core1_np_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return;
     }
     retrieved = queue_try_remove(&_core1_lp_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return;
     }
     // No messages existed. Restore interrupts and block on the L9 queue.
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     queue_remove_blocking(&_core1_l9_queue, msg);
 }
 
@@ -155,16 +155,16 @@ bool get_core1_msg_nowait(cmt_msg_t* msg) {
     uint32_t flags = save_and_disable_interrupts();
     retrieved = queue_try_remove(&_core1_l9_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return (retrieved);
     }
     retrieved = queue_try_remove(&_core1_np_queue, msg);
     if (retrieved) {
-        restore_interrupts(flags);
+        restore_interrupts_from_disabled(flags);
         return (retrieved);
     }
     retrieved = queue_try_remove(&_core1_lp_queue, msg);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     return (retrieved);
 }
 
@@ -189,11 +189,11 @@ void post_to_core0(const cmt_msg_t* msg) {
     cmt_msg_t m; // queue_add copies the contents, so on the stack is okay.
     _copy_and_set_num_ts(&m, msg);
     register bool posted = queue_try_add(q2use, &m);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     if (!posted) {
         _c0_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
-            panic("Req C0 msg could not post");
+            board_panic("Req C0 msg could not post");
         }
     }
 }
@@ -204,7 +204,7 @@ bool post_to_core0_nowait(const cmt_msg_t* msg) {
     register bool posted = false;
     uint32_t flags = save_and_disable_interrupts();
     posted = queue_try_add(&_core0_np_queue, &m);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
 
     return (posted);
 }
@@ -230,11 +230,11 @@ void post_to_core1(const cmt_msg_t* msg) {
     cmt_msg_t m; // queue_add copies the contents, so on the stack is okay.
     _copy_and_set_num_ts(&m, msg);
     register bool posted = queue_try_add(q2use, &m);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     if (!posted) {
         _c1_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
-            panic("Req C1 msg could not post");
+            board_panic("Req C1 msg could not post");
         }
     }
 }
@@ -245,7 +245,7 @@ bool post_to_core1_nowait(const cmt_msg_t* msg) {
     register bool posted = false;
     uint32_t flags = save_and_disable_interrupts();
     posted = queue_try_add(&_core1_lp_queue, &m);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
 
     return (posted);
 }
@@ -274,7 +274,7 @@ void start_core1() {
 void multicore_module_init(bool no_qadd_panic) {
     static bool _initialized = false;
     if (_initialized) {
-        panic("Multicore already initialized");
+        board_panic("Multicore already initialized");
     }
     _initialized = true;
     _msg_num = 0;

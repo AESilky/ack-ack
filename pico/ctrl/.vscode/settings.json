@@ -1,7 +1,29 @@
 {
     "cmake.sourceDirectory": "/home/esilky/proj/ack-ack/pico/ctrl/src",
     "cSpell.words": [
+        "AGPI",
+        "AGPO",
+        "clkdiv",
+        "colorn",
+        "curswitch",
+        "expio",
+        "GPINTEN",
         "hwctrl",
-        "multicore"
+        "hwos",
+        "IPOL",
+        "iser",
+        "ledb",
+        "longpress",
+        "multicore",
+        "nvic",
+        "OLAT",
+        "picotool",
+        "printc",
+        "sampleindx",
+        "samplerd",
+        "sensbank",
+        "sensdata",
+        "stdlib",
+        "UNCHG"
     ]
 }

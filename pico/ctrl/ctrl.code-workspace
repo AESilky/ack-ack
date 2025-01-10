@@ -23,9 +23,13 @@
 			"clocks.h": "c",
 			"stdlib.h": "c",
 			"float.h": "c",
-			"sf_table.h": "c"
+			"sf_table.h": "c",
+			"util.h": "c",
+			"hid.h": "c",
+			"display.h": "c"
 		},
 		"cSpell.words": [
+			"AGPI",
 			"BSPKT",
 			"BSSP",
 			"cntx",
@@ -44,6 +48,7 @@
 			"srvo",
 			"txval",
 			"UART"
-		]
+		],
+		"cortex-debug.variableUseNaturalFormat": false
 	}
 }

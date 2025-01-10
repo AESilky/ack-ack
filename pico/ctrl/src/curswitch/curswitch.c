@@ -212,7 +212,7 @@ void _read_bank_delayed(void* user_data) {
         // Figure out what changed and post messages for the actions.
         cmt_msg_t msg;
         cmt_msg_init(&msg, MSG_SWITCH_ACTION);
-        // debug_printf(false, "csw: => %d\n", sw);
+        // debug_printf("csw: => %d\n", sw);
         for (int i=0; i<SW_COUNT; i++) {
             if (changes[i]) {
                 sw_state_t ss = sw_bank_state[i];
@@ -225,7 +225,7 @@ void _read_bank_delayed(void* user_data) {
                     releases[i].switch_id = i+1;
                 }
                 // char* state = (ss.pressed ? "Pressed" : "Released");
-                // debug_printf(false, "csw: Sw:%d %s\n", i+1, state);
+                // debug_printf("csw: Sw:%d %s\n", i+1, state);
             }
         }
         // Post the messages - Releases first.

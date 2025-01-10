@@ -13,6 +13,7 @@
  *
  */
 #include "expio.h"
+#include "board.h"
 #include "system_defs.h"
 #include "spi_ops.h"
 
@@ -43,40 +44,136 @@
 
 // Expansion I/O Board Pins
 
-#define EIO_LED_A                       4  // Aux General Purpose 4 - Connected to a header and LED-A (OUT)
-#define EIO_LED_B                       5  // Aux General Purpose 5 - Connected to a header and LED-B (OUT)
-#define EIO_BOARD_ADDR                  7  // Board Address (IN)
-#define EIO_DISPLAY_BL_EN               6  // Display Backlight Enable (OUT)
-#define EIO_SERVO_POWER_A_EN            0  // Servo Power Bus-A Enable (OUT)
-#define EIO_SERVO_POWER_B_EN            1  // Servo Power Bus-B Enable (OUT)
-#define EIO_SERVO_POWER_SENSE_EN        2  // Servo Power Current Sense Enable (OUT)
-#define EIO_SERVO_POWER_SENSE_AB_SEL    3  // Servo Power Current Sense Select (0=A, 1=B)
+#define EIO_AGPI_0                      0       // AGPI_0 (IN)
+#define EIO_AGPI_0_MASK                 0x01    // Mask for correct bit
+#define EIO_AGPI_0_SHIFT                0       // Shift to move bit to/from 0
+#define EIO_AGPI_1                      1       // AGPI_1 (IN)
+#define EIO_AGPI_1_MASK                 0x02    // Mask for correct bit
+#define EIO_AGPI_1_SHIFT                1       // Shift to move bit to/from 0
+#define EIO_AGPO_2                      2       // AGPO_2 (OUT)
+#define EIO_AGPO_2_MASK                 0x04    // Mask for correct bit
+#define EIO_AGPO_2_SHIFT                2       // Shift to move bit to/from 0
+#define EIO_AGPO_3                      3       // AGPO_3 (OUT)
+#define EIO_AGPO_3_MASK                 0x08    // Mask for correct bit
+#define EIO_AGPO_3_SHIFT                3       // Shift to move bit to/from 0
+#define EIO_LED_A                       4       // Aux General Purpose 4 - Connected to a header and LED-A (OUT)
+#define EIO_LED_A_MASK                  0x10    // Mask for correct bit
+#define EIO_LED_A_SHIFT                 4       // Shift to move bit to/from 0
+#define EIO_LED_B                       5       // Aux General Purpose 5 - Connected to a header and LED-B (OUT)
+#define EIO_LED_B_MASK                  0x20    // Mask for correct bit
+#define EIO_LED_B_SHIFT                 5       // Shift to move bit to/from 0
+#define EIO_DISPLAY_BL_EN               6       // Display Backlight Enable (OUT)
+#define EIO_DISPLAY_BL_EN_MASK          0x40    // Mask for correct bit
+#define EIO_DISPLAY_BL_EN_SHIFT         6       // Shift to move bit to/from 0
+#define EIO_BOARD_ADDR                  7       // Board Address (IN)
+#define EIO_BOARD_ADDR_MASK             0x80    // Mask for correct bit
+#define EIO_BOARD_ADDR_SHIFT            7       // Shift to move bit to/from 0
 //
-#define EIO_GPIO_DIRECTIONS             0x80  // 1000 0000
+#define EIO_GPIO_DIRECTIONS             0x80  // 1000 0011
 
+/** Flag to know if the module has been initialized */
+static bool _initialized = false;
+
+/** @brief Last written Output Latch value (OLAT). Needed to OR-in new values. */
+static uint8_t _olat;
+
+/**
+ * Set the chip select for the Expansion I/O.
+ *
+ */
+static void _cs(bool sel) {
+    if (sel) {
+        spi_expio_select();
+    }
+    else {
+        spi_none_select();
+    }
+}
+
+static void _op_begin() {
+    if (!_initialized) {
+        board_panic("expio_module_init not called.");
+    }
+    spi_expio_begin();
+    _cs(true);
+}
+
+static void _op_end() {
+    _cs(false);
+    spi_expio_end();
+}
+
+
+/*
+ * Runs _op_begin/_op_end
+ */
+static uint8_t _eio_read(uint8_t reg) {
+    uint8_t v;
+    uint8_t buf[] = { EIO_CONTROL_BYTE | EIO_CONTROL_RD_EN, reg };
+    _op_begin();
+    {
+        spi_expio_write8_buf(buf, 2);
+        v = spi_expio_read8(0xff);
+    }
+    _op_end();
+    return v;
+}
+
+/*
+ * Runs _op_begin/_op_end
+ */
 static void _eio_write(uint8_t reg, uint8_t val) {
-    // ZZZ - TODO
+    uint8_t buf[] = { EIO_CONTROL_BYTE | EIO_CONTROL_WR_EN, reg, val };
+    _op_begin();
+    {
+        spi_expio_write8_buf(buf, 3);
+    }
+    _op_end();
+}
+
+uint8_t eio_board_addr(void) {
+    uint8_t r = 0;
+    r = _eio_read(EIO_REG_GPIO);
+    r = ((r & EIO_BOARD_ADDR_MASK) > EIO_BOARD_ADDR_SHIFT);
+    return r;
 }
 
 void eio_display_backlight_on(bool on) {
-    // ZZZ - TODO
+    // Gen OLAT value
+    uint8_t b = EIO_DISPLAY_BL_EN_MASK;
+    _olat = (on ? (_olat | b) : (_olat & ~b));
+    _eio_write(EIO_REG_OLAT, _olat);
+}
+
+void eio_leda_on(bool on) {
+    // Gen OLAT value
+    uint8_t b = EIO_LED_A_MASK;
+    _olat = (on ? (_olat | b) : (_olat & ~b));
+    _eio_write(EIO_REG_OLAT, _olat);
+}
+
+void eio_ledb_on(bool on) {
+    // Gen OLAT value
+    uint8_t b = EIO_LED_B_MASK;
+    _olat = (on ? (_olat | b) : (_olat & ~b));
+    _eio_write(EIO_REG_OLAT, _olat);
 }
 
 void expio_module_init(void) {
-    static bool _initialized = false;
-
     if (_initialized) {
-        panic("expio_module_init called multiple times.");
+        board_panic("expio_module_init called multiple times.");
     }
     _initialized = true;
 
     // Values are written to all of the chip's registers, even though many
     // contain the desired values after the chip's Power-On-Reset.
-    _eio_write(EIO_REG_IOCON, EIO_IOCON_SEQOP_DIS_BIT);  // Disable sequential write/read operation
-    _eio_write(EIO_REG_IODIR, EIO_GPIO_DIRECTIONS);
+    _eio_write(EIO_REG_IOCON, EIO_IOCON_SEQOP_DIS_BIT); // Disable sequential write/read operation
+    _eio_write(EIO_REG_IODIR, EIO_GPIO_DIRECTIONS);     // Set the Input/Output pin directions
     _eio_write(EIO_REG_IPOL, 0);        // All non-inverting
     _eio_write(EIO_REG_GPINTEN, 0);     // No interrupts from pins
     _eio_write(EIO_REG_DEFVAL, 0);      // 0 defaults for interrupts
     _eio_write(EIO_REG_INTCON, 0xFF);   // Interrupt compare to default
+    _eio_write(EIO_REG_OLAT, 0);        // Output Latch - All 0's
+    _olat = 0;
 }
 

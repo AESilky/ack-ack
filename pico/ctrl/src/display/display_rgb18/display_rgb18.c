@@ -512,7 +512,7 @@ void disp_module_init(void) {
     }
 
     if (_scr_ctx != NULL) {
-        warn_printf(false, "`disp_module_init` called multiple times!\n");
+        warn_printf("`disp_module_init` called multiple times!\n");
         return;
     }
 
@@ -784,7 +784,7 @@ void disp_update(paint_control_t paint) {
 
 void disp_screen_close() {
     if (!_has_scr_context()) {
-        warn_printf(false, "Display - Trying to close main screen context. Ignoring `disp_screen_close()` call.");
+        warn_printf("Display - Trying to close main screen context. Ignoring `disp_screen_close()` call.");
         return;
     }
     // Free the buffers from the current context...
@@ -811,7 +811,7 @@ bool disp_screen_new() {
     }
     scr_context_t* scr_context = malloc(sizeof(scr_context_t));
     if (scr_context == NULL) {
-        error_printf(false, "Display - Could not allocate a screen context.");
+        error_printf("Display - Could not allocate a screen context.");
         return false;
     }
     // For now, we only have one font - get its info
@@ -853,7 +853,7 @@ void disp_scroll_area_define(uint16_t top_fixed_size, uint16_t bottom_fixed_size
     uint16_t fixed_lines = top_fixed_size + bottom_fixed_size;
     int16_t scroll_lines = screen_lines - fixed_lines;
     if (scroll_lines < 0) {
-        error_printf(false, "Display - Attempting to set fixed regions of screen larger than total screen lines.");
+        error_printf("Display - Attempting to set fixed regions of screen larger than total screen lines.");
         return;
     }
     else if (scroll_lines == 0) {

@@ -47,6 +47,22 @@ extern uint8_t eio_board_addr(void);
 extern void eio_display_backlight_on(bool on);
 
 /**
+ * @brief Turn the LED-A On/Off.
+ * @ingroup expio
+ *
+ * @param on true to turn the LED on, false for off.
+ */
+extern void eio_leda_on(bool on);
+
+/**
+ * @brief Turn the LED-B On/Off.
+ * @ingroup expio
+ *
+ * @param on true to turn the LED on, false for off.
+ */
+extern void eio_ledb_on(bool on);
+
+/**
  * @brief Initialize the Expansion I/O
  * @ingroup display
  *

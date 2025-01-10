@@ -10,10 +10,13 @@
  */
 
 #include "rover.h"
+
+#include "board.h"
+#include "rover_info.h"
+
 #include "servo/servo.h"
 #include "servo/servos.h"
 
-#include "rover_info.h"
 
 #include "pico/stdlib.h"
 
@@ -71,6 +74,7 @@ void rover_housekeeping(void) {
 }
 
 void rover_start(void) {
+    sensbank_start();
     servos_start();
 }
 
@@ -80,9 +84,10 @@ void rover_module_init(void) {
     static bool _initialized = false;
 
     if (_initialized) {
-        panic("rover_module_init already called");
+        board_panic("rover_module_init already called");
     }
     _initialized = true;
 
+    sensbank_module_init();
     servos_module_init();
 }

@@ -34,6 +34,40 @@
       "runToEntryPoint": "main"
     },
     {
+      "name": "Pico2 Debug (Cortex-Debug)",
+      "cwd": "${workspaceFolder}",
+      "executable": "${command:cmake.launchTargetPath}",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "openocd",
+      "gdbPath": "${env:ARM_GDB_PATH}",
+      "device": "RP2350",
+      "configFiles": [
+        "interface/cmsis-dap.cfg",
+        "target/rp2350.cfg"
+      ],
+      "svdFile": "${env:PICO_SDK_PATH}/src/rp2350/hardware_regs/rp2350.svd",
+      "runToEntryPoint": "main",
+      "showDevDebugOutput": "raw",
+      "openOCDLaunchCommands": [
+        "adapter speed 3000"
+      ]
+    },
+    {
+      "name": "Pico2 Debug (Cortex-Debug with external OpenOCD)",
+      "cwd": "${workspaceFolder}",
+      "executable": "${command:cmake.launchTargetPath}",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "external",
+      "gdbTarget": "localhost:3333",
+      "gdbPath": "${env:ARM_GDB_PATH}",
+      "device": "RP2350",
+      "svdFile": "${env:PICO_SDK_PATH}/src/rp2350/hardware_regs/rp2350.svd",
+      "runToEntryPoint": "main",
+      "showDevDebugOutput": "raw"
+    },
+    {
       "name": "Pico Debug (C++ Debugger)",
       "type": "cppdbg",
       "request": "launch",

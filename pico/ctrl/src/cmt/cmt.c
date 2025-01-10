@@ -187,7 +187,7 @@ int cmt_sched_msg_waiting() {
         }
     }
     mutex_exit(&sm_mutex);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
 
     return (count);
 }
@@ -212,7 +212,7 @@ bool cmt_sched_msg_waiting_ids(int max, uint16_t *buf) {
         }
     }
     mutex_exit(&sm_mutex);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
 
     return (msgs_waiting);
 }
@@ -240,9 +240,9 @@ void cmt_sleep_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data) {
         }
     }
     mutex_exit(&sm_mutex);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     if (!scheduled) {
-        panic("CMT - No SMD available for use for sleep.");
+        board_panic("CMT - No SMD available for use for sleep.");
     }
 }
 
@@ -264,9 +264,9 @@ void _schedule_core_msg_in_ms(uint8_t core_num, int32_t ms, const cmt_msg_t* msg
         }
     }
     mutex_exit(&sm_mutex);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     if (!scheduled) {
-        panic("CMT - No SM Data slot available for use.");
+        board_panic("CMT - No SM Data slot available for use.");
     }
 }
 
@@ -294,7 +294,7 @@ void scheduled_msg_cancel(msg_id_t sched_msg_id) {
         }
     }
     mutex_exit(&sm_mutex);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
 }
 
 extern bool scheduled_message_exists(msg_id_t sched_msg_id) {
@@ -310,7 +310,7 @@ extern bool scheduled_message_exists(msg_id_t sched_msg_id) {
         }
     }
     mutex_exit(&sm_mutex);
-    restore_interrupts(flags);
+    restore_interrupts_from_disabled(flags);
     return (exists);
 }
 
@@ -360,7 +360,7 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
             psa_sec->t_idle = psa->t_idle;
             cs += psa_sec->t_idle;
             psa->t_idle = 0;
-            psa_sec->interrupt_status = nvic_hw->iser;
+            psa_sec->interrupt_status = *nvic_hw->iser; // On Pico2 this is an array[2]
             cs += psa_sec->interrupt_status;
             psa_sec->core_temp = onboard_temp_c();
             psa_sec->ts_psa = t_start;

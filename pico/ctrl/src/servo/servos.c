@@ -35,6 +35,7 @@
 #include "servos.h"
 #include "servo.h"
 
+#include "board.h"
 #include "rover_info.h"
 #include "cmt/cmt.h"
 
@@ -321,7 +322,7 @@ void servos_module_init(void) {
     static bool _initialized = false;
 
     if (_initialized) {
-        panic("servos_module_init already called");
+        board_panic("servos_module_init already called");
     }
     _initialized = true;
 

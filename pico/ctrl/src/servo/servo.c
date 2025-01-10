@@ -607,7 +607,7 @@ void servo_module_init() {
     static bool _initialized = false;
 
     if (_initialized) {
-        panic("servo_module_init already called");
+        board_panic("servo_module_init already called");
     }
     _initialized = true;
     _tx_disable();

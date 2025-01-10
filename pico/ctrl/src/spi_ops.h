@@ -39,8 +39,15 @@ typedef enum _SPI_DEVICE_SEL_ {
 #define SPI_LOW_TXD_FOR_READ 0x00
 
 /**
+ * @brief Take control of the SPI bus for use by the display.
+ * @ingroup spi_ops
+ *
  * Make sure we have control of the SPI for one or more operations.
  * `spi_end` must be called when the SPI is done being used.
+ *
+ * No other SPI devices can be used between `begin` and `end`
+ *
+ * @see spi_display_end()
  */
 extern void spi_display_begin(void);
 
@@ -78,13 +85,30 @@ extern int spi_display_write16(uint16_t data);
 extern int spi_display_write16_buf(const uint16_t* buf, size_t len);
 
 
-extern void spi_expansion_begin(void);
+/**
+ * @brief Take control of the SPI bus for use by the Expansion I/O.
+ * @ingroup spi_ops
+ *
+ * Make sure we have control of the SPI for one or more operations.
+ * `spi_end` must be called when the SPI is done being used.
+ *
+ * No other SPI devices can be used between `begin` and `end`
+ *
+ * @see spi_expansion_end()
+ */
+extern void spi_expio_begin(void);
 
-extern void spi_expansion_end(void);
+/**
+ * @brief Signal the end of one or more SPI operations on the Expansion I/O.
+ * @ingroup spi_ops
+ *
+ * `spi_expansion_begin` must have been called at the beginning of the operations.
+ */
+extern void spi_expio_end(void);
 
-extern int spi_expansion_read_buf(uint8_t txval, uint8_t* dst, size_t len);
+extern int spi_expio_read_buf(uint8_t txval, uint8_t* dst, size_t len);
 
-extern uint8_t spi_expansion_read8(uint8_t txval);
+extern uint8_t spi_expio_read8(uint8_t txval);
 
 /**
  * @brief Select the SPI Expansion I/O device for activity
@@ -99,9 +123,9 @@ extern uint8_t spi_expansion_read8(uint8_t txval);
  */
 extern void spi_expio_select();
 
-extern int spi_expansion_write8(uint8_t data);
+extern int spi_expio_write8(uint8_t data);
 
-extern int spi_expansion_write8_buf(const uint8_t* buf, size_t len);
+extern int spi_expio_write8_buf(const uint8_t* buf, size_t len);
 
 
 /**
@@ -114,8 +138,25 @@ extern int spi_expansion_write8_buf(const uint8_t* buf, size_t len);
 extern void spi_none_select();
 
 
+/**
+ * @brief Take control of the SPI bus for use by the Touch Panel.
+ * @ingroup spi_ops
+ *
+ * Make sure we have control of the SPI for one or more operations.
+ * `spi_end` must be called when the SPI is done being used.
+ *
+ * No other SPI devices can be used between `begin` and `end`
+ *
+ * @see spi_touch_end()
+ */
 extern void spi_touch_begin(void);
 
+/**
+ * @brief Signal the end of one or more SPI operations on the Touch Panel.
+ * @ingroup spi_ops
+ *
+ * `spi_touch_begin` must have been called at the beginning of the operations.
+ */
 extern void spi_touch_end(void);
 
 extern int spi_touch_read_buf(uint8_t txval, uint8_t* dst, size_t len);

@@ -16,8 +16,8 @@
  * 5. Read the state of the input switch
  *
 */
-#ifndef _ScoreBOARD_H_
-#define _ScoreBOARD_H_
+#ifndef HWCBoard_H_
+#define HWCBoard_H_
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -51,7 +51,7 @@ extern uint8_t board_addr(void);
 extern void display_backlight_on(bool on);
 
 /**
- * @brief Flash the LED on/off
+ * @brief Flash the Pico LED on/off
  * @ingroup board
  *
  * @param ms Milliseconds to turn the LED on.
@@ -59,7 +59,7 @@ extern void display_backlight_on(bool on);
 extern void led_flash(int ms);
 
 /**
- * @brief Turn the LED on/off
+ * @brief Turn the Pico LED on/off
  * @ingroup board
  *
  * @param on True to turn LED on, False to turn it off.
@@ -67,7 +67,7 @@ extern void led_flash(int ms);
 extern void led_on(bool on);
 
 /**
- * @brief Turn the LED on off on off...
+ * @brief Turn the Pico LED on off on off...
  * @ingroup board
  *
  * This flashes the LED for times specified by the `pattern` in milliseconds.
@@ -76,6 +76,22 @@ extern void led_on(bool on);
  *      The last element of the array must be 0.
 */
 extern void led_on_off(const int32_t* pattern);
+
+/**
+ * @brief Turn the Board LED-A (green) on/off
+ * @ingroup board
+ *
+ * @param on True to turn LED on, False to turn it off.
+*/
+extern void ledA_on(bool on);
+
+/**
+ * @brief Turn the Board LED-B (yellow) on/off
+ * @ingroup board
+ *
+ * @param on True to turn LED on, False to turn it off.
+*/
+extern void ledB_on(bool on);
 
 /**
  * @brief Get a millisecond value of the time since the board was booted.
@@ -125,7 +141,19 @@ extern void info_printf(const char* format, ...) __attribute__((format(_printf_,
 /** @brief Printf like function that includes the datetime and type prefix */
 extern void warn_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 
+/**
+ * @brief Board level (common) panic location.
+ * @ingroup board
+ *
+ * This should be used in preference to directly using the Pico `panic` to make
+ * it better for debugging and common fatal error handling.
+ *
+ * @param fmt format string (printf-like)
+ * @param ...  printf-like arguments
+ */
+extern void board_panic(const char* fmt, ...);
+
 #ifdef __cplusplus
 }
 #endif
-#endif // _ScoreBOARD_H_
+#endif // HWCBoard_H_

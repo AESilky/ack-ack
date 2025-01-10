@@ -17,7 +17,7 @@
 
 static const uint8_t DAYS_IN_MONTH[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
 
-#if PICO_RP2040
+#if HAS_RP2040_RTC
 static const char* DATETIME_MONTHS[12] = {
         "January",
         "February",
@@ -211,7 +211,7 @@ int strcpynt(char* dest, const char* src, size_t maxchars) {
     return (n);
 }
 
-#if PICO_RP2040
+#if HAS_RP2040_RTC
 void strdatetime(char* buf, uint bufsize, datetime_t* dt, strdatetime_ctrl_t ctrl) {
     char time_str[12];
     int time_len = 0;

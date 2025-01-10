@@ -17,6 +17,7 @@
 */
 #include "system_defs.h"
 
+#include "pico.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 #include "pico/printf.h"
@@ -30,6 +31,9 @@
 #include "hardware/timer.h"
 #include "hardware/uart.h"
 #include "pico/bootrom.h"
+#if HAS_RP2040_RTC
+#include "hardware/rtc.h"
+#endif
 
 #include "board.h"
 
@@ -167,13 +171,15 @@ int board_init() {
         debug_mode_enable(true);
     }
 
-    // Initialize the SPI Ops module
+    // Initialize the SPI Ops module before any SPI operations
     spi_ops_module_init();
+    // Now initialize the Expansion I/O chip so the other devices will work
+    expio_module_init();
 
     // Initialize the display
     disp_module_init();
 
-#if PICO_RP2040
+#if HAS_RP2040_RTC
     // Initialize the board RTC.
     // Start on Sunday the 1st of January 2023 00:00:01
     datetime_t t = {
@@ -262,6 +268,14 @@ void led_on_off(const int32_t *pattern) {
     }
 }
 
+void ledA_on(bool on) {
+    eio_leda_on(on);
+}
+
+void ledB_on(bool on) {
+    eio_ledb_on(on);
+}
+
 uint32_t now_ms() {
     return (us_to_ms(time_us_64()));
 }
@@ -297,12 +311,10 @@ void debug_printf(const char* format, ...) {
     if (debug_mode_enabled()) {
         char buf[512];
         int index = 0;
-        index += snprintf(&buf[index], sizeof(buf) - index, "D: ");
         va_list xArgs;
         va_start(xArgs, format);
         index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
         va_end(xArgs);
-        // printf(buf);
         if (disp_ready()) {
             text_color_pair_t cp;
             disp_text_colors_get(&cp);
@@ -316,12 +328,10 @@ void debug_printf(const char* format, ...) {
 void error_printf(const char* format, ...) {
     char buf[512];
     int index = 0;
-    index += snprintf(&buf[index], sizeof(buf) - index, "\033[91mE: ");
     va_list xArgs;
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    // printf("%s\033[0m", buf);
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -334,12 +344,10 @@ void error_printf(const char* format, ...) {
 void info_printf(const char* format, ...) {
     char buf[512];
     int index = 0;
-    index += snprintf(&buf[index], sizeof(buf) - index, "I: ");
     va_list xArgs;
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    // printf(buf);
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -352,12 +360,10 @@ void info_printf(const char* format, ...) {
 void warn_printf(const char* format, ...) {
     char buf[512];
     int index = 0;
-    index += snprintf(&buf[index], sizeof(buf) - index, "W: ");
     va_list xArgs;
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
-    // printf(buf);
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -365,5 +371,13 @@ void warn_printf(const char* format, ...) {
         disp_prints(buf, Paint);
         disp_text_colors_cp_set(&cp);
     }
+}
+
+void board_panic(const char* fmt, ...) {
+    va_list xArgs;
+    va_start(xArgs, fmt);
+    error_printf(fmt, xArgs);
+    panic(fmt, xArgs);
+    va_end(xArgs);
 }
 

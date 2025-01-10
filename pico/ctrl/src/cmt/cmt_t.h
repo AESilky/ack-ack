@@ -22,6 +22,7 @@ extern "C" {
 
 // Includes for types used in the Message Data
 #include "curswitch/curswitch_t.h"
+#include "sensbank/sensbank_t.h"
 #include "servo/servo_t.h"
 
 
@@ -33,7 +34,7 @@ typedef enum MSG_PRI_ {
 
 
 typedef enum MSG_ID_ {
-    // Common messages (used by both BE and UI)
+    // Common messages (used by both HWOS and DCS/HID)
     MSG_COMMON_NOOP = 0x0000,
     MSG_EXEC,               // General purpose message to use when specifying a handler.
     MSG_CONFIG_CHANGED,
@@ -42,6 +43,7 @@ typedef enum MSG_ID_ {
     MSG_HOUSEKEEPING_RT,    // Housekeeping Repeating - Every 16ms (62.5Hz)
     MSG_INPUT_SW_PRESS,
     MSG_INPUT_SW_RELEASE,
+    MSG_SENSBANK_CHG,
     MSG_SWITCH_ACTION,
     MSG_SWITCH_LONGPRESS,
     MSG_TERM_CHAR_RCVD,
@@ -105,6 +107,7 @@ union MSG_DATA_VALUE_ {
     int16_t rotary_delta;
     int32_t status;
     char* str;
+    sensbank_chg_t sensbank_chg;
     servo_params_t servo_params;
     switch_action_data_t sw_action;
     uint32_t ts_ms;

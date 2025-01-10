@@ -434,7 +434,7 @@ ili_controller_type ili_module_init(void) {
         _ili_line_buf = malloc(_screen_width * sizeof(rgb18_t));
     }
     else {
-        warn_printf(false, "Cannot determine display controller type (9341 or 9488)");
+        warn_printf("Cannot determine display controller type (9341 or 9488)");
     }
 
     if (_ili_controller_type != ILI_CONTROLLER_NONE) {

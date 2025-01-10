@@ -239,7 +239,7 @@ void tp_irq_handler(uint gpio, uint32_t events) {
         if (p) {
             // Read the force so that the last force value is updated.
             uint16_t f = tp_check_touch_force();
-            debug_printf(false, "Touch Force: %u\n", f);
+            debug_printf("Touch Force: %u\n", f);
             // Post a message with the display point
             // ZZZ _msg_touch.data.touch_point = p;
             postDCSMsg(&_msg_touch);

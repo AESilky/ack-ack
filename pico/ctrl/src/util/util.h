@@ -175,7 +175,7 @@ extern char* str_value_create(const char* value);
  */
 extern int strcpynt(char* dest, const char* src, size_t maxchars);
 
-#if PICO_RP2040
+#if HAS_RP2040_RTC
 /**
  * @brief Format a date-time into a string.
  * @ingroup util

@@ -20,6 +20,7 @@
 #include "rotary_encoder/re_pbsw.h"
 #include "rotary_encoder/rotary_encoder.h"
 #include "rover/rover.h"
+#include "sensbank/sensbank.h"
 #include "servo/servos.h"
 #include "term/term.h"
 #include "touch_panel/touch.h"
@@ -42,6 +43,7 @@ static void _handle_hwos_housekeeping(cmt_msg_t* msg);
 static void _handle_hwos_test(cmt_msg_t* msg);
 static void _handle_input_sw_debounce(cmt_msg_t* msg);
 static void _handle_rotary_change(cmt_msg_t* msg);
+static void _handle_sensbank_change(cmt_msg_t* msg);
 static void _handle_switch_action(cmt_msg_t* msg);
 static void _handle_switch_longpress_delay(cmt_msg_t* msg);
 static void _handle_dcs_started(cmt_msg_t* msg);
@@ -58,6 +60,7 @@ static const msg_handler_entry_t _hwos_housekeeping = { MSG_HOUSEKEEPING_RT, _ha
 static const msg_handler_entry_t _hwos_test = { MSG_HWOS_TEST, _handle_hwos_test };
 static const msg_handler_entry_t _input_sw_debounce_handler_entry = { MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce };
 static const msg_handler_entry_t _rotary_chg_handler_entry = { MSG_ROTARY_CHG, _handle_rotary_change };
+static const msg_handler_entry_t _sensbank_chg_handler_entry = { MSG_SENSBANK_CHG, _handle_sensbank_change };
 static const msg_handler_entry_t _switch_action_handler_entry = { MSG_SWITCH_ACTION, _handle_switch_action };
 static const msg_handler_entry_t _switch_longpress_handler_entry = { MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay };
 static const msg_handler_entry_t _dcs_started_handler_entry = { MSG_DCS_STARTED, _handle_dcs_started };
@@ -73,6 +76,7 @@ static const msg_handler_entry_t* _hwos_handler_entries[] = {
     & cmt_sm_tick_handler_entry,    // CMT Scheduled Message 'Tick'
     & _hwos_housekeeping,
     & servo_rxd_handler_entry,
+    & _sensbank_chg_handler_entry,
     & _switch_action_handler_entry,
     & _switch_longpress_handler_entry,
     & _input_sw_debounce_handler_entry,
@@ -207,7 +211,12 @@ static void _handle_input_sw_debounce(cmt_msg_t* msg) {
 static void _handle_rotary_change(cmt_msg_t* msg) {
     // The rotary encoder has been turned.
     int32_t rotary_cnt = re_count();
-    debug_printf(false, "RE: p:%5d d:%3hd\n", rotary_cnt, msg->data.rotary_delta);
+    debug_printf("RE: p:%5d d:%3hd\n", rotary_cnt, msg->data.rotary_delta);
+}
+
+static void _handle_sensbank_change(cmt_msg_t* msg) {
+    // Handle changes in the sensor bank bits.
+    debug_printf("SB Chg: %02x -> %02x\n", msg->data.sensbank_chg.prev_bits, msg->data.sensbank_chg.bits);
 }
 
 static void _handle_switch_action(cmt_msg_t* msg) {
@@ -330,9 +339,6 @@ void hwos_started() {
     // Start the Rover processing.
     rover_start();
     //
-    // Start the Terminal
-    term_start();
-    //
     // Done with the Hardware OS Startup - Let the DSC know.
     cmt_msg_t msg;
     cmt_msg_init(&msg, MSG_HWOS_STARTED);
@@ -357,11 +363,8 @@ void hwos_module_init() {
     // gpio_set_irq_enabled(IRQ_rotary_SW, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
     // gpio_set_irq_enabled(IRQ_TOUCH, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
 
-    // Init the rover control.
+    // Init the rover control functionality.
     rover_module_init();
-
-    // Init the terminal
-    term_module_init();
 
     // Post a TEST to ourself in case we have any tests set up.
     cmt_msg_t msg;

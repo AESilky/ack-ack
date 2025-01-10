@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Initialize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
-set(PICO_PLATFORM "rp2350-arm-s")
+#set(PICO_PLATFORM "rp2350-arm-s")
 set(PICO_BOARD "pico2")
 set(PICO_USE_MALLOC_MUTEX 1)
 set(PICO_QUEUE_MAX_LEVEL 1)
@@ -31,20 +31,25 @@ add_compile_options(
 )
 pico_sdk_init()
 
-# Local libraries (additional sources)
+# Local libraries (our additional sources)
 add_subdirectory(cmt)
 add_subdirectory(curswitch)
 add_subdirectory(dcs)
 add_subdirectory(display)
 add_subdirectory(expio)
 add_subdirectory(gfx)
+add_subdirectory(hid)
 add_subdirectory(hwos)
 add_subdirectory(rotary_encoder)
 add_subdirectory(rover)
+add_subdirectory(sensbank)
 add_subdirectory(servo)
 add_subdirectory(term)
 add_subdirectory(touch_panel)
 add_subdirectory(util)
+#
+# External libraries
+add_subdirectory(lib)
 
 # Add executable.
 add_executable(hwctrl
@@ -53,14 +58,20 @@ add_executable(hwctrl
   debug_support.c
   multicore.c
   spi_ops.c
+  tests.c
+  p2bugs.c
 )
 
 pico_set_program_name(hwctrl "HWControl")
 pico_set_program_version(hwctrl "0.1")
 
+# Use the VFP instructions for float and double (can use DCP)
+pico_set_float_implementation(hwctrl pico)
+pico_set_double_implementation(hwctrl pico)
+
 # Use the USB for stdio. UART is used to communicate with host for commands.
-pico_enable_stdio_uart(hwctrl 0)
-pico_enable_stdio_usb(hwctrl 1)
+pico_enable_stdio_uart(hwctrl 1)
+pico_enable_stdio_usb(hwctrl 0)
 
 # Add the required include file paths to the build
 include_directories(
@@ -71,6 +82,7 @@ include_directories(
   ${PICO_SDK_PATH}/src/rp2_common/hardware_i2c/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_pio/include
   ${PICO_SDK_PATH}/src/rp2_common/hardware_pwm/include
+  ${PICO_SDK_PATH}/src/rp2_common/hardware_rtc/include
   ${PICO_SDK_PATH}/src/rp2_common/pico_cyw43_arch/include
   ${PICO_SDK_PATH}/src/rp2_common/pico_multicore/include
 )
@@ -99,9 +111,11 @@ target_link_libraries(hwctrl
   expio
   fonts
   gfx
+  hid
   hwos
   rotary_encoder
   rover
+  sensbank
   servo
   terminal
   touch_panel
@@ -113,12 +127,19 @@ target_link_libraries(hwctrl
   hardware_pio
   hardware_spi
   hardware_timer
+  pico_double
   pico_float
   pico_multicore
   pico_stdlib
 )
+if(${PICO_BOARD} STREQUAL "pico")
+target_link_libraries(hwctrl
+  hardware_rtc
+)
+endif()
 if(${PICO_BOARD} STREQUAL "pico_w")
 target_link_libraries(hwctrl
+  hardware_rtc
   pico_cyw43_arch_lwip_threadsafe_background
 )
 endif()
