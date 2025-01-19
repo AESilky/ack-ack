@@ -5,7 +5,7 @@
  *
  * This is the include file for the 'types' used by CMT.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
 */
@@ -92,7 +92,7 @@ struct CMT_MSG_;
  */
 typedef void (*msg_handler_fn)(struct CMT_MSG_* msg);
 
-#define NULL_MSG_HNDLR ((msg_handler_fn)0)
+#define NULL_MSG_HDLR ((msg_handler_fn)0)
 
 /**
  * @brief Message data.
@@ -121,7 +121,7 @@ typedef union MSG_DATA_VALUE_ msg_data_value_t;
  * @param id The ID (number) of the message.
  * @param data The data for the message.
  * @param priority The message priority.
- * @param hndlr A Handler function to use rather then the one registered (or null).
+ * @param hdlr A Handler function to use rather then the one registered (or null).
  * @param n The message number (set by the posting system)
  * @param t The millisecond time msg was posted (set by the posting system)
  */
@@ -129,7 +129,7 @@ typedef struct CMT_MSG_ {
     msg_id_t id;
     msg_priority_t priority;
     msg_data_value_t data;
-    msg_handler_fn hndlr;
+    msg_handler_fn hdlr;
     int32_t n;
     uint32_t t;
 } cmt_msg_t;

@@ -1,7 +1,7 @@
 /**
  * ILI9341 TFT LCD functionaly interface through SPI
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  * Using ILI9341 4-Line Serial Interface II (see datasheet pg 63)

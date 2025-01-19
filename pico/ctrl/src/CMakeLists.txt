@@ -40,6 +40,7 @@ add_subdirectory(expio)
 add_subdirectory(gfx)
 add_subdirectory(hid)
 add_subdirectory(hwos)
+add_subdirectory(neopix)
 add_subdirectory(rotary_encoder)
 add_subdirectory(rover)
 add_subdirectory(sensbank)
@@ -113,6 +114,7 @@ target_link_libraries(hwctrl
   gfx
   hid
   hwos
+  neopix
   rotary_encoder
   rover
   sensbank

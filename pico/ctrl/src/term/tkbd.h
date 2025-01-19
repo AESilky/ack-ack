@@ -9,7 +9,7 @@
  * three columns in width. It requires 5 rows and 30 columns. It is placed
  * on the screen using parameters passed in the init methods.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

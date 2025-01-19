@@ -1,7 +1,7 @@
 /**
  * HWControl Board Initialization and General Functions.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  * This sets up the Pico-W for use for hwctrl.

@@ -3,7 +3,7 @@
  *
  * Common to ILI9341 and ILI9488
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  */

@@ -1,7 +1,7 @@
 /**
  * hwctrl Debugging flags and utilities.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  */
 #include "debug_support.h"

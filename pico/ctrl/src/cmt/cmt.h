@@ -3,7 +3,7 @@
  *
  * Contains message loop, timer, and other CMT enablement functions.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
 */
@@ -79,9 +79,9 @@ extern void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority);
  * @param msg Pointer to the Message to initialize
  * @param id Message ID
  * @param priority Priority
- * @param hndlr Message handler function
+ * @param hdlr Message handler function
  */
-extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hndlr);
+extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hdlr);
 
 /**
  * @brief Indicates if the Core-0 message loop has been started.

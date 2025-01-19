@@ -5,7 +5,7 @@
  * This contains most of the definitions for the board. There are some additional
  * definitions in the display, expio, and curswitch modules.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */
@@ -105,7 +105,9 @@ extern "C" {
 #define PIO_ROTARY_SM            0              // State Machine 0 is used for the rotary quad decode
 #define PIO_ROTARY_IRQ          PIO0_IRQ_0      // PIO IRQ to use for Sensor reading change
 #define PIO_SENSBANK_BLOCK      pio1            // PIO Block 1 is used to select and read the Multiplexed Sensors
-#define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the front IR (A)
+#define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the switch bank
+#define PIO_NEOPIX_BLOCK        pio1            // PIO Block 1 is used for the Neopixel display
+#define PIO_NEOPIX_SM            1              // State Machine 1 is used to drive the Neopixel display
 
 // I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, NeoPixel, etc.
 #define I2C_EXTERN              i2c0
@@ -122,10 +124,13 @@ extern "C" {
 #define ROTARY_A_GPIO           14              // DP-19
 #define ROTARY_B_GPIO           15              // DP-20
 
-// Other GPIO
+// Neopixel Display
+// See PIO section for PIO defines...
 //
-#define SERVO_PWR_CURSENSE_GPIO 27              // Servo Power Current Sense from High-Side Switch
-#define SERVO_PWR_CURSENSE_ADC  ADC_INPUT_1     // Current Sense is on ADC-1
+#define NEOPIXEL_DRIVE          27              // Neopixel GPIO Drive Pin
+
+// Switch Bank and User Switch
+//
 #define SW_BANK_GPIO            28              // Switch Matrix Bank
 #define SW_MAIN_USER_GPIO       SW_BANK_GPIO    // Main User Switch is GND on the Switch Matrix Bank
 #define SW_BANK_ADC             ADC_INPUT_2     // Switch bank is read using ADC-2

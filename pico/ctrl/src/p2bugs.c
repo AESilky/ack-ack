@@ -1,7 +1,7 @@
 /**
  *    File containing functions work around bugs found with the SDK2 support of Pico2.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  */

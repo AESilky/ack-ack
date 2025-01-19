@@ -4,7 +4,7 @@
  *
  * This provides input from the rotary encoder push-button switch.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

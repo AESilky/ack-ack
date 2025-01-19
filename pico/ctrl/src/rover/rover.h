@@ -4,7 +4,7 @@
  *
  * Controls and monitors the rover platform.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

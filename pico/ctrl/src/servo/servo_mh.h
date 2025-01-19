@@ -5,7 +5,7 @@
  * Controls a collection of HiWonder Serial Bus servos.
  * This file contains the Message Handler declarations (only)
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

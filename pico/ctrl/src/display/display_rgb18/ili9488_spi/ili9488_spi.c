@@ -2,7 +2,7 @@
  * ILI9488 TFT LCD functionality interface through SPI
  * (This also works for the ILI9486 controller, at least for the functionality we use.)
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  * Using ILI9488 4-Line Serial Interface II (see datasheet pg 63)

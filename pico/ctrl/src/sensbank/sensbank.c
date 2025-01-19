@@ -4,7 +4,7 @@
  *
  * Continuously reads the Sensor Bank and posts messages with state and changes.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

@@ -4,7 +4,7 @@
  *
  * Provides graphics primatives and operations. It is independent of the display.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

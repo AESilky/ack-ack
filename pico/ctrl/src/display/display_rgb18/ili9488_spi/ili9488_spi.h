@@ -2,7 +2,7 @@
  * ILI9488 320x480 Color LCD functionality interface through SPI
  * (used on the 3.5" display)
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  */

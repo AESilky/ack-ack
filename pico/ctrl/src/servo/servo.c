@@ -19,7 +19,7 @@
  * +------+------+------+------+------+------+------+------+-------|
  * LEN = The length of the entire packet minus the 2 header bytes and the ID.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */
@@ -616,7 +616,7 @@ void servo_module_init() {
     _servo_in_proc = SERVO_NONE;
     _rxd_handler = _rxd_discard;
     cmt_msg_init(&_msg_rxd_to, MSG_SERVO_DATA_RX_TO);
-    _msg_rxd_to.hndlr = _rxd_status_asm_to;  // Handler for RX receive timeout
+    _msg_rxd_to.hdlr = _rxd_status_asm_to;  // Handler for RX receive timeout
     // Set up our UART with the required speed.
     uart_init(SERVO_CTRL_UART, BS_BAUDRATE);
     uart_set_hw_flow(SERVO_CTRL_UART, false, false);  // CTS/RTS off

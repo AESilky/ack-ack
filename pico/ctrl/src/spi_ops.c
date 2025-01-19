@@ -4,7 +4,7 @@
  * The SPI is used by 3 devices, so this provides routines
  * to read/write to them in a coordinated way.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
 */

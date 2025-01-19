@@ -8,7 +8,7 @@
  * The terminal identifies itself as 'xterm' but it is far from an
  * actual xterm terminal.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

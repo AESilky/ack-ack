@@ -3,7 +3,7 @@
  *
  * Contains message loop, scheduled message, and other CMT enablement functions.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
 */
@@ -103,7 +103,7 @@ static void _scheduled_msg_init() {
 void cmt_msg_init(cmt_msg_t* msg, msg_id_t id) {
     msg->id = id;
     msg->priority = MSG_PRI_NORM;
-    msg->hndlr = NULL_MSG_HNDLR;
+    msg->hdlr = NULL_MSG_HDLR;
     msg->n = 0;
     msg->t = 0;
 }
@@ -111,15 +111,15 @@ void cmt_msg_init(cmt_msg_t* msg, msg_id_t id) {
 void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority) {
     msg->id = id;
     msg->priority = priority;
-    msg->hndlr = NULL_MSG_HNDLR;
+    msg->hdlr = NULL_MSG_HDLR;
     msg->n = 0;
     msg->t = 0;
 }
 
-void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hndlr) {
+void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hdlr) {
     msg->id = id;
     msg->priority = priority;
-    msg->hndlr = hndlr;
+    msg->hdlr = hdlr;
     msg->n = 0;
     msg->t = 0;
 }
@@ -372,9 +372,9 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
             psa->retrieved++;
             // Find the handler
             //  Does the message designate a handler?
-            if (msg.hndlr != NULL_MSG_HNDLR) {
+            if (msg.hdlr != NULL_MSG_HDLR) {
                 gpio_put(PICO_DEFAULT_LED_PIN, 1);
-                msg.hndlr(&msg);
+                msg.hdlr(&msg);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
             else {

@@ -20,7 +20,7 @@
  * `kill -9 772`
  *
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */
@@ -168,7 +168,7 @@ static void _post_msg_if_chars_available() {
     if (term_input_available()) {
         cmt_msg_t msg;
         cmt_msg_init(&msg, MSG_TERM_CHAR_RCVD);
-        msg.hndlr = _term_notify_on_input;  // Load a handler (or NULL)
+        msg.hdlr = _term_notify_on_input;  // Load a handler (or NULL)
         // Post the message.
         postHWCtrlMsg(&msg);
     }

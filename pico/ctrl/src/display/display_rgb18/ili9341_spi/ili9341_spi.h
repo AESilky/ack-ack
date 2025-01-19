@@ -1,7 +1,7 @@
 /**
  * ILI9341 240x320 Color LCD functionaly interface through SPI
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  */

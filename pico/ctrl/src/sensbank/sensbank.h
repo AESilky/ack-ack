@@ -4,7 +4,7 @@
  *
  * Monitors the sensbank and notifies the HWOS of changes.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

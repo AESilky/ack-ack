@@ -4,7 +4,7 @@
  *
  * Controls the hardware functionality of the rover.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */
@@ -14,6 +14,7 @@
 #include "board.h"
 #include "rover_info.h"
 
+#include "sensbank/sensbank.h"
 #include "servo/servo.h"
 #include "servo/servos.h"
 

@@ -1,7 +1,7 @@
 /**
  * HWControl main application.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
 */
@@ -22,6 +22,9 @@
 //
 #include "display/display.h"
 #include"tests.h"
+
+//
+#include "neopix/neopix.h"
 
 
 #define DOT_MS 60 // Dot at 20 WPM
@@ -80,6 +83,8 @@ int main()
 
     // Turn the green LED on.
     ledA_on(true);
+
+    ws2312_main();
 
     // Launch the Hardware Operation System (core-0 (endless) Message Dispatching Loop).
     // (!!! THIS NEVER RETURNS !!!)

@@ -8,7 +8,7 @@
  * The reason the devices are split across two HW SPI units is because the Touch
  * Panel SCK speed is much slower than the Display and the Expansion I/O.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  */

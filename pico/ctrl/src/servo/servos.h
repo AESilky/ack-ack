@@ -27,7 +27,7 @@
  * RR_DIR   : Turns the Right-Rear drive wheel
  * BOGIE_PIVOT : Reads, and can drive, the bogie pivot arm angle
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  *
  * SPDX-License-Identifier: MIT
  */

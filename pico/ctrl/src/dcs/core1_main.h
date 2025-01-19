@@ -3,7 +3,7 @@
  *
  * This contains the main routine (the entry point) for operations on Core 1.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
 */

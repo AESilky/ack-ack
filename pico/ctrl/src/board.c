@@ -1,7 +1,7 @@
 /**
  * HWControl Board Initialization and General Functions.
  *
- * Copyright 2023-24 AESilky
+ * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
  *
  * This sets up the Pico for use for hwctrl.
@@ -156,10 +156,6 @@ int board_init() {
     gpio_set_function(SENSOR_READ, GPIO_FUNC_SIO);
     gpio_set_dir(SENSOR_READ, GPIO_IN);
     gpio_set_pulls(SENSOR_READ, false, false);
-    //    Servo Power Current Sense
-    gpio_set_function(SERVO_PWR_CURSENSE_GPIO, GPIO_FUNC_SIO);
-    gpio_set_dir(SERVO_PWR_CURSENSE_GPIO, GPIO_IN);
-    gpio_set_pulls(SERVO_PWR_CURSENSE_GPIO, false, false);
     //    Switch Matrix
     gpio_set_function(SW_BANK_GPIO, GPIO_FUNC_SIO);
     gpio_set_dir(SW_BANK_GPIO, GPIO_IN);
