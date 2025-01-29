@@ -14,8 +14,10 @@
 #include "board.h"
 #include "display/display.h"
 #include "display/fonts/font.h"
+#include "neopix/neopix.h"
 #include "term/term.h"
 
+#include <stdio.h>
 
 // ############################################################################
 // Constants Definitions
@@ -31,6 +33,7 @@
 // Function Declarations
 // ############################################################################
 //
+static void _show_psa(proc_status_accum_t* psa, int corenum);
 
 
 // ############################################################################
@@ -43,13 +46,32 @@
 // Message Handlers
 // ############################################################################
 //
-
+static void _disp_proc_status(void* data) {
+    // Output status every 7 seconds
+    cmt_sleep_ms(7000, _disp_proc_status, NULL);
+    // Output the current state
+    for (int i = 0; i < 2; i++) {
+        proc_status_accum_t psa;
+        cmt_proc_status_sec(&psa, i);
+        // Display the proc status...
+        _show_psa(&psa, i);
+    }
+}
 
 // ############################################################################
 // Internal Functions
 // ############################################################################
 //
-
+static void _show_psa(proc_status_accum_t* psa, int corenum) {
+    long active = psa->t_active;
+    int retrieved = psa->retrieved;
+    int msg_id = psa->msg_longest;
+    long msg_t = psa->t_msg_longest;
+    int interrupt_status = psa->interrupt_status;
+    float busy = (float)active / 10000.0f; // Divide by 10,000 rather than 1,000,000 for percent
+    float core_temp = onboard_temp_c();
+    printf("PSA %d: Active: % 3.2f%%\t At:%ld\tMR:%d\t Temp: %3.1f\t Msg: %03X Msgt: %ld\t Int:%08x\n", corenum, busy, active, retrieved, core_temp, msg_id, msg_t, interrupt_status);
+}
 
 // ############################################################################
 // Public Functions
@@ -88,6 +110,12 @@ void hid_start(void) {
     //
     // Start the Terminal
     term_start();
+    //
+    // Start the NeoPixel panels
+    neopix_start();
+    //
+    // Output status every 7 seconds
+    cmt_sleep_ms(7000, _disp_proc_status, NULL);
 }
 
 
@@ -102,5 +130,5 @@ void hid_module_init(void) {
     // Initialize the terminal portion of the HID
         // Init the terminal
     term_module_init();
-
+    neopix_module_init();
 }

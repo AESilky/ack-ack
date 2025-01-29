@@ -84,8 +84,6 @@ int main()
     // Turn the green LED on.
     ledA_on(true);
 
-    ws2312_main();
-
     // Launch the Hardware Operation System (core-0 (endless) Message Dispatching Loop).
     // (!!! THIS NEVER RETURNS !!!)
     start_hwos();

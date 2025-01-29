@@ -124,6 +124,7 @@ target_link_libraries(hwctrl
   util
   hardware_adc
   hardware_clocks
+  hardware_dma
   hardware_exception
   hardware_i2c
   hardware_pio

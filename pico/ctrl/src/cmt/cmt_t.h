@@ -135,12 +135,6 @@ typedef struct CMT_MSG_ {
 } cmt_msg_t;
 
 /**
- * @brief Function prototype for an idle function.
- * @ingroup cmt
- */
-typedef void (*idle_fn)(void);
-
-/**
  * @brief Function prototype for the start function.
  * @ingroup cmt
  */

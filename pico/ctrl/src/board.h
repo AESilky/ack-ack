@@ -110,16 +110,16 @@ extern uint32_t now_ms();
 extern uint64_t now_us();
 
 /**
- * @brief Get the temperature from the on-chip temp sensor if Celsius.
+ * @brief Get the temperature from the on-chip temp sensor in Celsius.
  *
  * @return float Celsius temperature
  */
 extern float onboard_temp_c();
 
 /**
- * @brief Get the temperature from the on-chip temp sensor in Farenheit.
+ * @brief Get the temperature from the on-chip temp sensor in Fahrenheit.
  *
- * @return float Farenheit temperature
+ * @return float Fahrenheit temperature
  */
 extern float onboard_temp_f();
 

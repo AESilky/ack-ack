@@ -15,6 +15,7 @@
 #include "debug_support.h"
 
 #include "cmt/cmt.h"
+#include "cmt/cmt_mh.h"
 #include "hid/hid.h"
 #include "sensbank/sensbank.h"
 #include "util/util.h"
@@ -55,46 +56,17 @@ static const msg_handler_entry_t _sbchg_he = { MSG_SENSBANK_CHG, _handle_sensban
 // For performance - put these in order that we expect to receive more often
 static const msg_handler_entry_t* _dcs_handler_entries[] = {
     & _dcs_housekeeping_he,
+    & cmt_sm_sleep_handler_entry,    // CMT Scheduled Message 'Sleep' handler
     & _sbchg_he,
     & _dcs_test_he,
     & _hwos_started_he,
     ((msg_handler_entry_t*)0), // Last entry must be a NULL
 };
 
-static const idle_fn _dcs_idle_functions[] = {
-    // Cast needed do to definition needed to avoid circular reference.
-    (idle_fn)_dcs_idle_function_1,
-    (idle_fn)_dcs_idle_function_2,
-    (idle_fn)0, // Last entry must be a NULL
-};
-
 msg_loop_cntx_t dcs_msg_loop_cntx = {
     DCS_CORE_NUM, // Drive Control System runs on Core 1
     _dcs_handler_entries,
-    _dcs_idle_functions,
 };
-
-// ====================================================================
-// Idle functions
-//
-// Something to do when there are no messages to process.
-// (These are cycled through, so do one task.)
-// ====================================================================
-
-/**
- * @brief Do something.
- * @ingroup dcs
- */
-static void _dcs_idle_function_1() {
-}
-
-/**
- * @brief Do something else.
- * @ingroup dcs
- */
-static void _dcs_idle_function_2() {
-}
-
 
 // ====================================================================
 // Message handler functions
@@ -129,7 +101,7 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     }
     if ((_dcs_hk_cnt % DCS_HOST_STATUS_PERIOD) == 0) {
         // Send our status to the host.
-        printf("DCS: %d A:%d B:%d\n", _dcs_hk_cnt, aon, bon);
+        //printf("DCS: %d A:%d B:%d\n", _dcs_hk_cnt, aon, bon);
     }
 }
 

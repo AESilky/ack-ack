@@ -1,6 +1,7 @@
 {
     "cmake.sourceDirectory": "/home/esilky/proj/ack-ack/pico/ctrl/src",
     "cSpell.words": [
+        "Adafruit",
         "AGPI",
         "AGPO",
         "clkdiv",
@@ -27,6 +28,7 @@
         "samplerd",
         "sensbank",
         "sensdata",
+        "sideset",
         "stdlib",
         "UNCHG"
     ]

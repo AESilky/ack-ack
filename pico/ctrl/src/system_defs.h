@@ -108,6 +108,7 @@ extern "C" {
 #define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the switch bank
 #define PIO_NEOPIX_BLOCK        pio1            // PIO Block 1 is used for the Neopixel display
 #define PIO_NEOPIX_SM            1              // State Machine 1 is used to drive the Neopixel display
+#define PIO_NEOPIX_DREQ         DREQ_PIO1_TX1   // DMA DREQ trigger from PIO1-SM1
 
 // I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, NeoPixel, etc.
 #define I2C_EXTERN              i2c0

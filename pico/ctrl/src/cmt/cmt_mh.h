@@ -24,7 +24,7 @@ extern "C" {
  * @ingroup cmt
  *
  */
-extern const msg_handler_entry_t cmt_sm_tick_handler_entry;
+extern const msg_handler_entry_t cmt_sm_sleep_handler_entry;
 
 
 #ifdef __cplusplus

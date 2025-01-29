@@ -73,8 +73,8 @@ static const msg_handler_entry_t _dcs_started_handler_entry = { MSG_DCS_STARTED,
 
 // For performance - put these in order that we expect to receive more often
 static const msg_handler_entry_t* _hwos_handler_entries[] = {
-    & cmt_sm_tick_handler_entry,    // CMT Scheduled Message 'Tick'
     & _hwos_housekeeping,
+    & cmt_sm_sleep_handler_entry,    // CMT Scheduled Message 'Sleep' handler
     & servo_rxd_handler_entry,
     & _sensbank_chg_handler_entry,
     & _switch_action_handler_entry,
@@ -88,43 +88,10 @@ static const msg_handler_entry_t* _hwos_handler_entries[] = {
     ((msg_handler_entry_t*)0), // Last entry must be a NULL
 };
 
-static const idle_fn _hwos_idle_functions[] = {
-    // Cast needed do to definition needed to avoid circular reference.
-    (idle_fn)_hwos_idle_function_1,
-    (idle_fn)_hwos_idle_function_2,
-    (idle_fn)0, // Last entry must be a NULL
-};
-
 msg_loop_cntx_t hwos_msg_loop_cntx = {
     HWOS_CORE_NUM, // Hardware OS runs on Core 0
     _hwos_handler_entries,
-    _hwos_idle_functions,
 };
-
-// ====================================================================
-// Idle functions
-//
-// Something to do when there are no messages to process.
-// (These are cycled through, so do one task.)
-// ====================================================================
-
-/**
- * @brief Do an actual check of the input switch to make sure we stay
- *        in sync with the actual state (not just relying on the
- *        interrupts).
- * @ingroup be
- */
-static void _hwos_idle_function_1() {
-    _input_sw_pressed = _input_sw_pressed && user_switch_pressed();
-}
-
-/**
- * @brief Do periodic, non-critical, system updates during idle time.
- * @ingroup be
- */
-static void _hwos_idle_function_2() {
-}
-
 
 // ====================================================================
 // Message handler functions
@@ -185,15 +152,14 @@ static void _handle_hwos_test(cmt_msg_t* msg) {
 
     uint64_t period = 60;
 
-    bool ZZZ = false;
-    if (ZZZ && debug_mode_enabled()) {
-        uint64_t now = now_us();
+    // if (debug_mode_enabled()) {
+    //     uint64_t now = now_us();
 
-        uint64_t last_time = msg->data.ts_us;
-        int64_t error = ((now - last_time) - (period * 1000 * 1000));
-        float error_per_ms = ((error * 1.0) / (period * 1000.0));
-        info_printf("\n%5.5d - Scheduled msg delay error us/ms:%5.2f\n", times, error_per_ms);
-    }
+    //     uint64_t last_time = msg->data.ts_us;
+    //     int64_t error = ((now - last_time) - (period * 1000 * 1000));
+    //     float error_per_ms = ((error * 1.0) / (period * 1000.0));
+    //     info_printf("\n%5.5d - Scheduled msg delay error us/ms:%5.2f\n", times, error_per_ms);
+    // }
     msg_time.data.ts_us = now_us(); // Get the 'next' -> 'last_time' fresh
     schedule_msg_in_ms((period * 1000), &msg_time);
     times++;

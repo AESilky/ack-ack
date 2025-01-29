@@ -29,20 +29,17 @@ extern "C" {
 #define postBothMsgDiscardable( pmsg )          post_to_cores_nowait( pmsg )
 
 typedef struct _PROC_STATUS_ACCUM_ {
-    volatile int64_t cs;
     volatile uint64_t ts_psa;                       // Timestamp of last PS Accumulator/sec update
     volatile uint64_t t_active;
-    volatile uint64_t t_idle;
     volatile uint32_t retrieved;
-    volatile uint32_t idle;
     volatile uint32_t interrupt_status;
-    volatile float core_temp;
+    volatile msg_id_t msg_longest;
+    volatile uint64_t t_msg_longest;
 } proc_status_accum_t;
 
 typedef struct _MSG_LOOP_CNTX {
     uint8_t corenum;                                // The core number the loop is running on
     const msg_handler_entry_t** handler_entries;    // NULL terminated list of message handler entries
-    const idle_fn* idle_functions;                  // Null terminated list of idle functions
 } msg_loop_cntx_t;
 
 /**

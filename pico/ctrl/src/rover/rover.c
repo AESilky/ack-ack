@@ -63,7 +63,7 @@ void rover_housekeeping(void) {
     static uint8_t hk_count = 0;
     static bool rip = false;
 
-    if (++hk_count % (62*5) == 0) {
+    if (++hk_count % (100) == 0) {
         if (rip) {
             servos_rip_position();
         }

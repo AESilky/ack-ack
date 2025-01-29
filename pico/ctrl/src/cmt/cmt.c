@@ -24,7 +24,7 @@
 #include <string.h>
 
 
-#define SCHEDULED_MESSAGES_MAX 16
+#define SCHEDULED_MESSAGES_MAX 32
 
 #define SM_OVERHEAD_US_PER_MS_ (20)
 #define SMD_FREE_INDICATOR_ (-1)
@@ -46,12 +46,12 @@ static _scheduled_msg_data_t _scheduled_message_datas[SCHEDULED_MESSAGES_MAX]; /
 static bool _msg_loop_0_running = false;
 static bool _msg_loop_1_running = false;
 
-static proc_status_accum_t _psa[2]; // One Proc Status Accumulator for each core
-static proc_status_accum_t _psa_sec[2]; // Proc Status Accumulator per second for each core
+static proc_status_accum_t _psa[2];         // One Proc Status Accumulator for each core
+static proc_status_accum_t _psa_sec[2];     // Proc Status Accumulator per second for each core
 
 void cmt_handle_sleep(cmt_msg_t* msg);
 
-const msg_handler_entry_t cmt_sm_tick_handler_entry = { MSG_CMT_SLEEP, cmt_handle_sleep };
+const msg_handler_entry_t cmt_sm_sleep_handler_entry = { MSG_CMT_SLEEP, cmt_handle_sleep };
 
 static uint8_t _housekeep_rt;  // Incremented each ms. Generates a Housekeeping msg every 16ms (62.5Hz)
 
@@ -147,32 +147,12 @@ void cmt_handle_sleep(cmt_msg_t* msg) {
 void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
     if (corenum < 2) {
         proc_status_accum_t* psa_sec = &_psa_sec[corenum];
-        proc_status_accum_t psa;
-        int64_t cs = 0;
-        do {
-            psa.cs = psa_sec->cs;   // Get the 'per-sec' checksum
-            psa.core_temp = psa_sec->core_temp;
-            psa.idle = psa_sec->idle;
-            cs = psa.idle;
-            psa.retrieved = psa_sec->retrieved;
-            cs += psa.retrieved;
-            psa.t_active = psa_sec->t_active;
-            cs += psa.t_active;
-            psa.t_idle = psa_sec->t_idle;
-            cs += psa.t_idle;
-            psa.interrupt_status = psa_sec->interrupt_status;
-            cs += psa.interrupt_status;
-            psa.ts_psa = psa_sec->ts_psa;
-
-        } while(psa.cs != cs);
-        psas->core_temp = psa.core_temp;
-        psas->idle = psa.idle;
-        psas->retrieved = psa.retrieved;
-        psas->t_active = psa.t_active;
-        psas->t_idle = psa.t_idle;
-        psas->interrupt_status = psa.interrupt_status;
-        psas->ts_psa = psa.ts_psa;
-        psas->cs = psa.cs;
+        psas->retrieved = psa_sec->retrieved;
+        psas->t_active = psa_sec->t_active;
+        psas->msg_longest = psa_sec->msg_longest;
+        psas->t_msg_longest = psa_sec->t_msg_longest;
+        psas->interrupt_status = psa_sec->interrupt_status;
+        psas->ts_psa = psa_sec->ts_psa;
     }
 }
 
@@ -323,10 +303,9 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
     uint8_t corenum = loop_context->corenum;
     get_msg_nowait_fn get_msg_function = (corenum == 0 ? get_core0_msg_nowait : get_core1_msg_nowait);
     cmt_msg_t msg;
-    const idle_fn* idle_functions = loop_context->idle_functions;
     proc_status_accum_t *psa = &_psa[corenum];
     proc_status_accum_t *psa_sec = &_psa_sec[corenum];
-    psa->ts_psa = now_ms();
+    psa->ts_psa = now_us();
 
     // Indicate that the message loop is running for the calling core.
     if (corenum == 0) {
@@ -344,36 +323,27 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
     // Enter into the endless loop reading and dispatching messages to the handlers...
     while (1) {
         uint64_t t_start = now_us();
-        // Store and reset the process status accumulators once every second
+            // Store and reset the process status accumulators once every second
         if (t_start - psa->ts_psa >= ONE_SECOND_US) {
-            int64_t cs = 0;
-            psa_sec->cs = -1;
-            psa_sec->idle = psa->idle;
-            cs += psa_sec->idle;
-            psa->idle = 0;
             psa_sec->retrieved = psa->retrieved;
-            cs += psa_sec->retrieved;
             psa->retrieved = 0;
             psa_sec->t_active = psa->t_active;
-            cs += psa_sec->t_active;
             psa->t_active = 0;
-            psa_sec->t_idle = psa->t_idle;
-            cs += psa_sec->t_idle;
-            psa->t_idle = 0;
             psa_sec->interrupt_status = *nvic_hw->iser; // On Pico2 this is an array[2]
-            cs += psa_sec->interrupt_status;
-            psa_sec->core_temp = onboard_temp_c();
-            psa_sec->ts_psa = t_start;
+            psa_sec->msg_longest = psa->msg_longest;
+            psa_sec->t_msg_longest = psa->t_msg_longest;
+            psa->msg_longest = MSG_COMMON_NOOP;
+            psa->t_msg_longest = 0;
+            psa_sec->ts_psa = psa->ts_psa;
             psa->ts_psa = t_start;
-            psa_sec->cs = cs;
         }
 
         if (get_msg_function(&msg)) {
-            psa->retrieved++;
+            psa->retrieved += 1; // A message was retrieved, count it
             // Find the handler
             //  Does the message designate a handler?
             if (msg.hdlr != NULL_MSG_HDLR) {
-                gpio_put(PICO_DEFAULT_LED_PIN, 1);
+                gpio_put(PICO_DEFAULT_LED_PIN, 1); // Turn the Pico LED on while the handler runs
                 msg.hdlr(&msg);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0);
             }
@@ -389,24 +359,14 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
                 }
             }
             // No more handlers found for this message.
-            uint64_t ht = now_us() - t_start;
-            psa->t_active += ht;
-        }
-        else {
-            // No message available, allow next idle function to run
-            uint64_t is = now_us();
-            psa->idle++;
-            const idle_fn idle_function = *idle_functions;
-            if (idle_function) {
-                idle_function();
-                idle_functions++; // Next time do the next one...
+            uint64_t now = now_us();
+            uint64_t t_this_msg = now - t_start;
+            psa->t_active += t_this_msg;
+            // Update the 'longest' message if needed
+            if (t_this_msg > psa->t_msg_longest) {
+                psa->t_msg_longest = t_this_msg;
+                psa->msg_longest = msg.id;
             }
-            else {
-                // end of function list
-                idle_functions = loop_context->idle_functions; // reset the pointer
-            }
-            uint64_t it = now_us() - is;
-            psa->t_idle += it;
         }
     }
 }
