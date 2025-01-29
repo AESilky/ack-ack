@@ -1,0 +1,54 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"curswitch.h": "c",
+			"cmt.h": "c",
+			"hwos.h": "c",
+			"core1_main.h": "c",
+			"string.h": "c",
+			"font.h": "c",
+			"display_i.h": "c",
+			"multicore.h": "c",
+			"dcs.h": "c",
+			"servo.h": "c",
+			"stdio.h": "c",
+			"printf.h": "c",
+			"nvic.h": "c",
+			"pwm.h": "c",
+			"clocks.h": "c",
+			"stdlib.h": "c",
+			"float.h": "c",
+			"sf_table.h": "c",
+			"util.h": "c",
+			"hid.h": "c",
+			"display.h": "c"
+		},
+		"cSpell.words": [
+			"AGPI",
+			"BSPKT",
+			"BSSP",
+			"cntx",
+			"corenum",
+			"curswitch",
+			"expio",
+			"fstart",
+			"fullscreen",
+			"hbit",
+			"hndlr",
+			"hwctrl",
+			"hwos",
+			"lbit",
+			"multicore",
+			"rxstatus",
+			"srvo",
+			"txval",
+			"UART"
+		],
+		"cortex-debug.variableUseNaturalFormat": false
+	}
+}

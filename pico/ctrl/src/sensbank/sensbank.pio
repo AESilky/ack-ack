@@ -1,0 +1,24 @@
+;
+; Copyright 2023-25 AESilky
+;
+; SPDX-License-Identifier: MIT
+;
+.pio_version 1
+
+.program sensbank
+
+; Drive 3 pins as address bits and read the input and shift it into the RX FIFO.
+; - OUT pin 0-2 are addr
+; - IN pin 1 is the clock pin
+; - Auto-push is enabled, threshold 8
+;
+; This sets the address and then waits a PIO clock cycle before sampling the
+; input bit.
+.wrap_target
+    set x, 7
+nextaddr:
+    mov pins, x [1]
+    in  pins, 1
+    jmp x-- nextaddr
+    push
+.wrap
