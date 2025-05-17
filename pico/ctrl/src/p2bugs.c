@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: MIT License
  *
  */
+/*
 #include "pico/float.h"
 
 float int2float(int32_t f) {
@@ -21,3 +22,4 @@ int32_t float2int(float f) {
     int32_t r = (int32_t)f;
     return r;
 }
+*/

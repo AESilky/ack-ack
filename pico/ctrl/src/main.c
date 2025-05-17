@@ -51,7 +51,7 @@ static const int32_t say_hi[] = {
 int main()
 {
     // useful information for picotool
-    bi_decl(bi_program_description("OS and Control for Ack-Rover Hardware"));
+    bi_decl(bi_program_description("OS and Control for AckAck-Rover Hardware"));
 
     // Uncomment to force starting in Debug Mode
     debug_mode_enable(true);
@@ -73,6 +73,12 @@ int main()
 
     // Set up the Hardware O.S. (needs to be done before starting the Direction Control System)
     hwos_module_init();
+
+    // ZZZ - TEST the RC RX function...
+    #include "rcrx/rcrx.h"
+    rcrx_module_init();
+    rcrx_start();
+
 
     // Set up the Drive Control System
     dcs_module_init();

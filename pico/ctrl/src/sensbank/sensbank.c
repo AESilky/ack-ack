@@ -179,7 +179,7 @@ void sensbank_module_init(void) {
     if (irq_get_exclusive_handler(_pio_irq)) {
         _pio_irq++;
         if (irq_get_exclusive_handler(_pio_irq)) {
-            board_panic("sensbank_module_init - All IRQs are in use");
+            board_panic("sensbank_module_init - All PIO IRQs are in use");
         }
     }
 

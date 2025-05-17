@@ -124,6 +124,10 @@ void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_han
     msg->t = 0;
 }
 
+void cmt_msg_rm_hdlr(cmt_msg_t* msg) {
+    msg->hdlr = NULL;
+}
+
 
 bool cmt_message_loop_0_running() {
     return (_msg_loop_0_running);

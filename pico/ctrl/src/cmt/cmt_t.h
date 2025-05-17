@@ -22,6 +22,7 @@ extern "C" {
 
 // Includes for types used in the Message Data
 #include "curswitch/curswitch_t.h"
+#include "rcrx/rcrx_t.h"
 #include "sensbank/sensbank_t.h"
 #include "servo/servo_t.h"
 
@@ -53,6 +54,11 @@ typedef enum MSG_ID_ {
     MSG_HWOS_TEST,
     MSG_INPUT_SW_DEBOUNCE,
     MSG_MAIN_USER_SWITCH_PRESS,
+    MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
+    MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
+    MSG_RC_DETECTED,    // Radio Control BAUD & Protocol detected
+    MSG_RC_RX_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
+    MSG_RC_RX_MSG_RDY,  // Radio Control receiver message is ready
     MSG_ROTARY_CHG,
     MSG_SERVO_DATA_RCVD,
     MSG_SERVO_DATA_RX_TO,
@@ -63,7 +69,7 @@ typedef enum MSG_ID_ {
     MSG_TOUCH_PANEL,
     MSG_DCS_STARTED,
     //
-    // Drive Control System (DCS) messages
+    // Drive Control System (DCS) and Human Interface Devices (HID) messages
     MSG_DCS_NOOP = 0x0200,
     MSG_DCS_TEST,
     MSG_HWOS_STARTED,
@@ -107,6 +113,7 @@ union MSG_DATA_VALUE_ {
     int16_t rotary_delta;
     int32_t status;
     char* str;
+    rcrx_bp_t rcrx_bp;
     sensbank_chg_t sensbank_chg;
     servo_params_t servo_params;
     switch_action_data_t sw_action;

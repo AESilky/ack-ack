@@ -26,7 +26,10 @@
 			"sf_table.h": "c",
 			"util.h": "c",
 			"hid.h": "c",
-			"display.h": "c"
+			"display.h": "c",
+			"serial_rd.pio.h": "c",
+			"rcrx.h": "c",
+			"serial_rd.h": "c"
 		},
 		"cSpell.words": [
 			"AGPI",
@@ -35,6 +38,7 @@
 			"cntx",
 			"corenum",
 			"curswitch",
+			"Etry",
 			"expio",
 			"fstart",
 			"fullscreen",
@@ -44,7 +48,10 @@
 			"hwos",
 			"lbit",
 			"multicore",
+			"pindirs",
+			"rcrx",
 			"rxstatus",
+			"SBUS",
 			"srvo",
 			"txval",
 			"UART"

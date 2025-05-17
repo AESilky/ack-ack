@@ -51,7 +51,8 @@
       "showDevDebugOutput": "raw",
       "openOCDLaunchCommands": [
         "adapter speed 3000"
-      ]
+      ],
+      "liveWatch": "1"
     },
     {
       "name": "Pico2 Debug (Cortex-Debug with external OpenOCD)",

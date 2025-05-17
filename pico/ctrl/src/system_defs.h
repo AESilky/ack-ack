@@ -9,8 +9,8 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef _SYSTEM_DEFS_H_
-#define _SYSTEM_DEFS_H_
+#ifndef SYSTEM_DEFS_H_
+#define SYSTEM_DEFS_H_
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -101,23 +101,27 @@ extern "C" {
 
 // PIO Blocks
 //
-#define PIO_ROTARY_BLOCK        pio0            // PIO Block 0 is used to decode the quadrature signal
-#define PIO_ROTARY_SM            0              // State Machine 0 is used for the rotary quad decode
-#define PIO_ROTARY_IRQ          PIO0_IRQ_0      // PIO IRQ to use for Sensor reading change
-#define PIO_SENSBANK_BLOCK      pio1            // PIO Block 1 is used to select and read the Multiplexed Sensors
-#define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the switch bank
 #define PIO_NEOPIX_BLOCK        pio1            // PIO Block 1 is used for the Neopixel display
 #define PIO_NEOPIX_SM            1              // State Machine 1 is used to drive the Neopixel display
 #define PIO_NEOPIX_DREQ         DREQ_PIO1_TX1   // DMA DREQ trigger from PIO1-SM1
+#define PIO_RC_BLOCK            pio2            // Radio Control receive uses PIO Block 2 (available on RP2350)
+#define PIO_RC_SM                0              // Radio Control uses State Machine 0
+#define PIO_RCRX_DREQ           DREQ_PIO2_RX0   // Radio Control DMA DREQ trigger from PIO2-SM0
+#define PIO_ROTARY_BLOCK        pio1            // PIO Block 1 is used to decode the quadrature signal
+#define PIO_ROTARY_SM            0              // State Machine 0 is used for the rotary quad decode
+#define PIO_ROTARY_IRQ          PIO1_IRQ_0      // PIO IRQ to use for Rotary reading change
+#define PIO_SENSBANK_BLOCK      pio0            // PIO Block 0 is used to select and read the Multiplexed Sensors
+#define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the Sensors
 
-// I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, NeoPixel, etc.
+// I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, etc.
 #define I2C_EXTERN              i2c0
 #define I2C_EXTERN_SDA           6              // DP-9  Serial Data
 #define I2C_EXTERN_SCL           7              // DP-10 Serial Clock
 #define I2C_EXTERN_CLK_SPEED     (400 * 1000)   // 400kHz
 
-// RC Receiver and Telemetry input from FrSKY SBUS or Spektrum  DSMX
-// These are serial input that could be decoded using a PIO
+// RC Receiver and Telemetry input from FrSKY SBUS or Spektrum SRXL2
+// This is serial input that is decoded using a PIO
+// See PIO section for PIO defines...
 #define RC_RXTEL_GPIO            9              // DP-12
 
 // Rotary Encoder Input
@@ -158,4 +162,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif // _SYSTEM_DEFS_H_
+#endif // SYSTEM_DEFS_H_

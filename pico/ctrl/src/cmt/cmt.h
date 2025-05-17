@@ -76,9 +76,20 @@ extern void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority);
  * @param msg Pointer to the Message to initialize
  * @param id Message ID
  * @param priority Priority
- * @param hdlr Message handler function
+ * @param hdlr Message handler function that will be used, rather than looking one up
  */
 extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hdlr);
+
+/**
+ * @brief Remove the (forced) message handler set on a message.
+ *
+ * This should be used when re-posting a message that has been handled by a
+ * specific message handler (set in `init`) so that the handler will be
+ * looked up by the message processor.
+ *
+ * @param msg The message to remove the handler from
+ */
+extern void cmt_msg_rm_hdlr(cmt_msg_t* msg);
 
 /**
  * @brief Indicates if the Core-0 message loop has been started.

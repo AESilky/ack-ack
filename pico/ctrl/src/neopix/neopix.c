@@ -31,7 +31,7 @@
 #include <stdlib.h>
 
 static bool _initialized = false;
-static int _dma_fbuf;
+static int _dma_pio_rd;
 static int _dma_copy;
 
 static void _framebuf_to_disp();
@@ -85,12 +85,12 @@ static uint32_t* _eye_pattern[] = { _eye_pat0, _eye_pat1, _eye_pat2, _eye_pat3 }
  */
 static void _copy_to_framebuf(const uint32_t* src) {
     dma_channel_set_write_addr(_dma_copy, &_frame_buf, false);
-    dma_channel_set_read_addr(_dma_fbuf, &_frame_buf, false);
+    dma_channel_set_read_addr(_dma_pio_rd, &_frame_buf, false);
     dma_channel_transfer_from_buffer_now(_dma_copy, src, NEOPIX_FRAME_BUF_ELEMENTS);
 }
 
 static void _framebuf_to_disp() {
-    dma_channel_transfer_from_buffer_now(_dma_fbuf, &_frame_buf, NEOPIX_FRAME_BUF_ELEMENTS);
+    dma_channel_transfer_from_buffer_now(_dma_pio_rd, &_frame_buf, NEOPIX_FRAME_BUF_ELEMENTS);
 }
 
 
@@ -175,11 +175,11 @@ void neopix_module_init(void) {
     ws2812_program_init(PIO_NEOPIX_BLOCK, PIO_NEOPIX_SM, offset, NEOPIXEL_DRIVE, 800000, false);
     // Initialize the DMA that moves data from the frame buffers to the PIO,
     // and from a source buffer to the frame buffer.
-    _dma_fbuf = dma_claim_unused_channel(true);
+    _dma_pio_rd = dma_claim_unused_channel(true);
     _dma_copy = dma_claim_unused_channel(true);
     //
     // Init the Frame Buffer DMA to write the frame buffer to the PIO
-    dma_channel_config c1 = dma_channel_get_default_config(_dma_fbuf); //Get configurations for the frame-buffer channel
+    dma_channel_config c1 = dma_channel_get_default_config(_dma_pio_rd); //Get configurations for the frame-buffer channel
     channel_config_set_transfer_data_size(&c1, DMA_SIZE_32); //Set frame-buffer channel data transfer size to 8 bits
     channel_config_set_read_increment(&c1, true); // Frame-buffer channel read increment to true (advance through buffer)
     channel_config_set_write_increment(&c1, false); // Frame-buffer channel write increment to false (write to PIO)
@@ -191,10 +191,10 @@ void neopix_module_init(void) {
     channel_config_set_transfer_data_size(&c2, DMA_SIZE_32); //Set transfer size to 32 bits
     channel_config_set_read_increment(&c2, true); // Frame-buffer channel read increment to true (advance through source)
     channel_config_set_write_increment(&c2, true); // Frame-buffer channel write increment to true (advance through frame buffer)
-    channel_config_set_chain_to(&c2, _dma_fbuf);  // Once the copy to the frame-buf is done, trigger the frame-buf DMA
+    channel_config_set_chain_to(&c2, _dma_pio_rd);  // Once the copy to the frame-buf is done, trigger the frame-buf DMA
     //
     // Configure frame-buffer channel to write to the PIO driving the panel
-    dma_channel_configure(_dma_fbuf, &c1,
+    dma_channel_configure(_dma_pio_rd, &c1,
         &PIO_NEOPIX_BLOCK->txf[PIO_NEOPIX_SM],      // Destination
         _frame_buf,                                 // Memory buffer to read from
         NEOPIX_FRAME_BUF_ELEMENTS,                  // Number of pixels to transfer in one block

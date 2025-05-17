@@ -41,6 +41,7 @@ add_subdirectory(gfx)
 add_subdirectory(hid)
 add_subdirectory(hwos)
 add_subdirectory(neopix)
+add_subdirectory(rcrx)
 add_subdirectory(rotary_encoder)
 add_subdirectory(rover)
 add_subdirectory(sensbank)
@@ -115,6 +116,7 @@ target_link_libraries(hwctrl
   hid
   hwos
   neopix
+  rcrx
   rotary_encoder
   rover
   sensbank
