@@ -60,7 +60,7 @@ extern void servos_zero_position();
  * @ingroup servo
  *
  * This performs regular housekeeping for the Servos Module.
- * It is expected to be called every ~16ms by the Hardware Control OS.
+ * It is expected to be called every ~16ms by the Hardware Control Runtime.
  */
 extern void servos_housekeeping(void);
 

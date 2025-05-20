@@ -29,8 +29,7 @@ extern "C" {
 
 typedef enum MSG_PRI_ {
     MSG_PRI_NORM = 0,
-    MSG_PRI_L9,
-    MSG_PRI_LP
+    MSG_PRI_LOW
 } msg_priority_t;
 
 
@@ -49,7 +48,7 @@ typedef enum MSG_ID_ {
     MSG_SWITCH_LONGPRESS,
     MSG_TERM_CHAR_RCVD,
     //
-    // Hardware-OS (HWOS) messages
+    // Hardware-Runtime (HWOS) messages
     MSG_HWOS_NOOP = 0x0100,
     MSG_HWOS_TEST,
     MSG_INPUT_SW_DEBOUNCE,

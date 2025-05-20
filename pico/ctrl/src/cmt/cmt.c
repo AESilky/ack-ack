@@ -85,7 +85,7 @@ static void _on_recurring_interrupt(void) {
         _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
         if (_housekeep_rt == 0) {
             cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LP);
+            cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LOW);
             postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
         }
     // Clear the interrupt flag that brought us here so it can occur again.

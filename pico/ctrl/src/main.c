@@ -18,7 +18,7 @@
 
 //
 #include "dcs/dcs.h"
-#include "hwos/hwos.h"
+#include "hwrt/hwrt.h"
 //
 #include "display/display.h"
 #include"tests.h"
@@ -51,7 +51,7 @@ static const int32_t say_hi[] = {
 int main()
 {
     // useful information for picotool
-    bi_decl(bi_program_description("OS and Control for AckAck-Rover Hardware"));
+    bi_decl(bi_program_description("Runtime and Control for AckAck-Rover Hardware"));
 
     // Uncomment to force starting in Debug Mode
     //debug_mode_enable(true);
@@ -71,7 +71,7 @@ int main()
     // Initialize the Cooperative Multi-Tasking subsystem
     cmt_module_init();
 
-    // Set up the Hardware O.S. (needs to be done before starting the Direction Control System)
+    // Set up the Hardware Runtime (needs to be done before starting the Direction Control System)
     hwos_module_init();
 
     // ZZZ - TEST the RC RX function...
@@ -98,7 +98,7 @@ int main()
     error_printf("hwctrl - Somehow we are out of our endless message loop in `main()`!!!");
     disp_clear(true);
     disp_string(1, 0, "!!!!!!!!!!!!!!!!", false, true);
-    disp_string(2, 0, "! OS LOOP EXIT !", false, true);
+    disp_string(2, 0, "! Runtime LOOP EXIT !", false, true);
     disp_string(3, 0, "!!!!!!!!!!!!!!!!", false, true);
     // ZZZ Reboot!!!
     return 0;

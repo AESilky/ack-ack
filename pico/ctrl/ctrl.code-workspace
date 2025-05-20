@@ -8,7 +8,7 @@
 		"files.associations": {
 			"curswitch.h": "c",
 			"cmt.h": "c",
-			"hwos.h": "c",
+			"hwrt.h": "c",
 			"core1_main.h": "c",
 			"string.h": "c",
 			"font.h": "c",
@@ -45,7 +45,7 @@
 			"hbit",
 			"hndlr",
 			"hwctrl",
-			"hwos",
+			"hwrt",
 			"lbit",
 			"multicore",
 			"pindirs",

@@ -39,7 +39,7 @@ add_subdirectory(display)
 add_subdirectory(expio)
 add_subdirectory(gfx)
 add_subdirectory(hid)
-add_subdirectory(hwos)
+add_subdirectory(hwrt)
 add_subdirectory(neopix)
 add_subdirectory(rcrx)
 add_subdirectory(rotary_encoder)
@@ -114,7 +114,7 @@ target_link_libraries(hwctrl
   fonts
   gfx
   hid
-  hwos
+  hwrt
   neopix
   rcrx
   rotary_encoder

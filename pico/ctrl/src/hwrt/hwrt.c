@@ -8,7 +8,7 @@
  *
 */
 
-#include "hwos.h"
+#include "hwrt.h"
 
 #include "board.h"
 #include "debug_support.h"
@@ -89,7 +89,7 @@ static const msg_handler_entry_t* _hwos_handler_entries[] = {
 };
 
 msg_loop_cntx_t hwos_msg_loop_cntx = {
-    HWOS_CORE_NUM, // Hardware OS runs on Core 0
+    HWOS_CORE_NUM, // Hardware Runtime runs on Core 0
     _hwos_handler_entries,
 };
 
@@ -98,7 +98,7 @@ msg_loop_cntx_t hwos_msg_loop_cntx = {
 // ====================================================================
 
 /**
- * @brief Handle HW OS Housekeeping tasks. This is triggered every ~16ms.
+ * @brief Handle HW Runtime Housekeeping tasks. This is triggered every ~16ms.
  *
  * @param msg Nothing important in the message.
  */
@@ -305,7 +305,7 @@ void hwos_started() {
     // Start the Rover processing.
     rover_start();
     //
-    // Done with the Hardware OS Startup - Let the DSC know.
+    // Done with the Hardware Runtime Startup - Let the DSC know.
     cmt_msg_t msg;
     cmt_msg_init(&msg, MSG_HWOS_STARTED);
     postDCSMsg(&msg);
@@ -334,6 +334,6 @@ void hwos_module_init() {
 
     // Post a TEST to ourself in case we have any tests set up.
     cmt_msg_t msg;
-    cmt_msg_init2(&msg, MSG_HWOS_TEST, MSG_PRI_LP);
+    cmt_msg_init2(&msg, MSG_HWOS_TEST, MSG_PRI_LOW);
     postHWCtrlMsgDiscardable(&msg);
 }

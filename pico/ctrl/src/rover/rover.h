@@ -22,7 +22,7 @@ extern "C" {
  * @ingroup rover
  *
  * This performs regular housekeeping for the Rover Module.
- * It is expected to be called every ~16ms by the Hardware Control OS.
+ * It is expected to be called every ~16ms by the Hardware Control Runtime.
  */
 extern void rover_housekeeping(void);
 
