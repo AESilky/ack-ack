@@ -107,11 +107,16 @@ extern "C" {
 #define PIO_RC_BLOCK            pio2            // Radio Control receive uses PIO Block 2 (available on RP2350)
 #define PIO_RC_SM                0              // Radio Control uses State Machine 0
 #define PIO_RCRX_DREQ           DREQ_PIO2_RX0   // Radio Control DMA DREQ trigger from PIO2-SM0
+#define PIO_RCRX_IRQ_ERR        PIO2_IRQ_0      // PIO IRQ-0 raised on receive data error (framing or parity)
+#define PIO_RCRX_IRQ_IDX         0              // PIO IRQ index for the RC-RX
 #define PIO_ROTARY_BLOCK        pio1            // PIO Block 1 is used to decode the quadrature signal
 #define PIO_ROTARY_SM            0              // State Machine 0 is used for the rotary quad decode
 #define PIO_ROTARY_IRQ          PIO1_IRQ_0      // PIO IRQ to use for Rotary reading change
+#define PIO_ROTARY_IRQ_IDX       0              // PIO IRQ index for the Rotary reading change
 #define PIO_SENSBANK_BLOCK      pio0            // PIO Block 0 is used to select and read the Multiplexed Sensors
 #define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the Sensors
+#define PIO_SENSBANK_IRQ        PIO0_IRQ_0      // PIO IRQ to use for sensor bank read cycle complete
+#define PIO_SENSBANK_IRQ_IDX     0              // PIO IRQ index for the sensbank
 
 // I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, etc.
 #define I2C_EXTERN              i2c0
@@ -153,6 +158,11 @@ extern "C" {
 // (from the USB-2 RTS) are OR'ed together and detected on GPIO-3 (DP-5)
 #define IRQ_WU_TOUCH_EXP         3              // DP-5
 #define IRQ_ROTARY_TURN         14              // DP-19
+// The Radio Control Receiver (RC-RX) use PIO2 and DMA interrupts to process incoming RX messages
+#define SYSIRQ_RCRX_DMA_FROM_PIO    DMA_IRQ_1       // System DMA IRQ-1 raised when DMA finishes pulling PIO data
+#define IRQn_RCRX_DMA_FROM_PIO      1u              // Use DMA IRQ 1 for finished pulling PIO data
+#define SYSIRQ_RCRX_DMA_XFER        DMA_IRQ_0       // System DMA IRQ-0 raised when DMA finishes transferring buffers
+#define IRQn_RCRX_DMA_XFER          0u              // Use DMA IRQ 0 for finished transferring buffers
 
 // The Switch Matrix is read using the ADC. See the `curswitch` module for details.
 //

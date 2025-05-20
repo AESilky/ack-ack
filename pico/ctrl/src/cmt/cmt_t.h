@@ -54,6 +54,7 @@ typedef enum MSG_ID_ {
     MSG_HWOS_TEST,
     MSG_INPUT_SW_DEBOUNCE,
     MSG_MAIN_USER_SWITCH_PRESS,
+    MSG_RC_COPY_DONE,   // Radio Control buffer copy complete
     MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
     MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
     MSG_RC_DETECTED,    // Radio Control BAUD & Protocol detected
@@ -112,6 +113,7 @@ union MSG_DATA_VALUE_ {
     cmt_sleep_data_t cmt_sleep;
     int16_t rotary_delta;
     int32_t status;
+    uint32_t value32u;
     char* str;
     rcrx_bp_t rcrx_bp;
     sensbank_chg_t sensbank_chg;

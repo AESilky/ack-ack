@@ -45,6 +45,7 @@
         "smcfg",
         "SRXL",
         "stdlib",
+        "SYSIRQ",
         "UNCHG"
     ]
 }

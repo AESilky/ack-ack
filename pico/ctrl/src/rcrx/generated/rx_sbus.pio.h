@@ -13,45 +13,47 @@
 // ------- //
 
 #define rx_sbus_wrap_target 4
-#define rx_sbus_wrap 27
+#define rx_sbus_wrap 26
 #define rx_sbus_pio_version 1
+
+#define rx_sbus_BIT_CLK_MULT 20
 
 #define rx_sbus_offset_start 0u
 
 static const uint16_t rx_sbus_program_instructions[] = {
-    0xe02c, //  0: set    x, 12
-    0x2820, //  1: wait   0 pin, 0               [8]
+    0xe02d, //  0: set    x, 13
+    0x2a20, //  1: wait   0 pin, 0               [10]
     0x00c0, //  2: jmp    pin, 0
-    0x0e42, //  3: jmp    x--, 2                 [14]
+    0x1242, //  3: jmp    x--, 2                 [18]
             //     .wrap_target
-    0xe055, //  4: set    y, 21
-    0x4045, //  5: in     y, 5
-    0xa04a, //  6: mov    y, ~y
-    0x4046, //  7: in     y, 6
-    0xa0e6, //  8: mov    osr, isr
-    0xa0c9, //  9: mov    isr, ~x
-    0x2fa0, // 10: wait   1 pin, 0               [15]
-    0xe727, // 11: set    x, 7                   [7]
-    0xa040, // 12: mov    y, pins
-    0xa04a, // 13: mov    y, ~y
-    0x4041, // 14: in     y, 1
-    0xa04a, // 15: mov    y, ~y
-    0x0092, // 16: jmp    y--, 18
-    0x0013, // 17: jmp    19
+    0x20a0, //  4: wait   1 pin, 0
+    0xe055, //  5: set    y, 21
+    0x4045, //  6: in     y, 5
+    0xa04a, //  7: mov    y, ~y
+    0x4046, //  8: in     y, 6
+    0xa0e6, //  9: mov    osr, isr
+    0xadc3, // 10: mov    isr, null              [13]
+    0xe827, // 11: set    x, 7                   [8]
+    0xa042, // 12: nop
+    0xe040, // 13: set    y, 0
+    0x00d0, // 14: jmp    pin, 16
+    0xe041, // 15: set    y, 1
+    0x4041, // 16: in     y, 1
+    0x0073, // 17: jmp    !y, 19
     0x6041, // 18: out    y, 1
-    0x094c, // 19: jmp    x--, 12                [9]
-    0xa020, // 20: mov    x, pins
-    0x6041, // 21: out    y, 1
-    0x00b8, // 22: jmp    x != y, 24
-    0x001c, // 23: jmp    28
-    0xec21, // 24: set    x, 1                   [12]
-    0x00dd, // 25: jmp    pin, 29
-    0x0f59, // 26: jmp    x--, 25                [15]
-    0x8000, // 27: push   noblock
+    0x0d4c, // 19: jmp    x--, 12                [13]
+    0x8000, // 20: push   noblock
+    0xe021, // 21: set    x, 1
+    0x6041, // 22: out    y, 1
+    0x00d9, // 23: jmp    pin, 25
+    0xe020, // 24: set    x, 0
+    0x18bb, // 25: jmp    x != y, 27             [24]
+    0x00de, // 26: jmp    pin, 30
             //     .wrap
-    0xc004, // 28: irq    nowait 4
-    0xc020, // 29: irq    wait 0
-    0x0000, // 30: jmp    0
+    0x4048, // 27: in     y, 8
+    0x8000, // 28: push   noblock
+    0xc004, // 29: irq    nowait 4
+    0xc020, // 30: irq    wait 0
 };
 
 #if !PICO_NO_HARDWARE
@@ -68,9 +70,9 @@ static const struct pio_program rx_sbus_program = {
 static inline pio_sm_config rx_sbus_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_wrap(&c, offset + rx_sbus_wrap_target, offset + rx_sbus_wrap);
-    sm_config_set_in_pin_count(&c, 32);
+    sm_config_set_in_pin_count(&c, 8);
     sm_config_set_in_shift(&c, 1, 0, 32);
-    sm_config_set_out_pin_count(&c, 32);
+    sm_config_set_out_pin_count(&c, 16);
     sm_config_set_out_shift(&c, 0, 0, 32);
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
     return c;

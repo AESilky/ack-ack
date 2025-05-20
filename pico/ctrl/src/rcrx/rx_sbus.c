@@ -38,7 +38,7 @@ pio_sm_cfg pio_rx_sbus_init(PIO pio, uint sm, uint pin, uint baud) {
     sm_config_set_jmp_pin(&smcfg.sm_cfg, pin); // for JMP
     // Run at 16X BAUD. This is required for the PIO program
     // to read in the middle of the bits.
-    float div = (float)clock_get_hz(clk_sys) / (baud * 16);
+    float div = (float)clock_get_hz(clk_sys) / (baud * rx_sbus_BIT_CLK_MULT);
     sm_config_set_clkdiv(&smcfg.sm_cfg, div);
 
     pio_sm_init(pio, sm, smcfg.offset, &smcfg.sm_cfg);

@@ -30,17 +30,31 @@ typedef struct {
 } pio_sm_cfg;
 
 /**
+ * @brief Get the enabled (running) state of a PIO State Machine.
+ *
+ * @param pio The PIO block
+ * @param sm The State Machine in the block
+ * @return true The SM is enabled
+ * @return false The SM is disabled
+ */
+static inline bool sm_enabled(PIO pio, uint sm) {
+    return ((pio->ctrl & (1u << sm)) != 0);
+}
+
+/**
  * @brief Reset a PIO State Machine, including putting the PC at the start.
  *
  * This clears (most of) the status registers, the ISR and OSR, and sets the
- * PC back to the beginning of the program. It leaves the State Machine disabled.
+ * PC back to the beginning of the program.
+ * This leaves the State Machine disabled.
  *
  * @param pio The PIO block
  * @param sm  The State Machine in the block
  * @param smcfg The pio_sm_cfg containing the program offset and configuration
  */
-static inline void sm_restart(PIO pio, uint sm, pio_sm_cfg smcfg) {
+static inline void sm_reset(PIO pio, uint sm, pio_sm_cfg smcfg) {
     pio_sm_init(pio, sm, smcfg.offset, &smcfg.sm_cfg);
+    pio_sm_clear_fifos(pio, sm);
 }
 
 #ifdef __cplusplus

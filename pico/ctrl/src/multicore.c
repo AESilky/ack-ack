@@ -28,28 +28,29 @@
 
 static int32_t _msg_num;
 // Flag indicating that we don't want to panic if we can't add a message to a queue.
-static bool    _no_qadd_panic;
-static int     _c0_reqmsg_post_errs;
-static int     _c1_reqmsg_post_errs;
+// (the following are global to aid with debugging)
+bool    _no_qadd_panic;
+int     _c0_reqmsg_post_errs;
+int     _c1_reqmsg_post_errs;
 
-static queue_t _core0_np_queue;
-static queue_t _core0_l9_queue;
-static queue_t _core0_lp_queue;
-static queue_t _core1_np_queue;
-static queue_t _core1_l9_queue;
-static queue_t _core1_lp_queue;
+queue_t _core0_np_queue;
+queue_t _core0_l9_queue;
+queue_t _core0_lp_queue;
+queue_t _core1_np_queue;
+queue_t _core1_l9_queue;
+queue_t _core1_lp_queue;
 
 static bool _all_q0_mt() {
     register uint level = queue_get_level(&_core0_l9_queue);
-    if (level) {
+    if (level > 0) {
         return false;
     }
     level = queue_get_level(&_core0_np_queue);
-    if (level) {
+    if (level > 0) {
         return false;
     }
     level = queue_get_level(&_core0_lp_queue);
-    if (level) {
+    if (level > 0) {
         return false;
     }
     return true;
@@ -57,15 +58,15 @@ static bool _all_q0_mt() {
 
 static bool _all_q1_mt() {
     register uint level = queue_get_level(&_core1_l9_queue);
-    if (level) {
+    if (level > 0) {
         return false;
     }
     level = queue_get_level(&_core1_np_queue);
-    if (level) {
+    if (level > 0) {
         return false;
     }
     level = queue_get_level(&_core1_lp_queue);
-    if (level) {
+    if (level > 0) {
         return false;
     }
     return true;

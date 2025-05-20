@@ -54,7 +54,7 @@ int main()
     bi_decl(bi_program_description("OS and Control for AckAck-Rover Hardware"));
 
     // Uncomment to force starting in Debug Mode
-    debug_mode_enable(true);
+    //debug_mode_enable(true);
 
     // Board/base level initialization
     if (board_init() != 0) {

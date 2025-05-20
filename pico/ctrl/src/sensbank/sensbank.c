@@ -42,10 +42,6 @@ static int _sampleindx;
 static uint8_t _samplerd[SAMPLES_NEEDED_];
 
 
-/** PIO IRQ number */
-static int8_t _pio_irq;
-
-
 // ############################################################################
 // Interrupt Handlers
 // ############################################################################
@@ -153,12 +149,11 @@ sensbank_chg_t sensbank_get_chg(void) {
 //
 
 void sensbank_start(void) {
-    // Enable the interrupt and start the PIO state machine
-    const uint irq_index = _pio_irq - pio_get_irq_num(PIO_SENSBANK_BLOCK, 0); // Get index of the IRQ
     // Set pio to tell us when the FIFO is NOT empty
-    pio_set_irqn_source_enabled(PIO_SENSBANK_BLOCK, irq_index, pio_get_rx_fifo_not_empty_interrupt_source(PIO_SENSBANK_SM), true);
+    pio_set_irqn_source_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_IRQ_IDX, pio_get_rx_fifo_not_empty_interrupt_source(PIO_SENSBANK_SM), true);
+    // Enable the interrupt and start the PIO state machine
     pio_sm_set_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM, true);
-    irq_set_enabled(_pio_irq, true);
+    irq_set_enabled(PIO_SENSBANK_IRQ, true);
 }
 
 
@@ -174,23 +169,14 @@ void sensbank_module_init(void) {
     _sensdata = SENSBANK_ALL_OPEN;
     _sampleindx = 0;
 
-    // Find a free irq
-    _pio_irq = pio_get_irq_num(PIO_SENSBANK_BLOCK, 0);
-    if (irq_get_exclusive_handler(_pio_irq)) {
-        _pio_irq++;
-        if (irq_get_exclusive_handler(_pio_irq)) {
-            board_panic("sensbank_module_init - All PIO IRQs are in use");
-        }
-    }
-
     // Load the PIO program
     offset = pio_add_program(PIO_SENSBANK_BLOCK, &sensbank_program);
     if (offset < 0) {
         board_panic("sensbank_module_init - Unable to load PIO program");
     }
     // Enable interrupt
-    irq_add_shared_handler(_pio_irq, pio_irq_func, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY); // Add a shared IRQ handler
-    irq_set_enabled(_pio_irq, false); // Disable the IRQ for now
+    irq_set_exclusive_handler(PIO_SENSBANK_IRQ, pio_irq_func); // Set the IRQ handler
+    irq_set_enabled(PIO_SENSBANK_IRQ, false); // Disable the IRQ for now
 
     _sensbank_program_init(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM, offset, SENSOR_SEL_A0, SENSOR_READ);
 }

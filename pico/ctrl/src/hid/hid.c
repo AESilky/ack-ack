@@ -115,7 +115,7 @@ void hid_start(void) {
     neopix_start();
     //
     // Output status every 7 seconds
-    cmt_sleep_ms(7000, _disp_proc_status, NULL);
+    //cmt_sleep_ms(7000, _disp_proc_status, NULL);
 }
 
 

@@ -79,22 +79,12 @@ msg_loop_cntx_t dcs_msg_loop_cntx = {
  */
 static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     // Do any regular status updates, cleanup, etc.
-    static bool aon = false;
-    static bool bon = false;
 
     // We do status updates at certain periods, and we
     // offset different operations a bit, just so not to
     // do too much all in one time slot.
     if (++_dcs_hk_cnt % DCS_STATUS_PERIOD == 0) {
         debug_printf("DCS: %d\n", _dcs_hk_cnt);
-        if (_dcs_hk_cnt % 2 == 0) {
-            aon = !aon;
-            ledA_on(aon);
-        }
-        if (_dcs_hk_cnt % 3 == 0) {
-            bon = !bon;
-            ledB_on(bon);
-        }
     }
     if (_dcs_hk_cnt % (DCS_STATUS_PERIOD + 3) == 0) {
         hid_update_sensbank(sensbank_get_chg());

@@ -41,7 +41,7 @@ typedef struct _scheduled_msg_data_ {
 
 
 auto_init_mutex(sm_mutex);
-static _scheduled_msg_data_t _scheduled_message_datas[SCHEDULED_MESSAGES_MAX]; // Objects to use (no malloc/free)
+_scheduled_msg_data_t _scheduled_message_datas[SCHEDULED_MESSAGES_MAX]; // Objects to use (no malloc/free). Global for debugging.
 
 static bool _msg_loop_0_running = false;
 static bool _msg_loop_1_running = false;
@@ -349,16 +349,16 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
             if (msg.hdlr != NULL_MSG_HDLR) {
                 gpio_put(PICO_DEFAULT_LED_PIN, 1); // Turn the Pico LED on while the handler runs
                 msg.hdlr(&msg);
-                gpio_put(PICO_DEFAULT_LED_PIN, 0);
+                gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
             }
             else {
                 const msg_handler_entry_t** handler_entries = loop_context->handler_entries;
                 while (*handler_entries) {
                     const msg_handler_entry_t* handler_entry = *handler_entries++;
                     if (msg.id == handler_entry->msg_id) {
-                        gpio_put(PICO_DEFAULT_LED_PIN, 1);
+                        gpio_put(PICO_DEFAULT_LED_PIN, 1); // Turn the Pico LED on while the handler runs
                         handler_entry->msg_handler(&msg);
-                        gpio_put(PICO_DEFAULT_LED_PIN, 0);
+                        gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
                     }
                 }
             }
