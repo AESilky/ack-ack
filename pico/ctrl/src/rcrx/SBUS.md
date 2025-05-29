@@ -1,7 +1,7 @@
 # SBUS Protocol Details
 
-SBUS Protocol
- 
+## SBUS Line Protocol
+
 The SBUS Protocol is a serial protocol that was developed by Futaba for hobby remote control applications. It is derived from the RS232 protocol but the voltage levels are inverted. The protocol provides 16 channels of 11 bits each, two digital channels, and two flags for "frame lost" and "failsafe".
 
 For SBUS, a serial port has to be configured as follows:
@@ -15,7 +15,8 @@ Note: The voltage levels of Futaba SBUS are inverted. So while a 0 with a normal
 
 Note: Even parity means that, for a given set of bits, the occurrences of bits whose value is 1 is counted. If that count is odd, the parity bit value is set to 1, making the total count of occurrences of 1s in the whole set (including the parity bit) an even number. If the count of 1s in a given set of bits is already even, the parity bit's value is 0.
 
-SBUS Protocol
+## SBUS Message
+
 A single SBUS message is 25 bytes long and therefore, with the configuration described above, takes 3ms to be transmitted. It consists of the following bytes:
 
 1 Header byte 00001111b (0x0F)
@@ -35,5 +36,8 @@ Since the least significant bit is sent first over the serial port, the followin
 
 shhhhhhhhpss | s 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 pss | s 1.8 1.9 1.10 2.1 2.2 2.3 2.4 pss | ...
 
-Channel Values
+### Channel Values
+
+FrSky receivers will output a range of 172 - 1811 with channels set to a range of -100% to +100%. Using extended limits of -150% to +150% outputs a range of 0 to 2047, which is the maximum range achievable with 11 bits of data.
+
 Each of the 16 channels use values in the range of 192 - 1792 which are mapped linearly in the Betaflight Firmware to values in the range 1000 - 2000. These values in the range [1000, 2000] are also what can be observed in the Betaflight Configurator's Receiver tab. Note that e.g. a Taranis transmitter sends values in a slightly larger range than [192, 1792] but these values will later be cropped.

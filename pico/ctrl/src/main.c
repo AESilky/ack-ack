@@ -53,13 +53,12 @@ int main()
     // useful information for picotool
     bi_decl(bi_program_description("Runtime and Control for AckAck-Rover Hardware"));
 
-    // Uncomment to force starting in Debug Mode
-    //debug_mode_enable(true);
-
     // Board/base level initialization
     if (board_init() != 0) {
         board_panic("Board init failed.");
     }
+    // Force setting Debug Mode (override User Switch)
+    debug_mode_enable(false);
 
     led_on_off(say_hi);
 
@@ -72,13 +71,14 @@ int main()
     cmt_module_init();
 
     // Set up the Hardware Runtime (needs to be done before starting the Direction Control System)
-    hwos_module_init();
+    hwrt_module_init();
 
-    // ZZZ - TEST the RC RX function...
+    // ZZZ - Test `board_addr` and 'RC RX'
     #include "rcrx/rcrx.h"
-    rcrx_module_init();
-    rcrx_start();
-
+    if (board_addr() == 0) {
+        rcrx_module_init();
+        rcrx_start();
+    }
 
     // Set up the Drive Control System
     dcs_module_init();
@@ -92,14 +92,14 @@ int main()
 
     // Launch the Hardware Operation System (core-0 (endless) Message Dispatching Loop).
     // (!!! THIS NEVER RETURNS !!!)
-    start_hwos();
+    start_hwrt();
 
     // How did we get here?!
     error_printf("hwctrl - Somehow we are out of our endless message loop in `main()`!!!");
     disp_clear(true);
-    disp_string(1, 0, "!!!!!!!!!!!!!!!!", false, true);
-    disp_string(2, 0, "! Runtime LOOP EXIT !", false, true);
-    disp_string(3, 0, "!!!!!!!!!!!!!!!!", false, true);
+    disp_string(1, 0, "!!!!!!!!!!!!!!!!!!!", false, true);
+    disp_string(2, 0, "! HW RT LOOP EXIT !", false, true);
+    disp_string(3, 0, "!!!!!!!!!!!!!!!!!!!", false, true);
     // ZZZ Reboot!!!
     return 0;
 }

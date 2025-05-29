@@ -29,7 +29,14 @@
 			"display.h": "c",
 			"serial_rd.pio.h": "c",
 			"rcrx.h": "c",
-			"serial_rd.h": "c"
+			"serial_rd.h": "c",
+			"rx_srxl2_uart.pio.h": "c",
+			"rx_srxl2.h": "c",
+			"rx_sbus.h": "c",
+			"pio_sm.h": "c",
+			"compare": "c",
+			"inttypes.h": "c",
+			"config.h": "c"
 		},
 		"cSpell.words": [
 			"AGPI",

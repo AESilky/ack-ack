@@ -11,7 +11,9 @@
 extern "C" {
 #endif
 
-#include "piosm.h"
+#include "rcrx_t.h"
+
+#include "pio_sm.h"
 
 #include "stdint.h"
 #include "hardware/pio.h"
@@ -19,22 +21,19 @@ extern "C" {
 /** @brief SBUS Message Length */
 #define SBUS_MSG_LEN 25
 
-extern void pio_rx_sbus_deinit(PIO pio, uint sm, int offset);
 
-extern pio_sm_cfg pio_rx_sbus_init(PIO pio, uint sm, uint pin, uint baud);
+extern void rx_sbus_module_deinit();
+
+extern void rx_sbus_start();
 
 /**
- * @brief Read an entire SBUS message from a PIO-SM (for DEBUG/TEST)
+ * @brief Initialize the module for SBUS reception.
  *
- * This reads an entire message, blocking until it is completely received.
- * This should only be used for debugging or test, as it blocks processor
- * execution until the entire message is received (3ms minimum).
- *
- * @param pio PIO block
- * @param sm State Machine within the block
- * @param buf Character buffer large enough to hold the entire message
+ * @param baud The baud rate to use (typically 100,000)
+ * @param channel_state Pointer to a rcrx_state_t Channel State to update with received data.
  */
-extern void pio_rx_sbus_msgget(PIO pio, uint sm, volatile unsigned char* buf);
+extern void rx_sbus_module_init(uint baud, rcrx_state_t* channel_state);
+
 
 #ifdef __cplusplus
 }

@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "piosm.h"
+#include "pio_sm.h"
 
 #include "stdint.h"
 #include "hardware/pio.h"
@@ -36,7 +36,7 @@ extern void pio_serial_rd_deinit(PIO pio, uint sm, int offset, bool inverse);
  * @param inverse True if the serial is inverted
  * @return int Offset the PIO program is loaded at
  */
-extern pio_sm_cfg pio_serial_rd_init(PIO pio, uint sm, uint pin, uint baud, bool inverse);
+extern pio_sm_pocfg pio_serial_rd_init(PIO pio, uint sm, uint pin, uint baud, bool inverse);
 
 #ifdef __cplusplus
 }

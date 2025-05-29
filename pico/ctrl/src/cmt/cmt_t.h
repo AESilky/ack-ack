@@ -34,7 +34,7 @@ typedef enum MSG_PRI_ {
 
 
 typedef enum MSG_ID_ {
-    // Common messages (used by both HWOS and DCS/HID)
+    // Common messages (used by both HWRT and DCS/HID)
     MSG_COMMON_NOOP = 0x0000,
     MSG_EXEC,               // General purpose message to use when specifying a handler.
     MSG_CONFIG_CHANGED,
@@ -48,16 +48,16 @@ typedef enum MSG_ID_ {
     MSG_SWITCH_LONGPRESS,
     MSG_TERM_CHAR_RCVD,
     //
-    // Hardware-Runtime (HWOS) messages
-    MSG_HWOS_NOOP = 0x0100,
-    MSG_HWOS_TEST,
+    // Hardware-Runtime (HWRT) messages
+    MSG_HWRT_NOOP = 0x0100,
+    MSG_HWRT_TEST,
     MSG_INPUT_SW_DEBOUNCE,
     MSG_MAIN_USER_SWITCH_PRESS,
-    MSG_RC_COPY_DONE,   // Radio Control buffer copy complete
     MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
     MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
     MSG_RC_DETECTED,    // Radio Control BAUD & Protocol detected
     MSG_RC_RX_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
+    MSG_RC_RX_MSG_RCVD, // Radio Control receiver message had been received
     MSG_RC_RX_MSG_RDY,  // Radio Control receiver message is ready
     MSG_ROTARY_CHG,
     MSG_SERVO_DATA_RCVD,
@@ -72,7 +72,7 @@ typedef enum MSG_ID_ {
     // Drive Control System (DCS) and Human Interface Devices (HID) messages
     MSG_DCS_NOOP = 0x0200,
     MSG_DCS_TEST,
-    MSG_HWOS_STARTED,
+    MSG_HWRT_STARTED,
     MSG_DISPLAY_MESSAGE,
 } msg_id_t;
 

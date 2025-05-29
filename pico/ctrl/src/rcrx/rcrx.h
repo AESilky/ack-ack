@@ -33,7 +33,26 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-extern const char* get_rxtype_name(rxprotocol_t type);
+extern void rcrx_clear_ch_state();
+
+extern const rcrx_state_t* rcrx_get_ch_state();
+
+extern rxprotocol_t rcrx_get_protocol();
+
+extern const char* rcrx_get_type_name(rxprotocol_t type);
+
+/**
+ * @brief Get the received message/packet count.
+ *
+ * This is the number of messages/packets received since the protocol & BAUD
+ * were detected and reception was enabled.
+ *
+ * This value can be useful for a heartbeat routine to verify that messages
+ * are being received.
+ *
+ * @return uint64_t The number of messages/packets received.
+ */
+extern uint64_t rcrx_get_rx_cnt();
 
 extern void rcrx_module_init();
 

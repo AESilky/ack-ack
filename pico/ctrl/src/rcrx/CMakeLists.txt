@@ -2,11 +2,15 @@
 add_library(rcrx INTERFACE)
 
 pico_generate_pio_header(rcrx ${CMAKE_CURRENT_LIST_DIR}/rx_sbus.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+pico_generate_pio_header(rcrx ${CMAKE_CURRENT_LIST_DIR}/rx_srxl2_msg.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+pico_generate_pio_header(rcrx ${CMAKE_CURRENT_LIST_DIR}/rx_srxl2_uart.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 pico_generate_pio_header(rcrx ${CMAKE_CURRENT_LIST_DIR}/serial_rd.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
 target_sources(rcrx INTERFACE
   rcrx.c
+  rx_cmn.c
   rx_sbus.c
+  rx_srxl2.c
   serial_rd.c
 )
 

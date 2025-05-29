@@ -9,12 +9,23 @@
 
 .program uart_rx
 
-; Slightly more fleshed-out 8n1 UART receiver which handles framing errors and
-; break conditions more gracefully.
+; 8n1 UART receiver which handles framing errors and break conditions.
 ; IN pin 0 and JMP pin are both mapped to the GPIO used as UART RX.
 
-start:
-    wait 0 pin 0        ; Stall until start bit is asserted
+.define PUBLIC BIT_CLK_MULT 20  ; The expected PIO clock multiple of the bit rate
+.define MIN_GAP_BITS 13 ; the bits needed for a 'gap'
+.fifo rx                ; Use both FIFOs for RX
+.in 8 right             ; Shift right, no auto-push
+
+PUBLIC start:
+    set x, MIN_GAP_BITS
+    wait 1 pin 0 [20/2]     ; Stall until we see a 1 (idle line), then delay 1/2 bit time
+idleloop:
+    jmp pin, idle_bit
+    jmp 
+idle_bit:start          ; 1. We received a 1 before enough 0's for idle
+    jmp x--, idleloop [20 - 2]  ; 2. Count the 0 [delay 1 bit-time]
+    ; We've received enough 0's for the idle period
     set x, 7    [10]    ; Preload bit counter, then delay until halfway through
 bitloop:                ; the first data bit (12 cycles incl wait, set).
     in pins, 1          ; Shift data bit into ISR

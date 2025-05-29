@@ -13,7 +13,6 @@
 #include "pio_uart.h"
 
 #include "pico/stdlib.h"
-#include "hardware/dma.h" //DMA is used to move the frame buffer to the PIO
 #include "hardware/clocks.h"
 #include "generated/uart.pio.h"
 

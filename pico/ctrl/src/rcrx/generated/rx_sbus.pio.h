@@ -13,7 +13,7 @@
 // ------- //
 
 #define rx_sbus_wrap_target 4
-#define rx_sbus_wrap 26
+#define rx_sbus_wrap 25
 #define rx_sbus_pio_version 1
 
 #define rx_sbus_BIT_CLK_MULT 20
@@ -33,24 +33,24 @@ static const uint16_t rx_sbus_program_instructions[] = {
     0x4046, //  8: in     y, 6
     0xa0e6, //  9: mov    osr, isr
     0xadc3, // 10: mov    isr, null              [13]
-    0xe827, // 11: set    x, 7                   [8]
-    0xa042, // 12: nop
-    0xe040, // 13: set    y, 0
-    0x00d0, // 14: jmp    pin, 16
-    0xe041, // 15: set    y, 1
-    0x4041, // 16: in     y, 1
-    0x0073, // 17: jmp    !y, 19
-    0x6041, // 18: out    y, 1
-    0x0d4c, // 19: jmp    x--, 12                [13]
-    0x8000, // 20: push   noblock
-    0xe021, // 21: set    x, 1
-    0x6041, // 22: out    y, 1
-    0x00d9, // 23: jmp    pin, 25
-    0xe020, // 24: set    x, 0
-    0x18bb, // 25: jmp    x != y, 27             [24]
-    0x00de, // 26: jmp    pin, 30
+    0xe527, // 11: set    x, 7                   [5]
+    0xe340, // 12: set    y, 0                   [3]
+    0x00cf, // 13: jmp    pin, 15
+    0xe041, // 14: set    y, 1
+    0x4041, // 15: in     y, 1
+    0x0073, // 16: jmp    !y, 19
+    0x6041, // 17: out    y, 1
+    0x0014, // 18: jmp    20
+    0xa242, // 19: nop                           [2]
+    0x084c, // 20: jmp    x--, 12                [8]
+    0x8000, // 21: push   noblock
+    0x6241, // 22: out    y, 1                   [2]
+    0xa020, // 23: mov    x, pins
+    0x15ba, // 24: jmp    x != y, 26             [21]
+    0x00de, // 25: jmp    pin, 30
             //     .wrap
-    0x4048, // 27: in     y, 8
+    0x4044, // 26: in     y, 4
+    0x4024, // 27: in     x, 4
     0x8000, // 28: push   noblock
     0xc004, // 29: irq    nowait 4
     0xc020, // 30: irq    wait 0

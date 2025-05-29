@@ -1,54 +1,69 @@
 # Spektrum SRXL2 Interface and Protocol Information
 
-6 HARDWARE-LEVEL PROTOCOL
-6.1 UART Configuration
+## HARDWARE-LEVEL PROTOCOL
+
+### UART Configuration
+
 • Baud options configurable on device
 o 115,200bps (default)
-o 400,000bps
+o 400,000bps (if all devices support it)
 • 8 Bits
 • No Parity
 • 1 Stop (8N1)
-6.2 Communication Rules
+
+## Communication Rules
+
 Communications on the SRXL2 bus generally follow the MPX specifications. Changes are:
-a) The bus is not driven while idle.
-b) The bus master shall be the RF telemetry receiver or remote receiver with the lowest device ID
+a. The bus is not driven while idle.
+b. The bus master shall be the RF telemetry receiver or remote receiver with the lowest device ID
 on the bus (see section 7 for details). Once communications are established, it shall speak a
 single Control Data packet onto the bus at the same rate as RF packets are received (typically
 every 5.5ms or 11ms).
-c) Only one bus master is allowed on the bus.
-d) Secondary remotes may be allowed, but shall follow the rules of other non-master devices.
+c. Only one bus master is allowed on the bus.
+d. Secondary remotes may be allowed, but shall follow the rules of other non-master devices.
 These secondary remotes shall either be a telemetry remote operating in a secondary mode, or a
 device to interface a standard DSMX remote to the bi-directional bus.
-e) All devices shall listen for communications from the bus master for synchronization.
-f) Any non-master device can only talk on the bus after an idle time of 2 characters has elapsed,
+e. All devices shall listen for communications from the bus master for synchronization.
+f. Any non-master device can only talk on the bus after an idle time of 2 characters has elapsed,
 and only if the bus master did not request a reply from anyone via Control Data packet.
-g) Devices which transmitted during the previous window should remain silent unless explicitly
+g. Devices which transmitted during the previous window should remain silent unless explicitly
 requested to respond by the bus master to prevent monopolizing the bus.
-h) All devices shall remain silent rather than write a message which would conflict with an
+h. All devices shall remain silent rather than write a message which would conflict with an
 incoming Control Data packet. The device must look ahead to determine if there is time to send
 a packet (including the 2-character idle time required between packets).
-i) In the case of a missing packet from the bus master, the bus shall remain idle for 50ms in order
+i. In the case of a missing packet from the bus master, the bus shall remain idle for 50ms in order
 to allow re-sync or new master selection.
-j) New master selection is beyond the scope of this document at this time, but it shall be limited to
+j. New master selection is beyond the scope of this document at this time, but it shall be limited to
 other receivers or remotes.
-k) Spektrum SRXL2 messages shall not exceed 80 bytes total, including 3-byte header and 2-byte
+k. Spektrum SRXL2 messages shall not exceed 80 bytes total, including 3-byte header and 2-byte
 CRC. This is to allow use of limited-size DMA buffer transfers.
-l) If a message on the bus is irrelevant to the device receiving it, the device should not attempt to
+l. If a message on the bus is irrelevant to the device receiving it, the device should not attempt to
 reply in order to allow another relevant device the “bus space” to reply.
-Page 5
-Rev KSpecification for Spektrum SRXL2
-7 SOFTWARE PROTOCOL
-7.1 Overview
-The latest Spektrum SRXL2 ID is 0xA6. Packets have varying lengths, with a minimum size of 5 bytes
-(3 header bytes, 0 data bytes and 2 CRC bytes) and a maximum size of 80 bytes. This protocol is only
-for products developed after June 2018. For older Spektrum SRXL implementation notes, please refer
-to Appendix 8.2 on Deprecated Protocols.
+
+## SOFTWARE PROTOCOL
+
+### Overview
+
+The latest Spektrum SRXL2 ID is 0xA6.
+
+Packets have varying lengths, with a minimum size of 5 bytes (3 header bytes, 0 data bytes and 2 CRC bytes)
+and a maximum size of 80 bytes.
+
+This protocol is only for products developed after June 2018. For older Spektrum SRXL implementation notes,
+please refer to Appendix 8.2 on Deprecated Protocols.
+
 All Spektrum SRXL packets begin with a 3-byte header that contains the SRXL Manufacturer ID
-(0xA6), a Packet Type, and a packet Length in bytes. The payload data (0 to 75 bytes) for that packet
-type follows that header, and the packet ends with a 16-bit XMODEM CRC in big endian byte order.
+(0xA6), a Packet Type, and a packet Length in bytes.
+
+The payload data (0 to 75 bytes) for that packet type follows that header, and the packet ends with a 16-bit
+ XMODEM CRC in big endian byte order.
+
 <0xA6><Packet_Type><Length><Data_bytes><CRC_Hi><CRC_Lo>
+
 The CRC is computed over all preceding packet data. See Appendix 8.1 for CRC Computation details.
-7.1.1 Device IDs
+
+### Device IDs
+
 Every device on the SRXL2 bus has a unique Device ID assigned to it. This Device ID is a single byte
 in which the 4 most significant bits contain a Device Type (see Table 2 below), and the lower 4 bits
 contain a Unit ID that is used to distinguish multiple devices of the same Device Type:
@@ -85,7 +100,9 @@ VTX
 reserved
 0xFF
 All devices (Broadcast)
+
 Table 1 - Device Types
+
 Default ID
 --
 0x10
@@ -105,8 +122,7 @@ When the Unit ID portion (the lower nibble) of the Device ID is 0, this tells th
 Handshake packet during startup without being polled by a bus master. The Default IDs given above
 are chosen because typically Receivers and VTXs should NOT talk on the bus until requested.
 NOTE: Only one device on the bus should have the Unit ID set to 0 to avoid handshake collisions.
-Page 6
-Rev KSpecification for Spektrum SRXL2
+
 In most current applications, an SRXL2 bus will not have more than one device of each device type on
 the bus, so the Default ID listed in Table 1 for a given Device Type can be used as the Device ID. In
 situations where multiple devices of the same type share the bus, the Unit IDs should be sequentially
@@ -119,7 +135,9 @@ Note: If there is enough demand for it, we can add support for a scheme to set t
 via SRXL2 that would require attaching the devices to the bus one at a time during a special
 programming mode. For now, this is not implemented, so physical switches or a stored configuration
 value are preferred.
-7.1.2 Packet Types
+
+### Packet Types
+
 The following table contains a list of Packet types:
 Packet Description
 Packet Type
@@ -146,9 +164,9 @@ Total Byte Length
 Details of each of these packets are described in the following subsections.
 NOTE: In the following packet descriptions, all payload data elements larger than a single byte use
 little endian byte order unless explicitly stated otherwise (as with the big endian CRC, for example).
-Page 7
-Rev KSpecification for Spektrum SRXL2
-7.2 Handshake Packet
+
+#### Handshake Packet
+
 The Handshake packet is sent during startup by each device on the bus, and must always be sent at the
 default baud rate of 115200. By following the protocol described in section 7.2.1 below, this will allow
 the bus master to poll each device on the bus to determine their requested telemetry priority and to set
@@ -178,15 +196,15 @@ same Device ID. If more than one device responds simultaneously with a handshake
 number will ensure that the CRC will be invalid. This value can be randomly generated for each device
 or can be a hash based on a serial number – the only requirement is that it be statistically unlikely for
 two devices to be assigned the same value.
-7.2.1 Handshake Protocol
+
+##### Handshake Protocol
+
 The Spektrum SRXL2 Handshake process is intended to take place upon device reset to allow a bus
 master to identify all other devices on the bus and negotiate a baud rate with them. The protocol is
 intended to handle cases of brown-out or momentary power loss on any of the individual devices
 including the bus master.
 If the bus master is a Receiver that shares the SRXL2 UART line with a throttle PWM line, it will
 refrain from sending a handshake until it has received one from a slave device or until 200ms has
-Page 8
-Rev KSpecification for Spektrum SRXL2
 elapsed. This is intended to prevent a Receiver from sending an SRXL2 handshake packet to a non-
 SRXL ESC or FC, possibly resulting in unintended movement or erratic behavior. If no handshake is
 received after 200ms, the Receiver assumes that no SRXL2 devices are present and defaults to PWM
@@ -219,11 +237,13 @@ indicate a brown-out reset of the bus master.
 It is up to the bus master to determine the highest speed supported by all devices before broadcasting a
 Handshake packet configuring the actual baud rate of the bus. Upon receiving this final broadcast
 Handshake, all devices should switch their baud rate accordingly.
-7.2.2 Handshake example
+
+##### Handshake example
+
 TODO
-Page 9
-Rev KSpecification for Spektrum SRXL2
-7.3 Bind Info Packet
+
+#### Bind Info Packet
+
 Upon completion of bind the bus master shall issue a Bind Info packet. This packet could be used by
 other receivers to bind to the designated master without having had to listen to the bind over the air.
 The Bind Info packet can also be generated by a device on the bus to request that all listeners enter bind
@@ -281,9 +301,9 @@ The Bound Data Report includes the UID of the reporting device. When a Bind Stat
 to Device ID 0, the bus master should report the bind info with the Bound Data Report packet. The
 requesting device can then use that information to send a Set Bind Info command to other Receivers or
 Remote Receivers on the SRXL2 bus to directly bind them to a transmitter without an RF bind packet.
-Page 10
-Rev KSpecification for Spektrum SRXL2
-7.4 Parameter Configuration
+
+#### Parameter Configuration
+
 Devices may allow query and configuration of internal parameters. The parameters and their values are
 specific to the device and are not enumerated here. This function is intended to allow the configuration
 of devices by host controllers, such as for a flight controller to specify the units of signal quality, the
@@ -308,9 +328,9 @@ extended in the message, and unsigned shall have high bits of 0.
 In all messages, data is transferred as 32-bit values. The host and device may thus have independent
 word sizes with no specific knowledge of how the data is stored on the other side.
 The definition of ParamIDs is outside the scope of this document, and is device-specific.
-Page 11
-Rev KSpecification for Spektrum SRXL2
-7.5 Signal Quality Packet
+
+#### Signal Quality Packet
+
 Devices with RF receivers in them may support signal strength data upon request from the host. Note
 that this is intended for a flight controller to request this in lieu of sending a telemetry packet, or for a
 bus master to be configured to send quality status reports regularly in addition to its control data.
@@ -330,9 +350,9 @@ available for the given antenna. A positive value shall indicate that the units 
 negative value shall indicate the actual value in dBm. Note that the units preferred by the host may be
 configured in the RF receiver device using the parameter control messages if supported by the RF
 receiver.
-Page 12
-Rev KSpecification for Spektrum SRXL2
-7.6 Telemetry Sensor Data Packet
+
+#### Telemetry Sensor Data Packet
+
 The Telemetry Sensor Data packet includes a complete 16-byte telemetry packet as it would be
 delivered over the RF as if it had come from an I2C device on the X-Bus. This will enable use of
 existing telemetry devices by plugging them into an adapter interface (which would handle
@@ -351,9 +371,9 @@ types of telemetry data.
 NOTE: Telemetry packets are sent by the device matching the ReplyID sent in a Control Data
 command. If the device supports multiple telemetry packets, it is up to the device to prioritize and
 decide which single telemetry packet to send each time a reply is requested.
-Page 13
-Rev KSpecification for Spektrum SRXL2
-7.7 Control Data Packet
+
+#### Control Data Packet
+
 The Control Data Packet type can be used to provide various forms of control data to slave devices.
 The packet format shall be:
 <0xA6><0xCD><Length><Command><ReplyID><Payload><CRC>
@@ -384,9 +404,9 @@ pins, then the flight controller would be allowed to reply in this scenario sinc
 receiver and VTX, and therefore can take the role of the VTX on the bus.
 Payload: The number of payload bytes are described in the reminder of this section. Note that Channel
 Data and Failsafe Channel Data both use the same basic payload data format.
-Page 14
-Rev KSpecification for Spektrum SRXL2
-7.7.1 Channel Data Payload
+
+#### Channel Data Payload
+
 The channel data payload consists mainly of updated servo values sent by the bus master to all devices
 on the bus during normal operation. Channels not sent in a packet should hold their last value.
 typedef struct
@@ -422,21 +442,16 @@ Current RSSI value of 88%, with a total of 11 lost frames.
 The payload includes the following channels:
 0x00000637 = 0b00000000000000000000011000110111 = CH 1, 2, 3, 5, 6, 10, 11
 The data for the channels is as follows:
-CH 1 = 0x2AA0 = 10912
-CH 2 = 0x8000 = 32768
-CH 3 = 0x8004 = 32772
-CH 5 = 0x7FFC = 32764
-CH 6 = 0xD554 = 54612
-CH 10 = 0x2AA0 = 10912
-CH 11 = 0x2AA0 = 10912
-(approx -100% on Spektrum transmitter)
-(center position)
-(1 tick above center at 14-bit resolution)
-(1 tick below center at 14-bit resolution)
-(approx. 100% on Spektrum transmitter)
-Page 15
-Rev KSpecification for Spektrum SRXL2
-7.7.2 Failsafe Channel Data Payload
+CH  1 = 0x2AA0 = 10912  (approx -100% on Spektrum transmitter)
+CH  2 = 0x8000 = 32768  (center position)  
+CH  3 = 0x8004 = 32772  (1 tick above center at 14-bit resolution)
+CH  5 = 0x7FFC = 32764  (1 tick below center at 14-bit resolution)
+CH  6 = 0xD554 = 54612  (approx. 100% on Spektrum transmitter)
+CH 10 = 0x2AA0 = 10912  (Switch (binary) OFF)
+CH 11 = 0x2AA0 = 10912  (Switch (binary) OFF)
+
+#### Failsafe Channel Data Payload
+
 The failsafe channel data payload consists mainly of servo values sent by the bus master to all devices
 on the bus when RF communications have been lost and failsafe values must be sent. These failsafe
 values are usually captured during bind and are stored in non-volatile memory on the Receiver. Unlike
@@ -473,9 +488,9 @@ not sent in the failsafe packet should be disabled rather than driven to a given
 It is ultimately up to the ESC or Flight Controller to decide what to do with these failsafe values, but it
 is strongly recommended that they be used in this manner to provide a consistent experience during RF
 signal loss.
-Page 16
-Rev KSpecification for Spektrum SRXL2
-7.7.3 VTX Data Payload
+
+#### VTX Data Payload
+
 The VTX data payload command will be similar to that used for telemetry:
 typedef struct
 {
@@ -517,10 +532,11 @@ Power = 0x02 = 15mW to 25mW
 PowerDec = 0xFFFF = use value indicated by Power
 Region = 0x00 = USA
 Assume this packet type has a variable length as new parameters may be added in the future.
-Page 17
-Rev KSpecification for Spektrum SRXL2
-8 APPENDICES
-8.1 CRC Computation
+
+### APPENDICES
+
+#### CRC Computation
+
 The SRXL protocol uses a standard 16-bit CRC commonly referred to as XMODEM or ZMODEM
 CRC. The CRC uses the polynomial 0x1021 (which corresponds to x16 + x12 + x5 + 1), with an initial
 value of 0, and operates with no bit reflection on the input or output (i.e. computations are performed
@@ -529,7 +545,9 @@ to be configured to reflect the bits if they operate on the data as it comes in 
 transmit the least significant bit first.
 The following code samples are included (with slight modifications) from the external Multiplex
 document “SRXL Specification Version 2.9”, page 2.
-8.1.1 CRC Algorithm (in C)
+
+##### CRC Algorithm (in C)
+
 uint16_t Crc16(uint16_t crc, uint8_t data)
 {
 crc = crc ^ ((uint16_t)data << 8);
@@ -542,7 +560,9 @@ crc = crc << 1;
 }
 return crc;
 }
-8.1.2 Sample CRC Usage (in C)
+
+##### Sample CRC Usage (in C)
+
 uint8_t rxBuffer[80]; // Assume this contains received SRXL packet
 uint8_t rxLength;
 // Assume this contains total length in bytes of received packet
@@ -556,5 +576,3 @@ if(computedCRC == rxCRC)
 // Success!
 else
 // Failure!
-Page 18
-Rev KSpecification for Spektrum SRXL2

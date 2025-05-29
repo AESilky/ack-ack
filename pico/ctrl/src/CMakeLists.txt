@@ -59,6 +59,7 @@ add_executable(hwctrl
   board.c
   debug_support.c
   multicore.c
+  pio_sm.c
   spi_ops.c
   tests.c
   p2bugs.c

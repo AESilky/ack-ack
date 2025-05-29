@@ -30,14 +30,14 @@
 #define DCS_HOST_STATUS_PERIOD 938  // Send status to host every 15 seconds
 
 static bool _dcs_initialized = false;
-static bool _hwos_started = false;
+static bool _hwrt_started = false;
 
 static int _dcs_hk_cnt;
 
 // Message handler functions...
 static void _handle_dcs_housekeeping(cmt_msg_t* msg);
 static void _handle_dcs_test(cmt_msg_t* msg);
-static void _handle_hwos_started(cmt_msg_t* msg);
+static void _handle_hwrt_started(cmt_msg_t* msg);
 static void _handle_sensbank_chg(cmt_msg_t* msg);
 
 // Idle functions...
@@ -50,7 +50,7 @@ static void _dcs_started();
 
 static const msg_handler_entry_t _dcs_housekeeping_he = { MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping };
 static const msg_handler_entry_t _dcs_test_he = { MSG_DCS_TEST, _handle_dcs_test };
-static const msg_handler_entry_t _hwos_started_he = { MSG_HWOS_STARTED, _handle_hwos_started };
+static const msg_handler_entry_t _hwrt_started_he = { MSG_HWRT_STARTED, _handle_hwrt_started };
 static const msg_handler_entry_t _sbchg_he = { MSG_SENSBANK_CHG, _handle_sensbank_chg };
 
 // For performance - put these in order that we expect to receive more often
@@ -59,7 +59,7 @@ static const msg_handler_entry_t* _dcs_handler_entries[] = {
     & cmt_sm_sleep_handler_entry,    // CMT Scheduled Message 'Sleep' handler
     & _sbchg_he,
     & _dcs_test_he,
-    & _hwos_started_he,
+    & _hwrt_started_he,
     ((msg_handler_entry_t*)0), // Last entry must be a NULL
 };
 
@@ -116,13 +116,13 @@ static void _handle_dcs_test(cmt_msg_t* msg) {
     times++;
 }
 
-static void _handle_hwos_started(cmt_msg_t* msg) {
+static void _handle_hwrt_started(cmt_msg_t* msg) {
     // The Hardware Operating System has reported that it is started.
     // Since we are responding to a message, it means we
     // are also initialized, so -
     //
     // Start things running.
-    _hwos_started = true;
+    _hwrt_started = true;
     _dcs_started();
 }
 

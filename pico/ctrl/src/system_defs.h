@@ -105,10 +105,14 @@ extern "C" {
 #define PIO_NEOPIX_SM            1              // State Machine 1 is used to drive the Neopixel display
 #define PIO_NEOPIX_DREQ         DREQ_PIO1_TX1   // DMA DREQ trigger from PIO1-SM1
 #define PIO_RC_BLOCK            pio2            // Radio Control receive uses PIO Block 2 (available on RP2350)
-#define PIO_RC_SM                0              // Radio Control uses State Machine 0
-#define PIO_RCRX_DREQ           DREQ_PIO2_RX0   // Radio Control DMA DREQ trigger from PIO2-SM0
-#define PIO_RCRX_IRQ_ERR        PIO2_IRQ_0      // PIO IRQ-0 raised on receive data error (framing or parity)
-#define PIO_RCRX_IRQ_IDX         0              // PIO IRQ index for the RC-RX
+#define PIO_RC_SM_RX             0              // Radio Control Data-In uses State Machine 0
+#define PIO_RC_SM_SRXL2_SI       1              // Radio Control SRXL2 Serial-In uses State Machine 1
+#define PIO_RCRX_DREQ           DREQ_PIO2_RX0   // Radio Control DMA DREQ trigger from PIO2-SM0 RXFIFO
+#define PIO_RC_SRXL2_SI_DREQ    DREQ_PIO2_RX1   // Radio Control DMA DREQ trigger from PIO2-SM1 RXFIFO (SRXL2)
+#define PIO_RCRX_SYSIRQ_ERR     PIO2_IRQ_0      // PIO IRQ-0 raised on receive data error (framing or parity)
+#define PIO_RCRX_SYSIRQ_MSG     PIO2_IRQ_1      // PIO IRQ-1 raised on completed SRXL2 message
+#define PIO_RCRX_IRQ_ERR_IDX     0              // PIO IRQ index (0/1) for the RC-RX Error
+#define PIO_RCRX_IRQ_MSG_IDX     1              // PIO IRQ index (0/1) for the RC-RX Message detector
 #define PIO_ROTARY_BLOCK        pio1            // PIO Block 1 is used to decode the quadrature signal
 #define PIO_ROTARY_SM            0              // State Machine 0 is used for the rotary quad decode
 #define PIO_ROTARY_IRQ          PIO1_IRQ_0      // PIO IRQ to use for Rotary reading change
