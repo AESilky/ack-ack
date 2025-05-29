@@ -37,10 +37,10 @@ typedef struct _PROC_STATUS_ACCUM_ {
     volatile uint64_t t_msg_longest;
 } proc_status_accum_t;
 
-typedef struct _MSG_LOOP_CNTX {
-    uint8_t corenum;                                // The core number the loop is running on
-    const msg_handler_entry_t** handler_entries;    // NULL terminated list of message handler entries
-} msg_loop_cntx_t;
+// typedef struct _MSG_LOOP_CNTX {
+//     uint8_t corenum;                                // The core number the loop is running on
+//     const msg_handler_entry_t** handler_entries;    // NULL terminated list of message handler entries
+// } msg_loop_cntx_t;
 
 /**
  * @brief Initialize a CMT Message with Normal Priority so that it is ready to be posted.
@@ -84,12 +84,66 @@ extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, 
  * @brief Remove the (forced) message handler set on a message.
  *
  * This should be used when re-posting a message that has been handled by a
- * specific message handler (set in `init`) so that the handler will be
+ * specific (forced) message handler (set in `init`) so that the handler will be
  * looked up by the message processor.
  *
  * @param msg The message to remove the handler from
  */
-extern void cmt_msg_rm_hdlr(cmt_msg_t* msg);
+extern void cmt_msg_rm_forced_hdlr(cmt_msg_t* msg);
+
+/**
+ * @brief Add (register) a handler for a message.
+ *
+ * This adds (registers) a handler to be called when a message is being processed. The
+ * handler is registered for the core calling this function.
+ *
+ * @see cmt_msg_hdlr_add_for_core to add a handler for both (or different) cores (Non-typical usage).
+ *
+ * @param id The message ID
+ * @param hdlr The handler function
+ */
+extern void cmt_msg_hdlr_add(msg_id_t id, msg_handler_fn hdlr);
+
+/**
+ * @brief Add (register) a handler for a message for both (or different) cores.
+ *
+ * This adds (registers) a handler to be called when a message is being processed. The
+ * handler is registered for the core specified.
+ *
+ * @see cmt_msg_hdlr_add to add a handler for the calling core (Typical usage).
+ * @see MSG_HDLR_CORE_BOTH for the ID to use to specify both cores.
+ *
+ * @param id The message ID
+ * @param hdlr The handler function
+ * @param corenum The corenum number
+ */
+extern void cmt_msg_hdlr_add_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum);
+
+/**
+ * @brief Remove (un-register) a handler for a message.
+ *
+ * This removes (un-registers) the handler for a message for the core calling this function.
+ *
+ * @see cmt_msg_hdlr_rm_for_core to remove a handler for both (or different) cores (Non-typical)
+ *
+ * @param id The message ID
+ * @param hdlr The handler function
+ */
+extern void cmt_msg_hdlr_rm(msg_id_t id, msg_handler_fn hdlr);
+
+/**
+ * @brief Remove (un-register) a handler for a message for both (or different) cores.
+ *
+ * This removes (un-registers) the handler for a message for the core calling this function.
+ *
+ * @see cmt_msg_hdlr_rm to remove a handler for the calling core (Typical)
+ * @see MSG_HDLR_CORE_BOTH for the ID to use to specify both cores.
+ *
+ * @param id The message ID
+ * @param hdlr The handler function
+ * @param corenum The corenum number
+ */
+extern void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum);
 
 /**
  * @brief Indicates if the Core-0 message loop has been started.
@@ -219,10 +273,9 @@ extern bool scheduled_message_exists(msg_id_t sched_msg_id);
  * Enter into a message processing loop using a loop context.
  * This function will not return.
  *
- * @param loop_context Loop context for processing.
  * @param fstart Function to be called once the message loop is started.
  */
-extern void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart);
+extern void message_loop(start_fn fstart);
 
 /**
  * @brief Initialize the Cooperative Multi-Tasking system.

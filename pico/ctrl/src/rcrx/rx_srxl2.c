@@ -58,6 +58,7 @@ pio_sm_pocfg _rx_srxl2_piosm_msg_cfg;
 static rcrx_state_t* _channel_state;
 static uint16_t _frames_lost;
 
+#if (SRXL_CRC_OPTIMIZE_MODE == SRXL_CRC_OPTIMIZE_SPEED)
 const uint16_t srxlCRCTable[] =
 {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
@@ -96,6 +97,7 @@ const uint16_t srxlCRCTable[] =
     0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8,
     0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
 };
+#endif
 
 // ///////////////////////////////////////////////////////////////////////// //
 // Function Declarations                                                     //
@@ -410,7 +412,7 @@ static uint16_t _srxlCrc16(uint8_t* packet) {
     uint8_t length = packet[2] - 2;  // Exclude 2 CRC bytes at end of packet from the length
 
     if (length <= SRXL_MAX_BUFFER_SIZE - 2) {
-#if(SRXL_CRC_OPTIMIZE_MODE == SRXL_CRC_OPTIMIZE_SIZE)
+#if (SRXL_CRC_OPTIMIZE_MODE == SRXL_CRC_OPTIMIZE_SIZE)
         // Bitwise calculation method
         for (uint8_t i = 0; i < length; ++i) {
             crc = crc ^ ((uint16_t)packet[i] << 8);

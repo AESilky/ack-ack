@@ -18,12 +18,6 @@ extern "C" {
 #define HWRT_CORE_NUM 0
 
 /**
- * @brief Message loop context for use by the loop handler.
- * @ingroup backend
- */
-extern msg_loop_cntx_t hwrt_msg_loop_cntx;
-
-/**
  * @brief Initialize the back-end
  * @ingroup backend
  */

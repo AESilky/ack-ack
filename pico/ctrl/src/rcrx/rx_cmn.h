@@ -13,7 +13,7 @@ extern "C" {
 
 #include "rcrx_t.h"
 
-#include "cmt/cmt_mh.h"
+#include "cmt/cmt_t.h"
 #include "pio_sm.h"
 
 #include "hardware/dma.h"

@@ -31,6 +31,7 @@
 #undef putc     // Use the function, not the macro
 #undef putchar  // Use the function, not the macro
 
+#include "board.h" // For `board_panic`
 #include "cmt/cmt.h"
 #include "curswitch/curswitch_t.h"
 #include "display/display.h"
@@ -77,9 +78,6 @@ static msg_handler_fn _term_notify_on_input; // Holds a function pointer for a m
 // Message Handlers
 // ############################################################################
 //
-
-const msg_handler_entry_t term_switch_action_handler_entry = { MSG_SWITCH_ACTION, _handle_switch_action };
-const msg_handler_entry_t term_touch_handler_entry = { MSG_TOUCH_PANEL, _handle_touch };
 
 
 static void _handle_switch_action(cmt_msg_t* msg) {
@@ -298,4 +296,12 @@ void term_start() {
 }
 
 void term_module_init() {
+    static bool _initialized = false;
+    if (_initialized) {
+        board_panic("term_module_init - Called more than once.");
+    }
+    _initialized = true;
+
+    cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
+    cmt_msg_hdlr_add(MSG_TOUCH_PANEL, _handle_touch);
 }

@@ -18,12 +18,6 @@ extern "C" {
 #define DCS_CORE_NUM 1
 
 /**
- * @brief Message loop context for use by the loop handler.
- * @ingroup dcs
- */
-extern msg_loop_cntx_t dcs_msg_loop_cntx;
-
-/**
  * @brief Initialize the Drive Control System
  * @ingroup dcs
  */

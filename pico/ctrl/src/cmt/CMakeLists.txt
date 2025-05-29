@@ -3,6 +3,7 @@ add_library(cmt INTERFACE)
 
 target_sources(cmt INTERFACE
   cmt.c
+  cmt_heap.c
 )
 
 target_link_libraries(cmt INTERFACE

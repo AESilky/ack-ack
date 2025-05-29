@@ -137,7 +137,7 @@ void rxcmn_mh_rx_error(cmt_msg_t* msg) {
     }
 
     // Re-post the error message so other parts of the system know about it
-    cmt_msg_rm_hdlr(msg);
+    cmt_msg_rm_forced_hdlr(msg);
     postHWCtrlMsg(msg);
     postDCSMsg(msg);
 }

@@ -23,5 +23,5 @@ void core1_main() {
     info_printf("CORE-%d - *** Started ***\n", get_core_num());
 
     // Enter into the (endless) Drive Control System Message Dispatching Loop
-    message_loop(&dcs_msg_loop_cntx, (start_fn)0);
+    message_loop((start_fn)0);
 }

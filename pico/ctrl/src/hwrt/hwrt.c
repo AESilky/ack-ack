@@ -56,43 +56,6 @@ static void _hwrt_idle_function_2();
 static void _input_sw_irq_handler(uint32_t events);
 
 
-static const msg_handler_entry_t _hwrt_housekeeping = { MSG_HOUSEKEEPING_RT, _handle_hwrt_housekeeping };
-static const msg_handler_entry_t _hwrt_test = { MSG_HWRT_TEST, _handle_hwrt_test };
-static const msg_handler_entry_t _input_sw_debounce_handler_entry = { MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce };
-static const msg_handler_entry_t _rotary_chg_handler_entry = { MSG_ROTARY_CHG, _handle_rotary_change };
-static const msg_handler_entry_t _sensbank_chg_handler_entry = { MSG_SENSBANK_CHG, _handle_sensbank_change };
-static const msg_handler_entry_t _switch_action_handler_entry = { MSG_SWITCH_ACTION, _handle_switch_action };
-static const msg_handler_entry_t _switch_longpress_handler_entry = { MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay };
-static const msg_handler_entry_t _dcs_started_handler_entry = { MSG_DCS_STARTED, _handle_dcs_started };
-
-// Include Message Handlers from other Modules
-//
-#include "cmt/cmt_mh.h"
-#include "servo/servo_mh.h"
-#include "term/term_mh.h"
-
-// For performance - put these in order that we expect to receive more often
-static const msg_handler_entry_t* _hwrt_handler_entries[] = {
-    & _hwrt_housekeeping,
-    & cmt_sm_sleep_handler_entry,    // CMT Scheduled Message 'Sleep' handler
-    & servo_rxd_handler_entry,
-    & _sensbank_chg_handler_entry,
-    & _switch_action_handler_entry,
-    & _switch_longpress_handler_entry,
-    & _input_sw_debounce_handler_entry,
-    & term_switch_action_handler_entry,
-    & term_touch_handler_entry,
-    & _rotary_chg_handler_entry,
-    & _dcs_started_handler_entry,
-    & _hwrt_test,
-    ((msg_handler_entry_t*)0), // Last entry must be a NULL
-};
-
-msg_loop_cntx_t hwrt_msg_loop_cntx = {
-    HWRT_CORE_NUM, // Hardware Runtime runs on Core 0
-    _hwrt_handler_entries,
-};
-
 // ====================================================================
 // Message handler functions
 // ====================================================================
@@ -317,11 +280,21 @@ void start_hwrt() {
     assert(!_started && 0 == get_core_num());
     _started = true;
     // Enter into the message loop.
-    message_loop(&hwrt_msg_loop_cntx, hwrt_started);
+    message_loop(hwrt_started);
 }
 
 
 void hwrt_module_init() {
+    cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_hwrt_housekeeping);
+    cmt_msg_hdlr_add(MSG_HWRT_TEST, _handle_hwrt_test);
+    cmt_msg_hdlr_add(MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce);
+    cmt_msg_hdlr_add(MSG_ROTARY_CHG, _handle_rotary_change);
+    cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
+    cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
+    cmt_msg_hdlr_add(MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay);
+    cmt_msg_hdlr_add(MSG_DCS_STARTED, _handle_dcs_started);
+
+
     _input_sw_pressed = false;
     re_pbsw_module_init();
     rotary_encoder_module_init();

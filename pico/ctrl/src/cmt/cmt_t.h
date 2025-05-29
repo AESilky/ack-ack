@@ -26,16 +26,18 @@ extern "C" {
 #include "sensbank/sensbank_t.h"
 #include "servo/servo_t.h"
 
+/** @brief Special identifier to specify a handler for both cores. */
+#define MSG_HDLR_CORE_BOTH ((uint)-1)
 
 typedef enum MSG_PRI_ {
     MSG_PRI_NORM = 0,
     MSG_PRI_LOW
 } msg_priority_t;
 
-
+// Keep the total number of messages under 256 to allow indexing into handlers.
 typedef enum MSG_ID_ {
-    // Common messages (used by both HWRT and DCS/HID)
-    MSG_COMMON_NOOP = 0x0000,
+    // Common messages 0x00 - 0x5F (used by both HWRT and DCS/HID)
+    MSG_COMMON_NOOP = 0x00,
     MSG_EXEC,               // General purpose message to use when specifying a handler.
     MSG_CONFIG_CHANGED,
     MSG_CMT_SLEEP,
@@ -48,8 +50,8 @@ typedef enum MSG_ID_ {
     MSG_SWITCH_LONGPRESS,
     MSG_TERM_CHAR_RCVD,
     //
-    // Hardware-Runtime (HWRT) messages
-    MSG_HWRT_NOOP = 0x0100,
+    // Hardware-Runtime (HWRT) messages 0x60 - 0xBF
+    MSG_HWRT_NOOP = 0x60,
     MSG_HWRT_TEST,
     MSG_INPUT_SW_DEBOUNCE,
     MSG_MAIN_USER_SWITCH_PRESS,
@@ -69,12 +71,13 @@ typedef enum MSG_ID_ {
     MSG_TOUCH_PANEL,
     MSG_DCS_STARTED,
     //
-    // Drive Control System (DCS) and Human Interface Devices (HID) messages
-    MSG_DCS_NOOP = 0x0200,
+    // Drive Control System (DCS) and Human Interface Devices (HID) messages 0xC0 - 0xFF
+    MSG_DCS_NOOP = 0xC0,
     MSG_DCS_TEST,
     MSG_HWRT_STARTED,
     MSG_DISPLAY_MESSAGE,
 } msg_id_t;
+#define MSG_ID_CNT (0x100)
 
 /**
  * @brief Function prototype for a sleep function.
@@ -151,10 +154,10 @@ typedef void (*start_fn)(void);
 /**
  * @brief Message handler entry. Used in the message handler list.
  */
-typedef struct _MSG_HANDLER_ENTRY {
-    int msg_id;
-    msg_handler_fn msg_handler;
-} msg_handler_entry_t;
+// typedef struct _MSG_HANDLER_ENTRY {
+//     int msg_id;
+//     msg_handler_fn msg_handler;
+// } msg_handler_entry_t;
 
 
 #ifdef __cplusplus
