@@ -201,7 +201,7 @@ static void _enable_rx() {
     _rxcmn_en_next_rx = rxcmn_enable_next_msg;      // The 'common' processing does everything we need
     _rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
 
-    // Clear the Current and Previous message buffer CRCs
+    // Clear the message buffer CRC
     _rc_bufs.msg_bufs.crc32_last = 0u;
 
     // Set up the interrupt for the PIO State Machine

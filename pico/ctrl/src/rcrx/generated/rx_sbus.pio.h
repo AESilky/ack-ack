@@ -43,7 +43,7 @@ static const uint16_t rx_sbus_program_instructions[] = {
     0x0014, // 18: jmp    20
     0xa242, // 19: nop                           [2]
     0x084c, // 20: jmp    x--, 12                [8]
-    0x8000, // 21: push   noblock
+    0x8020, // 21: push   block
     0x6241, // 22: out    y, 1                   [2]
     0xa020, // 23: mov    x, pins
     0x15ba, // 24: jmp    x != y, 26             [21]
@@ -51,7 +51,7 @@ static const uint16_t rx_sbus_program_instructions[] = {
             //     .wrap
     0x4044, // 26: in     y, 4
     0x4024, // 27: in     x, 4
-    0x8000, // 28: push   noblock
+    0x8020, // 28: push   block
     0xc004, // 29: irq    nowait 4
     0xc020, // 30: irq    wait 0
 };
