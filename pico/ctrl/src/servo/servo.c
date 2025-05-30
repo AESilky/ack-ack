@@ -473,8 +473,6 @@ static void _handle_servo_rxd(cmt_msg_t* msg) {
     _rxd_handler();
 }
 
-const msg_handler_entry_t servo_rxd_handler_entry = { MSG_SERVO_DATA_RCVD, _handle_servo_rxd };
-
 // ############################################################################
 // Public Methods
 // ############################################################################
@@ -609,6 +607,8 @@ void servo_module_init() {
     if (_initialized) {
         board_panic("servo_module_init already called");
     }
+    // Register our message handlers
+    cmt_msg_hdlr_add(MSG_SERVO_DATA_RCVD, _handle_servo_rxd);
     _initialized = true;
     _tx_disable();
     //

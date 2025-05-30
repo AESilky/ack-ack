@@ -72,7 +72,7 @@ void re_turn_irq_handler(uint gpio, uint32_t events) {
 
     if (_enc_delta != 0) {
         cmt_msg_t msg;
-        cmt_msg_init2(&msg, MSG_ROTARY_CHG, MSG_PRI_LP);
+        cmt_msg_init2(&msg, MSG_ROTARY_CHG, MSG_PRI_LOW);
         msg.data.rotary_delta = _enc_delta;
         postHWCtrlMsgDiscardable(&msg);
     }

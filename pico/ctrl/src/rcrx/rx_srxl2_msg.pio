@@ -1,0 +1,41 @@
+;
+; Copyright 2025 AESilky (SilkyDESIGN)
+; SPDX-License-Identifier: MIT
+;
+.pio_version RP2350
+
+.program rx_srxl2_msg
+
+; Monitor data received and raise an interrupt when a complete message is received.
+;
+; MSG    = <0xA6><Packet_Type><Length><Data_bytes><CRC_Hi><CRC_Lo>
+; Length = 3 (Header) + n (Data) + 2 (CRC)
+;
+.fifo txrx                      ; Use tx and rx FIFOs (4 each)
+.in 8 auto 8                    ; 8 bits, auto-push
+.out 8 auto 8                   ; 8 bits, auto-pull
+
+.define LEN_INDEX 2             ; Index of the LEN byte
+.define LEN_ADJUST 2            ; Amount to subtract from LEN for bytes to EOM
+
+PUBLIC start:
+    set x, LEN_INDEX
+xfer_byte:
+    out y, 8                    ; Get the OSR byte into Y (from TXFIFO)
+    in y, 8                     ; Send it to the system (to RXFIFO)
+    jmp x--, xfer_byte          ; Keep transferring until we get to the LEN byte
+    ; Y contains the LENGTH and is 3 more than the remaining bytes
+    set x, LEN_ADJUST
+dec_y:
+    jmp y--, dec_x
+dec_x:
+    jmp x--, dec_y
+    ; Y now contains the remaining byte count
+.wrap_target
+    out isr, 8                  ; Move a byte from the OSR (TXFIFO) to the ISR (RXFIFO)
+    jmp y--, eom                ; Keep transferring to the end of the message
+.wrap
+eom:
+    irq wait 1                  ; Set IRQ-1 to indicate end of message and wait for it to be cleared
+    ; The system will reset this SM PC back to the start for the next message
+

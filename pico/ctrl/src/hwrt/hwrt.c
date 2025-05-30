@@ -8,7 +8,7 @@
  *
 */
 
-#include "hwos.h"
+#include "hwrt.h"
 
 #include "board.h"
 #include "debug_support.h"
@@ -30,7 +30,7 @@
 #include "pico/float.h"
 #include "pico/printf.h"
 
-#define _HWOS_STATUS_PULSE_PERIOD 6999
+#define _HWRT_STATUS_PULSE_PERIOD 6999
 
 static switch_id_t _sw_pressed = SW_NONE;
 static cmt_msg_t _sw_longpress_msg = { MSG_SW_LONGPRESS_DELAY, MSG_PRI_NORM };
@@ -39,8 +39,8 @@ static cmt_msg_t _input_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE, MSG_PRI_NORM 
 static bool _dcs_started = false;
 
 // Message handler functions...
-static void _handle_hwos_housekeeping(cmt_msg_t* msg);
-static void _handle_hwos_test(cmt_msg_t* msg);
+static void _handle_hwrt_housekeeping(cmt_msg_t* msg);
+static void _handle_hwrt_test(cmt_msg_t* msg);
 static void _handle_input_sw_debounce(cmt_msg_t* msg);
 static void _handle_rotary_change(cmt_msg_t* msg);
 static void _handle_sensbank_change(cmt_msg_t* msg);
@@ -49,60 +49,23 @@ static void _handle_switch_longpress_delay(cmt_msg_t* msg);
 static void _handle_dcs_started(cmt_msg_t* msg);
 
 // Idle functions...
-static void _hwos_idle_function_1();
-static void _hwos_idle_function_2();
+static void _hwrt_idle_function_1();
+static void _hwrt_idle_function_2();
 
 // Hardware functions...
 static void _input_sw_irq_handler(uint32_t events);
 
-
-static const msg_handler_entry_t _hwos_housekeeping = { MSG_HOUSEKEEPING_RT, _handle_hwos_housekeeping };
-static const msg_handler_entry_t _hwos_test = { MSG_HWOS_TEST, _handle_hwos_test };
-static const msg_handler_entry_t _input_sw_debounce_handler_entry = { MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce };
-static const msg_handler_entry_t _rotary_chg_handler_entry = { MSG_ROTARY_CHG, _handle_rotary_change };
-static const msg_handler_entry_t _sensbank_chg_handler_entry = { MSG_SENSBANK_CHG, _handle_sensbank_change };
-static const msg_handler_entry_t _switch_action_handler_entry = { MSG_SWITCH_ACTION, _handle_switch_action };
-static const msg_handler_entry_t _switch_longpress_handler_entry = { MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay };
-static const msg_handler_entry_t _dcs_started_handler_entry = { MSG_DCS_STARTED, _handle_dcs_started };
-
-// Include Message Handlers from other Modules
-//
-#include "cmt/cmt_mh.h"
-#include "servo/servo_mh.h"
-#include "term/term_mh.h"
-
-// For performance - put these in order that we expect to receive more often
-static const msg_handler_entry_t* _hwos_handler_entries[] = {
-    & _hwos_housekeeping,
-    & cmt_sm_sleep_handler_entry,    // CMT Scheduled Message 'Sleep' handler
-    & servo_rxd_handler_entry,
-    & _sensbank_chg_handler_entry,
-    & _switch_action_handler_entry,
-    & _switch_longpress_handler_entry,
-    & _input_sw_debounce_handler_entry,
-    & term_switch_action_handler_entry,
-    & term_touch_handler_entry,
-    & _rotary_chg_handler_entry,
-    & _dcs_started_handler_entry,
-    & _hwos_test,
-    ((msg_handler_entry_t*)0), // Last entry must be a NULL
-};
-
-msg_loop_cntx_t hwos_msg_loop_cntx = {
-    HWOS_CORE_NUM, // Hardware OS runs on Core 0
-    _hwos_handler_entries,
-};
 
 // ====================================================================
 // Message handler functions
 // ====================================================================
 
 /**
- * @brief Handle HW OS Housekeeping tasks. This is triggered every ~16ms.
+ * @brief Handle HW Runtime Housekeeping tasks. This is triggered every ~16ms.
  *
  * @param msg Nothing important in the message.
  */
-static void _handle_hwos_housekeeping(cmt_msg_t* msg) {
+static void _handle_hwrt_housekeeping(cmt_msg_t* msg) {
     static gfx_point last_touch = {0,0};
     // static int cnt = 0;
 
@@ -145,10 +108,10 @@ static void _handle_hwos_housekeeping(cmt_msg_t* msg) {
     }
 }
 
-static void _handle_hwos_test(cmt_msg_t* msg) {
+static void _handle_hwrt_test(cmt_msg_t* msg) {
     // Test `scheduled_msg_ms` error
     static int times = 1;
-    static cmt_msg_t msg_time = { MSG_HWOS_TEST, MSG_PRI_NORM };
+    static cmt_msg_t msg_time = { MSG_HWRT_TEST, MSG_PRI_NORM };
 
     uint64_t period = 60;
 
@@ -295,7 +258,7 @@ static void _input_sw_irq_handler(uint32_t events) {
 // Initialization and Startup functions
 // ====================================================================
 
-void hwos_started() {
+void hwrt_started() {
     // Will be called by the CMT message loop processor when the message loop is ready.
     //
 
@@ -305,23 +268,33 @@ void hwos_started() {
     // Start the Rover processing.
     rover_start();
     //
-    // Done with the Hardware OS Startup - Let the DSC know.
+    // Done with the Hardware Runtime Startup - Let the DSC know.
     cmt_msg_t msg;
-    cmt_msg_init(&msg, MSG_HWOS_STARTED);
+    cmt_msg_init(&msg, MSG_HWRT_STARTED);
     postDCSMsg(&msg);
 }
 
-void start_hwos() {
+void start_hwrt() {
     static bool _started = false;
     // Make sure we aren't already started and that we are being called from core-0.
     assert(!_started && 0 == get_core_num());
     _started = true;
     // Enter into the message loop.
-    message_loop(&hwos_msg_loop_cntx, hwos_started);
+    message_loop(hwrt_started);
 }
 
 
-void hwos_module_init() {
+void hwrt_module_init() {
+    cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_hwrt_housekeeping);
+    cmt_msg_hdlr_add(MSG_HWRT_TEST, _handle_hwrt_test);
+    cmt_msg_hdlr_add(MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce);
+    cmt_msg_hdlr_add(MSG_ROTARY_CHG, _handle_rotary_change);
+    cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
+    cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
+    cmt_msg_hdlr_add(MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay);
+    cmt_msg_hdlr_add(MSG_DCS_STARTED, _handle_dcs_started);
+
+
     _input_sw_pressed = false;
     re_pbsw_module_init();
     rotary_encoder_module_init();
@@ -334,6 +307,6 @@ void hwos_module_init() {
 
     // Post a TEST to ourself in case we have any tests set up.
     cmt_msg_t msg;
-    cmt_msg_init2(&msg, MSG_HWOS_TEST, MSG_PRI_LP);
+    cmt_msg_init2(&msg, MSG_HWRT_TEST, MSG_PRI_LOW);
     postHWCtrlMsgDiscardable(&msg);
 }

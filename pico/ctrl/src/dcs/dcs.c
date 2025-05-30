@@ -15,7 +15,6 @@
 #include "debug_support.h"
 
 #include "cmt/cmt.h"
-#include "cmt/cmt_mh.h"
 #include "hid/hid.h"
 #include "sensbank/sensbank.h"
 #include "util/util.h"
@@ -30,14 +29,14 @@
 #define DCS_HOST_STATUS_PERIOD 938  // Send status to host every 15 seconds
 
 static bool _dcs_initialized = false;
-static bool _hwos_started = false;
+static bool _hwrt_started = false;
 
 static int _dcs_hk_cnt;
 
 // Message handler functions...
 static void _handle_dcs_housekeeping(cmt_msg_t* msg);
 static void _handle_dcs_test(cmt_msg_t* msg);
-static void _handle_hwos_started(cmt_msg_t* msg);
+static void _handle_hwrt_started(cmt_msg_t* msg);
 static void _handle_sensbank_chg(cmt_msg_t* msg);
 
 // Idle functions...
@@ -47,26 +46,6 @@ static void _dcs_idle_function_2();
 // Internal functions
 static void _dcs_started();
 
-
-static const msg_handler_entry_t _dcs_housekeeping_he = { MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping };
-static const msg_handler_entry_t _dcs_test_he = { MSG_DCS_TEST, _handle_dcs_test };
-static const msg_handler_entry_t _hwos_started_he = { MSG_HWOS_STARTED, _handle_hwos_started };
-static const msg_handler_entry_t _sbchg_he = { MSG_SENSBANK_CHG, _handle_sensbank_chg };
-
-// For performance - put these in order that we expect to receive more often
-static const msg_handler_entry_t* _dcs_handler_entries[] = {
-    & _dcs_housekeeping_he,
-    & cmt_sm_sleep_handler_entry,    // CMT Scheduled Message 'Sleep' handler
-    & _sbchg_he,
-    & _dcs_test_he,
-    & _hwos_started_he,
-    ((msg_handler_entry_t*)0), // Last entry must be a NULL
-};
-
-msg_loop_cntx_t dcs_msg_loop_cntx = {
-    DCS_CORE_NUM, // Drive Control System runs on Core 1
-    _dcs_handler_entries,
-};
 
 // ====================================================================
 // Message handler functions
@@ -79,22 +58,12 @@ msg_loop_cntx_t dcs_msg_loop_cntx = {
  */
 static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     // Do any regular status updates, cleanup, etc.
-    static bool aon = false;
-    static bool bon = false;
 
     // We do status updates at certain periods, and we
     // offset different operations a bit, just so not to
     // do too much all in one time slot.
     if (++_dcs_hk_cnt % DCS_STATUS_PERIOD == 0) {
         debug_printf("DCS: %d\n", _dcs_hk_cnt);
-        if (_dcs_hk_cnt % 2 == 0) {
-            aon = !aon;
-            ledA_on(aon);
-        }
-        if (_dcs_hk_cnt % 3 == 0) {
-            bon = !bon;
-            ledB_on(bon);
-        }
     }
     if (_dcs_hk_cnt % (DCS_STATUS_PERIOD + 3) == 0) {
         hid_update_sensbank(sensbank_get_chg());
@@ -126,13 +95,13 @@ static void _handle_dcs_test(cmt_msg_t* msg) {
     times++;
 }
 
-static void _handle_hwos_started(cmt_msg_t* msg) {
+static void _handle_hwrt_started(cmt_msg_t* msg) {
     // The Hardware Operating System has reported that it is started.
     // Since we are responding to a message, it means we
     // are also initialized, so -
     //
     // Start things running.
-    _hwos_started = true;
+    _hwrt_started = true;
     _dcs_started();
 }
 
@@ -146,6 +115,18 @@ static void _handle_sensbank_chg(cmt_msg_t* msg) {
 // ====================================================================
 
 static void _dcs_started() {
+    static bool _started = false;
+    if (_started) {
+        board_panic("_dcs_started - Called more than once.");
+    }
+
+    cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping);
+    cmt_msg_hdlr_add(MSG_DCS_TEST, _handle_dcs_test);
+    cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_chg);
+
+    // Initialize the Human Interface Device system
+    hid_module_init();
+
     // Start the HID
     hid_start();
 
@@ -172,11 +153,9 @@ void dcs_module_init() {
     if (_dcs_initialized) {
         board_panic("dcs_module_init called multiple times");
     }
+
     _dcs_initialized = true;
     _dcs_hk_cnt = 0;
-
-    // Initialize the Human Interface Device system
-    hid_module_init();
 }
 
 void start_dcs() {
@@ -184,5 +163,8 @@ void start_dcs() {
     // Make sure we aren't already started and that we are being called from core-0.
     assert(!_started && 0 == get_core_num());
     _started = true;
+    // Register our handler for the Hardware Control Runtime started, saying that it is for the DCS Core.
+    cmt_msg_hdlr_add_for_core(MSG_HWRT_STARTED, _handle_hwrt_started, DCS_CORE_NUM);
+
     start_core1(); // The Core-1 main starts the DCS
 }

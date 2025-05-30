@@ -39,8 +39,9 @@ add_subdirectory(display)
 add_subdirectory(expio)
 add_subdirectory(gfx)
 add_subdirectory(hid)
-add_subdirectory(hwos)
+add_subdirectory(hwrt)
 add_subdirectory(neopix)
+add_subdirectory(rcrx)
 add_subdirectory(rotary_encoder)
 add_subdirectory(rover)
 add_subdirectory(sensbank)
@@ -58,6 +59,7 @@ add_executable(hwctrl
   board.c
   debug_support.c
   multicore.c
+  pio_sm.c
   spi_ops.c
   tests.c
   p2bugs.c
@@ -113,8 +115,9 @@ target_link_libraries(hwctrl
   fonts
   gfx
   hid
-  hwos
+  hwrt
   neopix
+  rcrx
   rotary_encoder
   rover
   sensbank

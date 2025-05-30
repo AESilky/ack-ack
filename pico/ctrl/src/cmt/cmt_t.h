@@ -22,20 +22,22 @@ extern "C" {
 
 // Includes for types used in the Message Data
 #include "curswitch/curswitch_t.h"
+#include "rcrx/rcrx_t.h"
 #include "sensbank/sensbank_t.h"
 #include "servo/servo_t.h"
 
+/** @brief Special identifier to specify a handler for both cores. */
+#define MSG_HDLR_CORE_BOTH ((uint)-1)
 
 typedef enum MSG_PRI_ {
     MSG_PRI_NORM = 0,
-    MSG_PRI_L9,
-    MSG_PRI_LP
+    MSG_PRI_LOW
 } msg_priority_t;
 
-
+// Keep the total number of messages under 256 to allow indexing into handlers.
 typedef enum MSG_ID_ {
-    // Common messages (used by both HWOS and DCS/HID)
-    MSG_COMMON_NOOP = 0x0000,
+    // Common messages 0x00 - 0x5F (used by both HWRT and DCS/HID)
+    MSG_COMMON_NOOP = 0x00,
     MSG_EXEC,               // General purpose message to use when specifying a handler.
     MSG_CONFIG_CHANGED,
     MSG_CMT_SLEEP,
@@ -48,11 +50,17 @@ typedef enum MSG_ID_ {
     MSG_SWITCH_LONGPRESS,
     MSG_TERM_CHAR_RCVD,
     //
-    // Hardware-OS (HWOS) messages
-    MSG_HWOS_NOOP = 0x0100,
-    MSG_HWOS_TEST,
+    // Hardware-Runtime (HWRT) messages 0x60 - 0xBF
+    MSG_HWRT_NOOP = 0x60,
+    MSG_HWRT_TEST,
     MSG_INPUT_SW_DEBOUNCE,
     MSG_MAIN_USER_SWITCH_PRESS,
+    MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
+    MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
+    MSG_RC_DETECTED,    // Radio Control BAUD & Protocol detected
+    MSG_RC_RX_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
+    MSG_RC_RX_MSG_RCVD, // Radio Control receiver message had been received
+    MSG_RC_RX_MSG_RDY,  // Radio Control receiver message is ready
     MSG_ROTARY_CHG,
     MSG_SERVO_DATA_RCVD,
     MSG_SERVO_DATA_RX_TO,
@@ -63,12 +71,13 @@ typedef enum MSG_ID_ {
     MSG_TOUCH_PANEL,
     MSG_DCS_STARTED,
     //
-    // Drive Control System (DCS) messages
-    MSG_DCS_NOOP = 0x0200,
+    // Drive Control System (DCS) and Human Interface Devices (HID) messages 0xC0 - 0xFF
+    MSG_DCS_NOOP = 0xC0,
     MSG_DCS_TEST,
-    MSG_HWOS_STARTED,
+    MSG_HWRT_STARTED,
     MSG_DISPLAY_MESSAGE,
 } msg_id_t;
+#define MSG_ID_CNT (0x100)
 
 /**
  * @brief Function prototype for a sleep function.
@@ -106,7 +115,9 @@ union MSG_DATA_VALUE_ {
     cmt_sleep_data_t cmt_sleep;
     int16_t rotary_delta;
     int32_t status;
+    uint32_t value32u;
     char* str;
+    rcrx_bp_t rcrx_bp;
     sensbank_chg_t sensbank_chg;
     servo_params_t servo_params;
     switch_action_data_t sw_action;
@@ -143,10 +154,10 @@ typedef void (*start_fn)(void);
 /**
  * @brief Message handler entry. Used in the message handler list.
  */
-typedef struct _MSG_HANDLER_ENTRY {
-    int msg_id;
-    msg_handler_fn msg_handler;
-} msg_handler_entry_t;
+// typedef struct _MSG_HANDLER_ENTRY {
+//     int msg_id;
+//     msg_handler_fn msg_handler;
+// } msg_handler_entry_t;
 
 
 #ifdef __cplusplus

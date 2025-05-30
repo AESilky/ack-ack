@@ -9,8 +9,8 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef _SYSTEM_DEFS_H_
-#define _SYSTEM_DEFS_H_
+#ifndef SYSTEM_DEFS_H_
+#define SYSTEM_DEFS_H_
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -101,23 +101,36 @@ extern "C" {
 
 // PIO Blocks
 //
-#define PIO_ROTARY_BLOCK        pio0            // PIO Block 0 is used to decode the quadrature signal
-#define PIO_ROTARY_SM            0              // State Machine 0 is used for the rotary quad decode
-#define PIO_ROTARY_IRQ          PIO0_IRQ_0      // PIO IRQ to use for Sensor reading change
-#define PIO_SENSBANK_BLOCK      pio1            // PIO Block 1 is used to select and read the Multiplexed Sensors
-#define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the switch bank
 #define PIO_NEOPIX_BLOCK        pio1            // PIO Block 1 is used for the Neopixel display
 #define PIO_NEOPIX_SM            1              // State Machine 1 is used to drive the Neopixel display
 #define PIO_NEOPIX_DREQ         DREQ_PIO1_TX1   // DMA DREQ trigger from PIO1-SM1
+#define PIO_RC_BLOCK            pio2            // Radio Control receive uses PIO Block 2 (available on RP2350)
+#define PIO_RC_SM_RX             0              // Radio Control Data-In uses State Machine 0
+#define PIO_RC_SM_SRXL2_SI       1              // Radio Control SRXL2 Serial-In uses State Machine 1
+#define PIO_RCRX_DREQ           DREQ_PIO2_RX0   // Radio Control DMA DREQ trigger from PIO2-SM0 RXFIFO
+#define PIO_RC_SRXL2_SI_DREQ    DREQ_PIO2_RX1   // Radio Control DMA DREQ trigger from PIO2-SM1 RXFIFO (SRXL2)
+#define PIO_RCRX_SYSIRQ_ERR     PIO2_IRQ_0      // PIO IRQ-0 raised on receive data error (framing or parity)
+#define PIO_RCRX_SYSIRQ_MSG     PIO2_IRQ_1      // PIO IRQ-1 raised on completed SRXL2 message
+#define PIO_RCRX_IRQ_ERR_IDX     0              // PIO IRQ index (0/1) for the RC-RX Error
+#define PIO_RCRX_IRQ_MSG_IDX     1              // PIO IRQ index (0/1) for the RC-RX Message detector
+#define PIO_ROTARY_BLOCK        pio1            // PIO Block 1 is used to decode the quadrature signal
+#define PIO_ROTARY_SM            0              // State Machine 0 is used for the rotary quad decode
+#define PIO_ROTARY_IRQ          PIO1_IRQ_0      // PIO IRQ to use for Rotary reading change
+#define PIO_ROTARY_IRQ_IDX       0              // PIO IRQ index for the Rotary reading change
+#define PIO_SENSBANK_BLOCK      pio0            // PIO Block 0 is used to select and read the Multiplexed Sensors
+#define PIO_SENSBANK_SM          0              // State Machine 0 is used to read the Sensors
+#define PIO_SENSBANK_IRQ        PIO0_IRQ_0      // PIO IRQ to use for sensor bank read cycle complete
+#define PIO_SENSBANK_IRQ_IDX     0              // PIO IRQ index for the sensbank
 
-// I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, NeoPixel, etc.
+// I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, etc.
 #define I2C_EXTERN              i2c0
 #define I2C_EXTERN_SDA           6              // DP-9  Serial Data
 #define I2C_EXTERN_SCL           7              // DP-10 Serial Clock
 #define I2C_EXTERN_CLK_SPEED     (400 * 1000)   // 400kHz
 
-// RC Receiver and Telemetry input from FrSKY SBUS or Spektrum  DSMX
-// These are serial input that could be decoded using a PIO
+// RC Receiver and Telemetry input from FrSKY SBUS or Spektrum SRXL2
+// This is serial input that is decoded using a PIO
+// See PIO section for PIO defines...
 #define RC_RXTEL_GPIO            9              // DP-12
 
 // Rotary Encoder Input
@@ -149,6 +162,11 @@ extern "C" {
 // (from the USB-2 RTS) are OR'ed together and detected on GPIO-3 (DP-5)
 #define IRQ_WU_TOUCH_EXP         3              // DP-5
 #define IRQ_ROTARY_TURN         14              // DP-19
+// The Radio Control Receiver (RC-RX) use PIO2 and DMA interrupts to process incoming RX messages
+#define SYSIRQ_RCRX_DMA_FROM_PIO    DMA_IRQ_1       // System DMA IRQ-1 raised when DMA finishes pulling PIO data
+#define IRQn_RCRX_DMA_FROM_PIO      1u              // Use DMA IRQ 1 for finished pulling PIO data
+#define SYSIRQ_RCRX_DMA_XFER        DMA_IRQ_0       // System DMA IRQ-0 raised when DMA finishes transferring buffers
+#define IRQn_RCRX_DMA_XFER          0u              // Use DMA IRQ 0 for finished transferring buffers
 
 // The Switch Matrix is read using the ADC. See the `curswitch` module for details.
 //
@@ -158,4 +176,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif // _SYSTEM_DEFS_H_
+#endif // SYSTEM_DEFS_H_

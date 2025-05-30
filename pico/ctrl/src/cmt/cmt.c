@@ -8,6 +8,8 @@
  *
 */
 #include "cmt.h"
+#include "cmt_heap.h"
+
 #include "system_defs.h"
 #include "board.h"
 #include "debug_support.h"
@@ -41,7 +43,7 @@ typedef struct _scheduled_msg_data_ {
 
 
 auto_init_mutex(sm_mutex);
-static _scheduled_msg_data_t _scheduled_message_datas[SCHEDULED_MESSAGES_MAX]; // Objects to use (no malloc/free)
+_scheduled_msg_data_t _scheduled_message_datas[SCHEDULED_MESSAGES_MAX]; // Objects to use (no malloc/free). Global for debugging.
 
 static bool _msg_loop_0_running = false;
 static bool _msg_loop_1_running = false;
@@ -51,9 +53,10 @@ static proc_status_accum_t _psa_sec[2];     // Proc Status Accumulator per secon
 
 void cmt_handle_sleep(cmt_msg_t* msg);
 
-const msg_handler_entry_t cmt_sm_sleep_handler_entry = { MSG_CMT_SLEEP, cmt_handle_sleep };
-
 static uint8_t _housekeep_rt;  // Incremented each ms. Generates a Housekeeping msg every 16ms (62.5Hz)
+
+/** @brief The message handler(s) list. One entry for each (possible) message ID. Contains pointer to first handler link-list entry. */
+static cmt_msg_hdlr_ll_ent_t* _msg_hdlr[MSG_ID_CNT];
 
 /**
  * @brief Recurring Interrupt Handler (1ms from PWM).
@@ -85,7 +88,7 @@ static void _on_recurring_interrupt(void) {
         _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
         if (_housekeep_rt == 0) {
             cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LP);
+            cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LOW);
             postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
         }
     // Clear the interrupt flag that brought us here so it can occur again.
@@ -124,6 +127,52 @@ void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_han
     msg->t = 0;
 }
 
+void cmt_msg_rm_forced_hdlr(cmt_msg_t* msg) {
+    msg->hdlr = NULL;
+}
+
+void cmt_msg_hdlr_add(msg_id_t id, msg_handler_fn hdlr) {
+    uint corenum = get_core_num();
+    cmt_msg_hdlr_add_for_core(id, hdlr, corenum);
+}
+
+void cmt_msg_hdlr_add_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
+    cmt_msg_hdlr_ll_ent_t* ent = cmt_alloc_mhllent();
+    ent->handler = hdlr;
+    ent->corenum = corenum;
+    // Link it into the handler entries
+    cmt_msg_hdlr_ll_ent_t* head = _msg_hdlr[id];
+    ent->next = head;
+    _msg_hdlr[id] = ent;
+}
+
+void cmt_msg_hdlr_rm(msg_id_t id, msg_handler_fn hdlr) {
+    uint corenum = get_core_num();
+    cmt_msg_hdlr_rm_for_core(id, hdlr, corenum);
+}
+
+void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
+    cmt_msg_hdlr_ll_ent_t* ent = _msg_hdlr[id];
+    cmt_msg_hdlr_ll_ent_t* prev = (cmt_msg_hdlr_ll_ent_t*)NULL;
+    // Find the entry and remove it
+    while (ent) { // As long as we have an entry
+        if (ent->corenum == corenum && ent->handler == hdlr) {
+            // This is the entry to remove.
+            if (prev) {
+                // If this wasn't the first entry, have the prior entry point to the next.
+                prev->next = ent->next;
+            }
+            else {
+                // This was the first entry. Make the 'next' the first.
+                _msg_hdlr[id] = ent->next;
+            }
+            // Now we are done with this entry, return it to the heap.
+            cmt_return_mhllent(ent);
+            break;
+        }
+        ent = ent->next;
+    }
+}
 
 bool cmt_message_loop_0_running() {
     return (_msg_loop_0_running);
@@ -298,9 +347,9 @@ extern bool scheduled_message_exists(msg_id_t sched_msg_id) {
  * Endless loop reading and dispatching messages.
  * This is called/started once from each core, so two instances are running.
  */
-void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
+void message_loop(start_fn fstart) {
     // Setup occurs once when called by a core.
-    uint8_t corenum = loop_context->corenum;
+    uint8_t corenum = get_core_num();
     get_msg_nowait_fn get_msg_function = (corenum == 0 ? get_core0_msg_nowait : get_core1_msg_nowait);
     cmt_msg_t msg;
     proc_status_accum_t *psa = &_psa[corenum];
@@ -321,7 +370,7 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
     }
 
     // Enter into the endless loop reading and dispatching messages to the handlers...
-    while (1) {
+    do {
         uint64_t t_start = now_us();
             // Store and reset the process status accumulators once every second
         if (t_start - psa->ts_psa >= ONE_SECOND_US) {
@@ -345,17 +394,21 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
             if (msg.hdlr != NULL_MSG_HDLR) {
                 gpio_put(PICO_DEFAULT_LED_PIN, 1); // Turn the Pico LED on while the handler runs
                 msg.hdlr(&msg);
-                gpio_put(PICO_DEFAULT_LED_PIN, 0);
+                gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
             }
             else {
-                const msg_handler_entry_t** handler_entries = loop_context->handler_entries;
-                while (*handler_entries) {
-                    const msg_handler_entry_t* handler_entry = *handler_entries++;
-                    if (msg.id == handler_entry->msg_id) {
-                        gpio_put(PICO_DEFAULT_LED_PIN, 1);
-                        handler_entry->msg_handler(&msg);
-                        gpio_put(PICO_DEFAULT_LED_PIN, 0);
+                cmt_msg_hdlr_ll_ent_t* handler_entry = _msg_hdlr[msg.id];
+                while (handler_entry) {
+                    if (handler_entry->corenum == corenum || handler_entry->corenum == MSG_HDLR_CORE_BOTH) {
+                        // NOTE: Turning the LED on/off isn't core-safe (one could turn it on and the
+                        // other turn it off), but it does help indicate that the message loops are
+                        // processing messages (as long at the led is flickering, messages are being
+                        // processed).
+                        gpio_put(PICO_DEFAULT_LED_PIN, 1); // Turn the Pico LED on
+                        handler_entry->handler(&msg);
+                        gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
                     }
+                    handler_entry = handler_entry->next;
                 }
             }
             // No more handlers found for this message.
@@ -368,7 +421,7 @@ void message_loop(const msg_loop_cntx_t* loop_context, start_fn fstart) {
                 psa->msg_longest = msg.id;
             }
         }
-    }
+    } while (1);
 }
 
 void cmt_module_init() {
@@ -383,7 +436,7 @@ void cmt_module_init() {
     pwm_config_set_clkdiv(&cfg, div);
     pwm_config_set_wrap(&cfg, 1000);  // Reach 0 every millisecond
     pwm_init(CMT_PWM_RECINT_SLICE, &cfg, false);
-    // These aren't used, but we set them...
+    // These aren't used, but we set them so that they aren't 'just random'...
     //   Set output high for one cycle before dropping
     pwm_set_chan_level(CMT_PWM_RECINT_SLICE, PWM_CHAN_A, 1);
     pwm_set_chan_level(CMT_PWM_RECINT_SLICE, PWM_CHAN_B, 1);
@@ -396,6 +449,11 @@ void cmt_module_init() {
     mutex_enter_blocking(&sm_mutex);
     _scheduled_msg_init();
     mutex_exit(&sm_mutex);
+
+    // Initialize the message handler entries heap so that we can add/remove handlers
+    cmt_heap_module_init();
+    // Register our message handlers
+    cmt_msg_hdlr_add(MSG_CMT_SLEEP, cmt_handle_sleep);
 
     // Enable the PWM and interrupts from it.
     irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), true);

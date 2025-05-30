@@ -2,7 +2,7 @@
  * @brief Multiplexed Sensor - SENSBANK - Functionality.
  * @ingroup sensbank
  *
- * Monitors the sensbank and notifies the HWOS of changes.
+ * Monitors the sensbank and notifies the HWRT of changes.
  *
  * Copyright 2023-25 AESilky
  *
