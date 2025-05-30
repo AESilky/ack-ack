@@ -107,6 +107,7 @@ void __isr rxcmn_irq_pio_rx_err_handler() {
 
 
 void rxcmn_mh_rx_error(cmt_msg_t* msg) {
+
     // Cancel the DMA handling the received data.
     //  Due to errata RP2350-E5(see the RP2350 datasheet for further detail),
     //  it is necessary to clear the enable bit of the channel being aborted,
@@ -130,6 +131,10 @@ void rxcmn_mh_rx_error(cmt_msg_t* msg) {
     if (_rxcmn_proto_spec_rx_err_hndlr != NULL_MSG_HDLR) {
         _rxcmn_proto_spec_rx_err_hndlr(msg);
     }
+
+    // The interrupt handler for the PIO error disabled the PIO-SM, but we
+    // should clear out the RXFIFO.
+    pio_sm_clear_fifos(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm);
 
     if (!_channel_state->local_rx_disabled) {
         // Set up for another message
@@ -208,6 +213,7 @@ void rxcmn_accumulate_error(io_rw_32 pio_irqbits, io_rw_32 dma_wr_addr) {
     if (parity_err) {
         indx--; // Parity error pushes the expected parity as the last byte
     }
+    fflush(stdout);
     printf("\nRC RX ERROR: %04X  Byte at Buffer Index: %d  Errors: %ld  ESR: %d\n", pio_irqbits, indx, _channel_state->local_err_cnt_all, _channel_state->local_errs_in_period);
     rxcmn_list_pio_ch_state(false); // Report the PIO-SM status
     if (indx <= RC_RX_BUF_SIZE) {
@@ -223,6 +229,7 @@ void rxcmn_accumulate_error(io_rw_32 pio_irqbits, io_rw_32 dma_wr_addr) {
             printf(" Parity [Received:Expected]: %1hhX:%1hhX\n", pr, pe);
         }
     }
+    fflush(stdout);
 }
 
 void rxcmn_list_pio_ch_state(void* data) {
@@ -230,6 +237,7 @@ void rxcmn_list_pio_ch_state(void* data) {
     uint8_t pio_sm_pc = piosm_pc(_rxcmn_pio_smrx_pocfg);
     io_rw_32 pio_irqbits = _rxcmn_pio_smrx_pocfg.pio->irq;
     bool pio_sm_enbl = piosm_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm);
+    fflush(stdout);
     printf("\nRC Serial-RX PIO PC: %2hhu  IRQ: %04X  EN: %d    Rcvd: %llu  Dup: %llu  Errs: %lu ESR: %lu\n", pio_sm_pc, pio_irqbits, pio_sm_enbl,
         _rcrx_msg_cnt, _rcrx_msg_same_data_cnt, _channel_state->local_err_cnt_all, _channel_state->local_errs_in_period);
     // If the protocol is SRXL2, also get the info for the MSG PIO-SM
@@ -249,6 +257,7 @@ void rxcmn_list_pio_ch_state(void* data) {
         cd[10].v, cd[11].v, cd[12].v, cd[13].v, cd[14].v, cd[15].v);
     printf(" FS    LF               MP\n");
     printf("  %d %5ld %16llX\n", _channel_state->failsafe, _channel_state->frames_lost, _channel_state->msgs_processed);
+    fflush(stdout);
 
     if (retrigger) {
         // trigger another report
@@ -267,8 +276,10 @@ void rxcmn_enable_next_msg() {
         memset((void*)_rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
     }
     //
+    // Re-Configure PIO RD DMA channel, don't start it yet.
+    dma_channel_set_config(_rxcmn_dma_pio_rd, &_rxcmn_dma_pio_rd_cfg, false);
+    //
     // (bit-reverse) CRC32 sniff set-up
-    channel_config_set_sniff_enable(&_rxcmn_dma_pio_rd_cfg, false);
     dma_sniffer_set_data_accumulator(CRC32_INIT);
     channel_config_set_sniff_enable(&_rxcmn_dma_pio_rd_cfg, true);
     dma_sniffer_set_output_reverse_enabled(true);

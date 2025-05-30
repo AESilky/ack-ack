@@ -76,7 +76,7 @@ count_bit0:
     nop [2]                 ; 9-11 (0)
 count_bit:
     jmp x-- bit_loop [20 - 12]    ; 12. Get next bit (need 1 bit delay upon jumping).
-    push NOBLOCK            ; 1. Push this byte (this also clears the ISR)
+    push                    ; 1. Push this byte (this also clears the ISR)
     ; This next bit is the parity bit
     out y, 1 [2]            ; 2-4. Get the expected !parity bit from the OSR into Y
     mov x, PINS             ; 5. Parity bit into X
@@ -91,7 +91,7 @@ chk_stop:
 bad_parity:
     in y,4                  ; 6. Put the Y value (the parity we tested with) into ISR low 4 bits
     in x,4                  ; 7. Put the X value (the parity we got) into the ISR high 4 bits
-    push NOBLOCK            ; 8. Push it so the system can see what we checked
+    push                    ; 8. Push it so the system can see what we checked
     irq set 4               ; Set IRQ-4 (in addition to 0 below) for parity error (don't wait yet)
 framing_error:
     irq wait 0              ; Set IRQ-0 for either error and wait for it to be cleared
