@@ -46,15 +46,15 @@ typedef struct RCRX_CHANNEL_DATA_ {
 } rcrx_ch_data_t;
 
 typedef struct RCRX_STATE_ {
-    rcrx_ch_data_t ch_data[RCRX_CHANNELS_SUPPORTED];
-    volatile uint32_t frames_lost;
-    volatile uint64_t msgs_processed;
     volatile bool failsafe;
     volatile bool local_rx_disabled;
-    volatile uint32_t local_errs_in_period;
+    volatile uint16_t local_errs_in_period;
     volatile uint32_t local_err_cnt_all;
     volatile uint32_t local_parity_err_cnt;
+    volatile uint32_t frames_lost;
+    volatile uint32_t msgs_processed;
     volatile int8_t rssi; // 0 means 'not connected'. Value <0 is dBm. Value >0 is %R
+    rcrx_ch_data_t ch_data[RCRX_CHANNELS_SUPPORTED];
 } rcrx_state_t;
 
 

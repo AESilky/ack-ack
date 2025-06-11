@@ -54,6 +54,11 @@ extern const char* rcrx_get_type_name(rxprotocol_t type);
  */
 extern uint64_t rcrx_get_rx_cnt();
 
+/**
+ * @brief Print the RC Channels state.
+ */
+extern void rcrx_print_ch_state();
+
 extern void rcrx_module_init();
 
 extern void rcrx_start();

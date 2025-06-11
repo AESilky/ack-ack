@@ -168,7 +168,7 @@ static void _post_msg_if_chars_available() {
         cmt_msg_init(&msg, MSG_TERM_CHAR_RCVD);
         msg.hdlr = _term_notify_on_input;  // Load a handler (or NULL)
         // Post the message.
-        postHWCtrlMsg(&msg);
+        postHWRTMsg(&msg);
     }
 }
 

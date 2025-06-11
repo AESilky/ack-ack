@@ -74,7 +74,7 @@ void re_turn_irq_handler(uint gpio, uint32_t events) {
         cmt_msg_t msg;
         cmt_msg_init2(&msg, MSG_ROTARY_CHG, MSG_PRI_LOW);
         msg.data.rotary_delta = _enc_delta;
-        postHWCtrlMsgDiscardable(&msg);
+        postHWRTMsgDiscardable(&msg);
     }
 }
 

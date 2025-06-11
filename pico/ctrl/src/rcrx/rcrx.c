@@ -40,7 +40,7 @@ static int _bp_check_indx;
 static const uint _baud_checks[] = {400000, 115200, 100000};
 static const rxprotocol_t _rx_proto_types[] = {RXP_SRXL2, RXP_SRXL2, RXP_SBUS};
 static const bool _uart_inverse[] = {false, false, true};
-static const char* _rxtype_names[] = { "Unknown", "SBUS", "SRXL2" };
+static const char* const _rxtype_names[] = { "Unknown", "SBUS", "SRXL2" };
 
 // RC Receiver Baud and Protocol
 static uint _baud;
@@ -106,7 +106,7 @@ void rcrx_mh_detect_baud_protocol(cmt_msg_t* msg) {
             cmt_msg_init(&msg, MSG_RC_DETECTED);
             msg.data.rcrx_bp.baud = _baud;
             msg.data.rcrx_bp.protocol = _rx_protocol;
-            postHWCtrlMsg(&msg);
+            postHWRTMsg(&msg);
             postDCSMsg(&msg);
 
             printf("Enabling RC-RX @%d for Protocol:%d (%s)\n", _baud, _rx_protocol, rcrx_get_type_name(_rx_protocol));
@@ -309,6 +309,20 @@ uint64_t rcrx_get_rx_cnt() {
 
 const char* rcrx_get_type_name(rxprotocol_t type) {
     return _rxtype_names[type];
+}
+
+void rcrx_print_ch_state() {
+    //
+    // Channel Values
+    rcrx_ch_data_t* cd = _channel_state.ch_data;
+    printf(" CH1  CH2  CH3  CH4  CH5  CH6  CH7  CH8  CH9 CH10 CH11 CH12 CH13 CH14 CH15 CH16\n");
+    printf("%04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX\n",
+        cd[0].v, cd[1].v, cd[2].v, cd[3].v, cd[4].v, cd[5].v, cd[6].v, cd[7].v, cd[8].v, cd[9].v,
+        cd[10].v, cd[11].v, cd[12].v, cd[13].v, cd[14].v, cd[15].v);
+    printf(" FS    LF    Errs ESR Msgs-Processed\n");
+    printf(" %2d %5lu %7lu  %2lu %14lu\n",
+        _channel_state.failsafe, _channel_state.frames_lost, _channel_state.local_err_cnt_all, _channel_state.local_errs_in_period, _channel_state.msgs_processed);
+    fflush(stdout);
 }
 
 void rcrx_start() {

@@ -57,8 +57,8 @@ void rx_sbus_mh_rx_msg_proc(cmt_msg_t* msg) {
     // Check that it appears to be valid (has the correct header and footer byte values)
     volatile uint8_t* buf = _rc_bufs.msg_bufs.msg_enqueue;
     if (buf[SBUS_HEADER_IDX] != SBUS_HEADER_VALUE || buf[SBUS_FOOTER_IDX] != SBUS_FOOTER_VALUE) {
-        _channel_state->local_err_cnt_all++;
-        _channel_state->local_errs_in_period++;
+        rxcmn_update_error_count();
+        printf("RC-SBUS Header/Footer incorrect: %02hX|%02hX\n", buf[SBUS_HEADER_IDX], buf[SBUS_FOOTER_IDX]);
     }
     else {
         // Show that we are processing
@@ -238,7 +238,7 @@ static void _enable_rx() {
     // Tell the DMA to raise its IRQ when the channel finishes a block
     dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd, true);
 
-    // Enable the interrupts
+    // Enable the system interrupts
     irq_set_enabled(SYSIRQ_RCRX_DMA_FROM_PIO, true);
     irq_set_enabled(PIO_RCRX_SYSIRQ_ERR, true);
     //
@@ -262,7 +262,7 @@ static void _enable_rx() {
     pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, PIO_RC_SM_RX, true);
     // When a full message has been received the DMA will interrupt and post a message.
     // Use a sleep to periodically print the PIO-SM-PC
-    cmt_sleep_ms(3000, rxcmn_list_pio_ch_state, (void*)true);
+    cmt_sleep_ms(3000, rxcmn_list_pio_dma_state, (void*)1);
     return;
 }
 

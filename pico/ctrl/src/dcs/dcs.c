@@ -133,7 +133,7 @@ static void _dcs_started() {
     // Let the HW level know that we are started.
     cmt_msg_t msg;
     cmt_msg_init(&msg, MSG_DCS_STARTED);
-    postHWCtrlMsg(&msg);
+    postHWRTMsg(&msg);
 }
 
 

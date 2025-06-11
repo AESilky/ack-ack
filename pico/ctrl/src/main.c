@@ -73,13 +73,6 @@ int main()
     // Set up the Hardware Runtime (needs to be done before starting the Direction Control System)
     hwrt_module_init();
 
-    // ZZZ - Test `board_addr` and 'RC RX'
-    #include "rcrx/rcrx.h"
-    if (board_addr() == 0) {
-        rcrx_module_init();
-        rcrx_start();
-    }
-
     // Set up the Drive Control System
     dcs_module_init();
 

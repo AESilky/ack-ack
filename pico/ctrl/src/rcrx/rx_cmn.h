@@ -51,9 +51,9 @@ extern rc_bufs_t _rc_bufs; // Global for debugging
 extern uint32_t _rcrx_lerr_tms;  // Time of the last error.
 
 // Message Counts
-extern uint64_t _rcrx_msg_cnt;
-extern uint64_t _rcrx_msg_while_busy_cnt;
-extern uint64_t _rcrx_msg_same_data_cnt;
+extern uint32_t _rcrx_msg_cnt;
+extern uint32_t _rcrx_msg_while_busy_cnt;
+extern uint32_t _rcrx_msg_same_data_cnt;
 
 // RX PIO-SM and DMA Configurations
 extern int _rxcmn_dma_pio_rd;                     // DMA channel used to pull data from the PIO-SM
@@ -80,7 +80,7 @@ extern void __isr rxcmn_irq_pio_rx_err_handler();
  *
  * @param msg The message. Data is the irq-flags from the State Machine.
  */
-extern void rxcmn_mh_rx_error(cmt_msg_t* msg);
+extern void rxcmn_mh_pio_rx_error(cmt_msg_t* msg);
 
 /**
  * @brief Continuation of RX RC message received. Run after buffers copied.
@@ -96,13 +96,15 @@ extern void rxcmn_mh_rx_msg_proc_cnt(cmt_msg_t* msg);
  */
 extern void rxcmn_mh_rx_msg_proc(cmt_msg_t* msg);
 
-extern void rxcmn_accumulate_error(io_rw_32 pio_irqbits, io_rw_32 dma_wr_addr);
+extern void rxcmn_count_pio_rx_error(io_rw_32 pio_irqbits, io_rw_32 dma_wr_addr);
 
 extern uint64_t rxcmn_get_rxmsg_cnt();
 
-extern void rxcmn_list_pio_ch_state(void* data);
+extern void rxcmn_list_pio_dma_state(void* data);
 
 extern void rxcmn_enable_next_msg();
+
+extern void rxcmn_update_error_count();
 
 extern void rxcmn_module_init(rcrx_state_t* channel_state);
 

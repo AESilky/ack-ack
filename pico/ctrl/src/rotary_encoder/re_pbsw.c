@@ -23,7 +23,7 @@ void re_pbsw_irq_handler(uint gpio, uint32_t events) {
     if (events & GPIO_IRQ_EDGE_FALL) {
         cmt_msg_t msg;
         cmt_msg_init(&msg, MSG_MAIN_USER_SWITCH_PRESS);
-        postHWCtrlMsg(&msg);
+        postHWRTMsg(&msg);
     }
     if (events & GPIO_IRQ_EDGE_RISE) {
         //printf("re switch released\n");

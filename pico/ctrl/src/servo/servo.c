@@ -150,7 +150,7 @@ static void _post_servo_error_msg(servo_t *servo) {
         cmt_msg_t msg;
         cmt_msg_init(&msg, MSG_SERVO_READ_ERROR);
         msg.data.servo_params.servo_id = id;
-        postHWCtrlMsg(&msg);
+        postHWRTMsg(&msg);
         _servo_in_proc = SERVO_NONE;
     }
 }
@@ -203,7 +203,7 @@ static void _rxd_stash(uint8_t ch) {
         if (post_msg) {
             cmt_msg_t msg;
             cmt_msg_init(&msg, MSG_SERVO_DATA_RCVD);
-            postHWCtrlMsg(&msg);
+            postHWRTMsg(&msg);
         }
     }
 }
@@ -300,7 +300,7 @@ static void _rxd_status_asm_cont() {
                         cmt_msg_t msg;
                         cmt_msg_init(&msg, MSG_SERVO_STATUS_RCVD);
                         msg.data.servo_params.servo_id = _servo_in_proc->id;
-                        postHWCtrlMsg(&msg);
+                        postHWRTMsg(&msg);
                     }
                     else {
                         _post_servo_error_msg(_servo_in_proc);

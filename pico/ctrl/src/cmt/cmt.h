@@ -22,8 +22,8 @@ extern "C" {
 
 
 // Define functional names for the 'Core' message queue functions (Camel-case to help flag as aliases).
-#define postHWCtrlMsg( pmsg )                   post_to_core0( pmsg )
-#define postHWCtrlMsgDiscardable( pmsg )        post_to_core0_nowait( pmsg )
+#define postHWRTMsg( pmsg )                     post_to_core0( pmsg )
+#define postHWRTMsgDiscardable( pmsg )          post_to_core0_nowait( pmsg )
 #define postDCSMsg( pmsg )                      post_to_core1( pmsg )
 #define postDCSMsgDiscardable( pmsg )           post_to_core1_nowait( pmsg )
 #define postBothMsgDiscardable( pmsg )          post_to_cores_nowait( pmsg )

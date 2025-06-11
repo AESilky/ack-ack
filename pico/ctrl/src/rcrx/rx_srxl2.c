@@ -135,7 +135,7 @@ void __isr rx_srxl2_irq_pio_msgcmplt_handler() {
     //
     cmt_msg_init3(&msg, MSG_RC_RX_MSG_RCVD, MSG_PRI_NORM, rx_srxl2_mh_rx_msg_rcvd);
     msg.data.value32u = pio_irqbits;
-    postHWCtrlMsg(&msg);
+    postHWRTMsg(&msg);
 }
 
 // ///////////////////////////////////////////////////////////////////////// //
@@ -307,7 +307,7 @@ static void _enable_rx() {
     pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, true);
     // When a full message has been received the MSG PIO will interrupt and post a message.
     // Use a sleep to periodically print the PIO-SM-PC
-    cmt_sleep_ms(3000, rxcmn_list_pio_ch_state, (void*)true);
+    cmt_sleep_ms(3000, rxcmn_list_pio_dma_state, (void*)1);
     return;
 }
 

@@ -73,7 +73,7 @@ static void pio_irq_func(void) {
             cmt_msg_init(&msg, MSG_SENSBANK_CHG);
             msg.data.sensbank_chg.prev_bits = _sensdata_p;
             msg.data.sensbank_chg.bits = _sensdata;
-            postHWCtrlMsg(&msg);
+            postHWRTMsg(&msg);
             postDCSMsgDiscardable(&msg); // DCS is for status only
         }
     }

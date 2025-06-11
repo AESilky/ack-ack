@@ -40,28 +40,28 @@ static void _disp_eye(void* data);
 static uint32_t __attribute__((aligned(256))) _frame_buf[NEOPIX_FRAME_BUF_ELEMENTS];
 
 /* Pattern of words of GRB values 8 x 4 */
-static uint32_t __attribute__((aligned(256))) _eye_pat0[] = {
+static const uint32_t __attribute__((aligned(256))) _eye_pat0[] = {
     // Open eye
     0x00000000, 0x4F221400, 0x40221400, 0x40221400, 0x30201000, 0x00000000, 0x00000000, 0x00000000,
     0x4F281700, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x2A1A0A00, 0x00000000, 0x00000000,
     0x00000000, 0x20108000, 0x20108000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x10104000, 0x20108000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
 };
-static uint32_t __attribute__((aligned(256))) _eye_pat1[] = {
+static const uint32_t __attribute__((aligned(256))) _eye_pat1[] = {
     // Eyelid top closing #1
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x4F221400, 0x40221400, 0x40221400, 0x30201000, 0x00000000, 0x00000000, 0x00000000,
     0x4F281700, 0x20108000, 0x20108000, 0x00000000, 0x00000000, 0x2A1A0A00, 0x00000000, 0x00000000,
     0x00000000, 0x10104000, 0x20108000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
 };
-static uint32_t __attribute__((aligned(256))) _eye_pat2[] = {
+static const uint32_t __attribute__((aligned(256))) _eye_pat2[] = {
     // Eyelid top closing #2
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x4F281700, 0x4F221400, 0x4F221400, 0x4F221400, 0x30201000, 0x2A1A0A00, 0x00000000, 0x00000000,
     0x00000000, 0x10104000, 0x3F020000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
 };
-static uint32_t __attribute__((aligned(256))) _eye_pat3[] = {
+static const uint32_t __attribute__((aligned(256))) _eye_pat3[] = {
     // Eye closed
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -69,7 +69,7 @@ static uint32_t __attribute__((aligned(256))) _eye_pat3[] = {
     0x4F281700, 0x3F020000, 0x3F020000, 0x2F010000, 0x1F000000, 0x00000000, 0x00000000, 0x00000000,
 };
 
-static uint32_t* _eye_pattern[] = { _eye_pat0, _eye_pat1, _eye_pat2, _eye_pat3 };
+static const uint32_t* _eye_pattern[] = { _eye_pat0, _eye_pat1, _eye_pat2, _eye_pat3 };
 
 
 /**
@@ -128,27 +128,8 @@ void _disp_eye_blink(void* data) {
 void _disp_eye(void* data) {
     // Eye open
     static eye_state_t eye_state_;
-    static bool move_eye_right = true;
     eye_state_.opening = false;
     eye_state_.blink_state = 0;
-    // Possibly, move the eye a bit...
-    if (rand() % 3 == 0) {
-        // Move the 'eye' a bit, or move it back;
-        if (move_eye_right) {
-            *(_eye_pat0+19) = *(_eye_pat0+17);
-            *(_eye_pat0+17) = 0;
-            *(_eye_pat0 + 27) = *(_eye_pat0 + 25);
-            *(_eye_pat0 + 25) = 0;
-            move_eye_right = false;
-        }
-        else {
-            *(_eye_pat0+17) = *(_eye_pat0+19);
-            *(_eye_pat0+19) = 0;
-            *(_eye_pat0 + 25) = *(_eye_pat0 + 27);
-            *(_eye_pat0 + 27) = 0;
-            move_eye_right = true;
-        }
-    }
     _copy_to_framebuf(_eye_pat0);
     int open_time = 800 + (rand() % 7000);
     cmt_sleep_ms(open_time, _disp_eye_blink, &eye_state_);

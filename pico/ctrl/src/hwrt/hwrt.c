@@ -17,6 +17,7 @@
 #include "curswitch/curswitch.h"
 #include "display/display.h"                        // For character/line based operations
 #include "display/display_rgb18/display_rgb18.h"    // For pixel/graphics based operations
+#include "rcrx/rcrx.h"
 #include "rotary_encoder/re_pbsw.h"
 #include "rotary_encoder/rotary_encoder.h"
 #include "rover/rover.h"
@@ -63,11 +64,19 @@ static void _input_sw_irq_handler(uint32_t events);
 /**
  * @brief Handle HW Runtime Housekeeping tasks. This is triggered every ~16ms.
  *
+ * For reference, 625 times is 10 seconds.
+ *
  * @param msg Nothing important in the message.
  */
 static void _handle_hwrt_housekeeping(cmt_msg_t* msg) {
     static gfx_point last_touch = {0,0};
-    // static int cnt = 0;
+    static int cnt = 0;
+
+    cnt++;
+
+    if (cnt % 312 == 0) {
+        rcrx_print_ch_state();
+    }
 
     // if (++cnt % 625 == 0) {
     //     // Every 10 seconds, print the count
@@ -93,7 +102,7 @@ static void _handle_hwrt_housekeeping(cmt_msg_t* msg) {
             // Post a message with the touch
             cmt_msg_t msg;
             cmt_msg_init(&msg, MSG_TOUCH_PANEL);
-            postHWCtrlMsgDiscardable(&msg);
+            postHWRTMsgDiscardable(&msg);
             // const gfx_point* pp = tp_last_panel_point();
             // const gfx_rect* bounds = tp_bounds_observed();
             // scr_position_t sp = disp_lc_from_point(dp);
@@ -262,8 +271,12 @@ void hwrt_started() {
     // Will be called by the CMT message loop processor when the message loop is ready.
     //
 
-    // Touch Panel initialization
-    tp_module_init(5, gfxd_screen_width(), false, gfxd_screen_height(), true, 121, 2520, 122, 2603);
+    if (board_addr() == 0) {
+        // Touch Panel initialization
+        tp_module_init(5, gfxd_screen_width(), false, gfxd_screen_height(), true, 121, 2520, 122, 2603);
+        // Remote Control
+        rcrx_start();
+    }
     //
     // Start the Rover processing.
     rover_start();
@@ -287,26 +300,34 @@ void start_hwrt() {
 void hwrt_module_init() {
     cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_hwrt_housekeeping);
     cmt_msg_hdlr_add(MSG_HWRT_TEST, _handle_hwrt_test);
-    cmt_msg_hdlr_add(MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce);
-    cmt_msg_hdlr_add(MSG_ROTARY_CHG, _handle_rotary_change);
-    cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
-    cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
-    cmt_msg_hdlr_add(MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay);
     cmt_msg_hdlr_add(MSG_DCS_STARTED, _handle_dcs_started);
 
 
     _input_sw_pressed = false;
-    re_pbsw_module_init();
-    rotary_encoder_module_init();
-    gpio_set_irq_enabled_with_callback(IRQ_ROTARY_TURN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &_gpio_irq_handler);
-    // gpio_set_irq_enabled(IRQ_rotary_SW, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
-    // gpio_set_irq_enabled(IRQ_TOUCH, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
 
     // Init the rover control functionality.
     rover_module_init();
 
+    // Init Board 0 specific functionality.
+    if (board_addr() == 0) {
+        cmt_msg_hdlr_add(MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce);
+        cmt_msg_hdlr_add(MSG_ROTARY_CHG, _handle_rotary_change);
+        cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
+        cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
+        cmt_msg_hdlr_add(MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay);
+
+        re_pbsw_module_init();
+        rotary_encoder_module_init();
+        gpio_set_irq_enabled_with_callback(IRQ_ROTARY_TURN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &_gpio_irq_handler);
+        // gpio_set_irq_enabled(IRQ_rotary_SW, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
+        // gpio_set_irq_enabled(IRQ_TOUCH, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
+
+        // Remote control
+        rcrx_module_init();
+    }
+
     // Post a TEST to ourself in case we have any tests set up.
     cmt_msg_t msg;
     cmt_msg_init2(&msg, MSG_HWRT_TEST, MSG_PRI_LOW);
-    postHWCtrlMsgDiscardable(&msg);
+    postHWRTMsgDiscardable(&msg);
 }

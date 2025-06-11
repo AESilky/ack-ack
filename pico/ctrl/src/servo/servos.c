@@ -166,7 +166,7 @@ static bool _position_lf(uint16_t pos, uint16_t time) {
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
     cmt_msg_init3(&msg, MSG_EXEC, MSG_PRI_NORM, _position_lf_mh);
-    postHWCtrlMsg(&msg);
+    postHWRTMsg(&msg);
     return false;
 }
 
@@ -192,7 +192,7 @@ static bool _position_lr(uint16_t pos, uint16_t time) {
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
     cmt_msg_init3(&msg, MSG_EXEC, MSG_PRI_NORM, _position_lr_mh);
-    postHWCtrlMsg(&msg);
+    postHWRTMsg(&msg);
     return false;
 }
 
@@ -218,7 +218,7 @@ static bool _position_rf(uint16_t pos, uint16_t time) {
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
     cmt_msg_init3(&msg, MSG_EXEC, MSG_PRI_NORM, _position_rf_mh);
-    postHWCtrlMsg(&msg);
+    postHWRTMsg(&msg);
     return false;
 }
 
@@ -244,7 +244,7 @@ static bool _position_rr(uint16_t pos, uint16_t time) {
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
     cmt_msg_init3(&msg, MSG_EXEC, MSG_PRI_NORM, _position_rr_mh);
-    postHWCtrlMsg(&msg);
+    postHWRTMsg(&msg);
     return false;
 }
 

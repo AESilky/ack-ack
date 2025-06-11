@@ -64,16 +64,16 @@ void McuHardFault_HandlerC(uint32_t* hardfault_args) {
                                                               /*   $$$$$$$$$$$$$$$$$$$$$$$    $$$$$$$$$$$$$    $$$$$$$$$$$$$$  """$$$         */
     /* Configurable Fault Status Register */                  /*    "$$$""""$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$     "$$$        */
     /* Consists of MMSR, BFSR and UFSR */                     /*     $$$   o$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$     "$$$o      */
-    _CFSR = (*((volatile unsigned long*)(0xE000ED28)));      /*    o$$"   $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$       $$$o     */
+    _CFSR = (*((volatile unsigned long*)(0xE000ED28)));       /*    o$$"   $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$       $$$o     */
                                                               /*    $$$    $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" "$$$$$$ooooo$$$$o   */
     /* Hard Fault Status Register */                          /*   o$$$oooo$$$$$  $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$   o$$$$$$$$$$$$$$$$$  */
-    _HFSR = (*((volatile unsigned long*)(0xE000ED2C)));      /*   $$$$$$$$"$$$$   $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$     $$$$""""""""        */
+    _HFSR = (*((volatile unsigned long*)(0xE000ED2C)));       /*   $$$$$$$$"$$$$   $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$     $$$$""""""""        */
                                                               /*  """"       $$$$    "$$$$$$$$$$$$$$$$$$$$$$$$$$$$"      o$$$                 */
     /* Debug Fault Status Register */                         /*             "$$$o     """$$$$$$$$$$$$$$$$$$"$$"         $$$                  */
-    _DFSR = (*((volatile unsigned long*)(0xE000ED30)));      /*               $$$o          "$$""$$$$$$""""           o$$$                   */
+    _DFSR = (*((volatile unsigned long*)(0xE000ED30)));       /*               $$$o          "$$""$$$$$$""""           o$$$                   */
                                                               /*                $$$$o                                o$$$"                    */
     /* Auxiliary Fault Status Register */                     /*                 "$$$$o      o$$$$$$o"$$$$o        o$$$$                      */
-    _AFSR = (*((volatile unsigned long*)(0xE000ED3C)));      /*                   "$$$$$oo     ""$$$$o$$$$$o   o$$$$""                       */
+    _AFSR = (*((volatile unsigned long*)(0xE000ED3C)));       /*                   "$$$$$oo     ""$$$$o$$$$$o   o$$$$""                       */
                                                               /*                      ""$$$$$oooo  "$$$o$$$$$$$$$"""                          */
                                                               /*                         ""$$$$$$$oo $$$$$$$$$$                               */
     /* Read the Fault Address Registers. */                   /*                                 """"$$$$$$$$$$$                              */

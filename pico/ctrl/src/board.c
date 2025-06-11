@@ -42,6 +42,7 @@
 #include "debug_support.h"
 #include "display/display.h"
 #include "expio/expio.h"
+#include "rcrx/rcrx.h"
 #include "spi_ops.h"
 #include "util/util.h"
 
@@ -71,6 +72,10 @@ int board_init() {
 
     sleep_ms(80); // Ok to `sleep` as msg system not started
 
+    //
+    // Do initialization that is common for both board addresses (0&1).
+    //
+
     // Chip selects for the SPI peripherals
     gpio_set_function(SPI_ADDR_0, GPIO_FUNC_SIO);
     gpio_set_dir(SPI_ADDR_0, GPIO_OUT);
@@ -99,16 +104,6 @@ int board_init() {
     // SPI 0 initialization for the Display and IO-Expansion. Use SPI at 5MHz.
     spi_init(SPI_DISP_EXP_DEVICE, SPI_DISP_EXP_SPEED);
 
-    // SPI 1 Pins for Touch Panel
-    gpio_set_function(SPI_TOUCH_SCK, GPIO_FUNC_SPI);
-    gpio_set_function(SPI_TOUCH_MOSI, GPIO_FUNC_SPI);
-    gpio_set_function(SPI_TOUCH_MISO, GPIO_FUNC_SPI);
-    // SPI 1 Signal drive strengths
-    gpio_set_drive_strength(SPI_TOUCH_SCK, GPIO_DRIVE_STRENGTH_2MA);     // Two devices connected
-    gpio_set_drive_strength(SPI_TOUCH_MOSI, GPIO_DRIVE_STRENGTH_2MA);    // Two devices connected
-    // SPI 1 initialization for the Touch Panel. Use SPI at 2MHz.
-    spi_init(SPI_TOUCH_DEVICE, SPI_TOUCH_SPEED);
-
     // I2C Isn't directly used on the board, but is provided on headers for external use.
     i2c_init(I2C_EXTERN, I2C_EXTERN_CLK_SPEED);
     gpio_set_function(I2C_EXTERN_SDA, GPIO_FUNC_I2C);
@@ -130,6 +125,7 @@ int board_init() {
 
 
     // GPIO Outputs (other than SPI, I2C, UART, and chip-selects
+
     //  Sensor Selects
     gpio_set_function(SENSOR_SEL_A0, GPIO_FUNC_SIO);
     gpio_set_dir(SENSOR_SEL_A0, GPIO_OUT);
@@ -145,35 +141,20 @@ int board_init() {
     gpio_put(SENSOR_SEL_A2, 0);
 
     // GPIO Inputs
-    //   Rotary Encoder
-    gpio_set_function(ROTARY_A_GPIO, GPIO_FUNC_SIO);
-    gpio_set_dir(ROTARY_A_GPIO, GPIO_IN);
-    gpio_set_pulls(ROTARY_A_GPIO, true, false);
-    gpio_set_function(ROTARY_B_GPIO, GPIO_FUNC_SIO);
-    gpio_set_dir(ROTARY_B_GPIO, GPIO_IN);
-    gpio_set_pulls(ROTARY_B_GPIO, true, false);
+
     //    Sensor Input
     gpio_set_function(SENSOR_READ, GPIO_FUNC_SIO);
     gpio_set_dir(SENSOR_READ, GPIO_IN);
     gpio_set_pulls(SENSOR_READ, false, false);
-    //    Switch Matrix
-    gpio_set_function(SW_BANK_GPIO, GPIO_FUNC_SIO);
-    gpio_set_dir(SW_BANK_GPIO, GPIO_IN);
-    gpio_set_pulls(SW_BANK_GPIO, false, false);
 
-    // Check the user input switch to see if it's pressed during startup.
-    //  If yes, set 'debug_mode_enabled'
-    if (user_switch_pressed()) {
-        debug_mode_enable(true);
-    }
+    //
+    // Module initialization that is needed for other modules to initialize.
+    //
 
     // Initialize the SPI Ops module before any SPI operations
     spi_ops_module_init();
-    // Now initialize the Expansion I/O chip so the other devices will work
+    // Initialize the Expansion I/O chip so the other devices will work (including `board_addr` used below)
     expio_module_init();
-
-    // Initialize the display
-    disp_module_init();
 
 #if HAS_RP2040_RTC
     // Initialize the board RTC.
@@ -196,18 +177,52 @@ int board_init() {
     sleep_us(100);
 #endif
 
-    disp_line_clear(4, false);
-
-    disp_line_clear(4, false);
-    disp_string(4, 0, "Init: ADC", false, true);
     // Initialize hardware AD converter, enable onboard temperature sensor and
     //  select its channel.
     adc_init();
     adc_set_temp_sensor_enabled(true);
     adc_select_input(4); // Inputs 0-3 are GPIO pins, 4 is the built-in temp sensor
 
-    // Initialize the Cursor Switches module.
-    curswitch_module_init();
+    //
+    // Do board specific initialization based on ADDR 0 or 1
+    //
+    if (board_addr() == 0) {
+        //
+        // Board '0' has the Display and Switch board connected.
+        //
+        // SPI 1 Pins for Touch Panel
+        gpio_set_function(SPI_TOUCH_SCK, GPIO_FUNC_SPI);
+        gpio_set_function(SPI_TOUCH_MOSI, GPIO_FUNC_SPI);
+        gpio_set_function(SPI_TOUCH_MISO, GPIO_FUNC_SPI);
+        // SPI 1 Signal drive strengths
+        gpio_set_drive_strength(SPI_TOUCH_SCK, GPIO_DRIVE_STRENGTH_2MA);     // Two devices connected
+        gpio_set_drive_strength(SPI_TOUCH_MOSI, GPIO_DRIVE_STRENGTH_2MA);    // Two devices connected
+        // SPI 1 initialization for the Touch Panel. Use SPI at 2MHz.
+        spi_init(SPI_TOUCH_DEVICE, SPI_TOUCH_SPEED);
+        //   Rotary Encoder
+        gpio_set_function(ROTARY_A_GPIO, GPIO_FUNC_SIO);
+        gpio_set_dir(ROTARY_A_GPIO, GPIO_IN);
+        gpio_set_pulls(ROTARY_A_GPIO, true, false);
+        gpio_set_function(ROTARY_B_GPIO, GPIO_FUNC_SIO);
+        gpio_set_dir(ROTARY_B_GPIO, GPIO_IN);
+        gpio_set_pulls(ROTARY_B_GPIO, true, false);
+        //    Switch Matrix
+        gpio_set_function(SW_BANK_GPIO, GPIO_FUNC_SIO);
+        gpio_set_dir(SW_BANK_GPIO, GPIO_IN);
+        gpio_set_pulls(SW_BANK_GPIO, false, false);
+        // Initialize the display
+        disp_module_init();
+        // Cursor Switches module.
+        curswitch_module_init();
+    }
+
+
+    // Check the user input switch to see if it's pressed during startup.
+    //  If yes, set 'debug_mode_enabled'
+    if (user_switch_pressed()) {
+        debug_mode_enable(true);
+    }
+
 
     // The PWM is used for a recurring interrupt in CMT. It will initialize it.
 

@@ -33,7 +33,7 @@ static const uint16_t rx_sbus_program_instructions[] = {
     0x4046, //  8: in     y, 6
     0xa0e6, //  9: mov    osr, isr
     0xadc3, // 10: mov    isr, null              [13]
-    0xe527, // 11: set    x, 7                   [5]
+    0xe627, // 11: set    x, 7                   [6]
     0xe340, // 12: set    y, 0                   [3]
     0x00cf, // 13: jmp    pin, 15
     0xe041, // 14: set    y, 1
