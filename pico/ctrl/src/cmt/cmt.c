@@ -37,7 +37,7 @@ typedef struct _scheduled_msg_data_ {
     int32_t remaining;
     uint8_t corenum;
     int32_t ms_requested;
-    const cmt_msg_t* client_msg;
+    cmt_msg_t client_msg;  // Message gets copied into this
     cmt_msg_t sleep_msg;
 } _scheduled_msg_data_t;
 
@@ -76,10 +76,10 @@ static void _on_recurring_interrupt(void) {
             if (smd->remaining > 0) {
                 if (0 == --smd->remaining) {
                     if (0 == smd->corenum) {
-                        post_to_core0(smd->client_msg);
+                        post_to_core0(&(smd->client_msg));
                     }
                     else {
-                        post_to_core1(smd->client_msg);
+                        post_to_core1(&(smd->client_msg));
                     }
                     smd->remaining = SMD_FREE_INDICATOR_;
                 }
@@ -232,7 +232,7 @@ bool cmt_sched_msg_waiting_ids(int max, uint16_t *buf) {
         _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
         if (SMD_FREE_INDICATOR_ != smd->remaining) {
             msgs_waiting = true;
-            buf[values_index] = smd->client_msg->id;
+            buf[values_index] = smd->client_msg.id;
             values_index++;
         }
         // If we are less than the 'max' put a '-1' in to indicate the end.
@@ -260,7 +260,7 @@ void cmt_sleep_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data) {
             smd->sleep_msg.id = MSG_CMT_SLEEP;
             smd->sleep_msg.data.cmt_sleep.sleep_fn = sleep_fn;
             smd->sleep_msg.data.cmt_sleep.user_data = user_data;
-            smd->client_msg = &smd->sleep_msg;
+            smd->client_msg = smd->sleep_msg;
             smd->ms_requested = ms;
             smd->corenum = core_num;
             smd->remaining = ms;
@@ -284,7 +284,7 @@ void _schedule_core_msg_in_ms(uint8_t core_num, int32_t ms, const cmt_msg_t* msg
         _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
         if (SMD_FREE_INDICATOR_ == smd->remaining) {
             // This is free;
-            smd->client_msg = msg;
+            smd->client_msg = *msg;
             smd->ms_requested = ms;
             smd->corenum = core_num;
             smd->remaining = ms;
@@ -317,9 +317,10 @@ void scheduled_msg_cancel(msg_id_t sched_msg_id) {
     mutex_enter_blocking(&sm_mutex);
     for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
         _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (smd->remaining != SMD_FREE_INDICATOR_ && smd->client_msg && smd->client_msg->id == sched_msg_id) {
+        if (smd->remaining != SMD_FREE_INDICATOR_ && smd->client_msg.id == sched_msg_id) {
             // This matches, so set the remaining to -1;
             smd->remaining = SMD_FREE_INDICATOR_;
+            smd->client_msg.id = MSG_NOOP; // This doesn't really matter, but just to keep things clean.
         }
     }
     mutex_exit(&sm_mutex);
@@ -332,7 +333,7 @@ extern bool scheduled_message_exists(msg_id_t sched_msg_id) {
     mutex_enter_blocking(&sm_mutex);
     for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
         _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (smd->remaining != SMD_FREE_INDICATOR_ && smd->client_msg && smd->client_msg->id == sched_msg_id) {
+        if (smd->remaining != SMD_FREE_INDICATOR_ && smd->client_msg.id == sched_msg_id) {
             // This matches
             exists = true;
             break;
@@ -381,7 +382,7 @@ void message_loop(start_fn fstart) {
             psa_sec->interrupt_status = *nvic_hw->iser; // On Pico2 this is an array[2]
             psa_sec->msg_longest = psa->msg_longest;
             psa_sec->t_msg_longest = psa->t_msg_longest;
-            psa->msg_longest = MSG_COMMON_NOOP;
+            psa->msg_longest = MSG_NOOP;
             psa->t_msg_longest = 0;
             psa_sec->ts_psa = psa->ts_psa;
             psa->ts_psa = t_start;

@@ -23,6 +23,7 @@
 #include "cmt/cmt.h"
 #include "cmt/cmt_t.h"
 #include "system_defs.h"
+#include "termx/termx_min.h"
 
 #include "pico/stdlib.h"
 #include "hardware/dma.h" //DMA is used to move data from the PIO to a buffer
@@ -281,8 +282,9 @@ void rcrx_clear_ch_state() {
     for (int i = 0; i < RCRX_CHANNELS_SUPPORTED; i++) {
         rcrx_ch_data_t* cd = &_channel_state.ch_data[i];
         cd->raw_v = 0;
-        cd->v = 0;
+        cd->v = INT16_MAX;
     }
+    _channel_state.changed = 0x00;
     _channel_state.failsafe = false;
     _channel_state.frames_lost = 0;
     _channel_state.rssi = 0;
@@ -311,18 +313,51 @@ const char* rcrx_get_type_name(rxprotocol_t type) {
     return _rxtype_names[type];
 }
 
-void rcrx_print_ch_state() {
+void rcrx_print_ch_state(bool hl_chg) {
     //
     // Channel Values
     rcrx_ch_data_t* cd = _channel_state.ch_data;
-    printf(" CH1  CH2  CH3  CH4  CH5  CH6  CH7  CH8  CH9 CH10 CH11 CH12 CH13 CH14 CH15 CH16\n");
-    printf("%04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX %04hX\n",
-        cd[0].v, cd[1].v, cd[2].v, cd[3].v, cd[4].v, cd[5].v, cd[6].v, cd[7].v, cd[8].v, cd[9].v,
-        cd[10].v, cd[11].v, cd[12].v, cd[13].v, cd[14].v, cd[15].v);
-    printf(" FS    LF    Errs ESR Msgs-Processed\n");
-    printf(" %2d %5lu %7lu  %2lu %14lu\n",
-        _channel_state.failsafe, _channel_state.frames_lost, _channel_state.local_err_cnt_all, _channel_state.local_errs_in_period, _channel_state.msgs_processed);
+    uint16_t chg = _channel_state.changed;
+    printf("   CH1    CH2    CH3    CH4    CH5    CH6    CH7    CH8\n");
+    if (hl_chg) {
+        for (int i=0; i<8; i++) {
+            char* hl = "";
+            char* nm = "";
+            if (chg & (1 << i)) {
+                hl = TERMX_START_RED_STR;
+                nm = TERMX_DEFAULT_COLOR_STR;
+            }
+            printf("%s%6hd%s ", hl, cd[i].v, nm);
+        }
+        printf("\n");
+    }
+    else {
+        printf("%6hd %6hd %6hd %6hd %6hd %6hd %6hd %6hd\n",
+            cd[0].v, cd[1].v, cd[2].v, cd[3].v, cd[4].v, cd[5].v, cd[6].v, cd[7].v);
+    }
+    printf("   CH9   CH10   CH11   CH12   CH13   CH14   CH15   CH16\n");
+    if (hl_chg) {
+        for (int i = 8; i < 16; i++) {
+            char* hl = "";
+            char* nm = "";
+            if (chg & (1 << i)) {
+                hl = TERMX_START_RED_STR;
+                nm = TERMX_DEFAULT_COLOR_STR;
+            }
+            printf("%s%6hd%s ", hl, cd[i].v, nm);
+        }
+        printf("\n");
+    }
+    else {
+        printf("%6hd %6hd %6hd %6hd %6hd %6hd %6hd %6hd\n",
+            cd[8].v, cd[9].v, cd[10].v, cd[11].v, cd[12].v, cd[13].v, cd[14].v, cd[15].v);
+    }
+    printf("  CHG  FS    LF    Errs ESR Msgs-Processed\n");
+    printf(" %04hX  %2d %5lu %7lu  %2lu %14lu\n",
+        chg, _channel_state.failsafe, _channel_state.frames_lost,
+        _channel_state.local_err_cnt_all, _channel_state.local_errs_in_period, _channel_state.msgs_processed);
     fflush(stdout);
+    _channel_state.changed = 0x0000;
 }
 
 void rcrx_start() {

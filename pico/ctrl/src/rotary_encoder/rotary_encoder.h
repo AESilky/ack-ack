@@ -14,6 +14,8 @@
 extern "C" {
 #endif
 
+#include <pico/types.h>
+
 /**
  * @brief Current position count of the rotary encoder.
  *

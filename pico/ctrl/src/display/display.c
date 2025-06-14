@@ -15,7 +15,7 @@
 #include "pico/printf.h"
 
 // Stack of display contexts
-#define NUMBER_OF_SCREEN_CONTEXTS 8
+#define NUMBER_OF_SCREEN_CONTEXTS 4
 static scr_context_t* _scr_contexts[NUMBER_OF_SCREEN_CONTEXTS];
 static int _scr_contexts_peek = -1;
 

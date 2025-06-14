@@ -56,8 +56,10 @@ extern uint64_t rcrx_get_rx_cnt();
 
 /**
  * @brief Print the RC Channels state.
+ *
+ * @param hl_chg Highlight changed channels if true.
  */
-extern void rcrx_print_ch_state();
+extern void rcrx_print_ch_state(bool hl_chg);
 
 extern void rcrx_module_init();
 

@@ -16,7 +16,6 @@
 
 #include "cmt/cmt.h"
 #include "hid/hid.h"
-#include "sensbank/sensbank.h"
 #include "util/util.h"
 
 #include "lib/json-maker/json-maker.h"
@@ -33,15 +32,17 @@ static bool _hwrt_started = false;
 
 static int _dcs_hk_cnt;
 
+
 // Message handler functions...
 static void _handle_dcs_housekeeping(cmt_msg_t* msg);
 static void _handle_dcs_test(cmt_msg_t* msg);
 static void _handle_hwrt_started(cmt_msg_t* msg);
-static void _handle_sensbank_chg(cmt_msg_t* msg);
 
 // Idle functions...
 static void _dcs_idle_function_1();
 static void _dcs_idle_function_2();
+
+// Hardware functions...
 
 // Internal functions
 static void _dcs_started();
@@ -65,9 +66,6 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     if (++_dcs_hk_cnt % DCS_STATUS_PERIOD == 0) {
         debug_printf("DCS: %d\n", _dcs_hk_cnt);
     }
-    if (_dcs_hk_cnt % (DCS_STATUS_PERIOD + 3) == 0) {
-        hid_update_sensbank(sensbank_get_chg());
-    }
     if ((_dcs_hk_cnt % DCS_HOST_STATUS_PERIOD) == 0) {
         // Send our status to the host.
         //printf("DCS: %d A:%d B:%d\n", _dcs_hk_cnt, aon, bon);
@@ -77,12 +75,11 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
 static void _handle_dcs_test(cmt_msg_t* msg) {
     // Test `scheduled_msg_ms` error
     static int times = 1;
-    static cmt_msg_t msg_time = { MSG_DCS_TEST, MSG_PRI_NORM };
-
+    
+    cmt_msg_t msg_time = { MSG_DCS_TEST, MSG_PRI_NORM };
     uint64_t period = 60;
 
-    bool ZZZ = false;
-    if (ZZZ && debug_mode_enabled()) {
+    if (debug_mode_enabled()) {
         uint64_t now = now_us();
 
         uint64_t last_time = msg->data.ts_us;
@@ -105,15 +102,18 @@ static void _handle_hwrt_started(cmt_msg_t* msg) {
     _dcs_started();
 }
 
-static void _handle_sensbank_chg(cmt_msg_t* msg) {
-    // There was a change in the SenseBank. Update the HID.
-    hid_update_sensbank(msg->data.sensbank_chg);
-}
 
 // ====================================================================
 // Local functions
 // ====================================================================
 
+/**
+ * @brief Called after the DCS is started - the message loop is running.
+ *
+ * Initialization of DCS modules that require the message loop
+ * should be put here. Modules that need to be initialized before the
+ * message loop is running should go in `dcs_module_init`.
+ */
 static void _dcs_started() {
     static bool _started = false;
     if (_started) {
@@ -122,13 +122,6 @@ static void _dcs_started() {
 
     cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping);
     cmt_msg_hdlr_add(MSG_DCS_TEST, _handle_dcs_test);
-    cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_chg);
-
-    // Initialize the Human Interface Device system
-    hid_module_init();
-
-    // Start the HID
-    hid_start();
 
     // Let the HW level know that we are started.
     cmt_msg_t msg;

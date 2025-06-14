@@ -37,12 +37,15 @@ typedef enum MSG_PRI_ {
 // Keep the total number of messages under 256 to allow indexing into handlers.
 typedef enum MSG_ID_ {
     // Common messages 0x00 - 0x5F (used by both HWRT and DCS/HID)
-    MSG_COMMON_NOOP = 0x00,
+    MSG_NOOP = 0x00,
     MSG_EXEC,               // General purpose message to use when specifying a handler.
     MSG_CONFIG_CHANGED,
     MSG_CMT_SLEEP,
+    MSG_DCS_STARTED,
     MSG_DEBUG_CHANGED,
+    MSG_HID_STARTED,
     MSG_HOUSEKEEPING_RT,    // Housekeeping Repeating - Every 16ms (62.5Hz)
+    MSG_HWRT_STARTED,
     MSG_INPUT_SW_PRESS,
     MSG_INPUT_SW_RELEASE,
     MSG_SENSBANK_CHG,
@@ -69,12 +72,11 @@ typedef enum MSG_ID_ {
     MSG_STDIO_CHAR_READY,
     MSG_SW_LONGPRESS_DELAY,
     MSG_TOUCH_PANEL,
-    MSG_DCS_STARTED,
     //
     // Drive Control System (DCS) and Human Interface Devices (HID) messages 0xC0 - 0xFF
     MSG_DCS_NOOP = 0xC0,
+    MSG_HID_NOOP = 0xC0,
     MSG_DCS_TEST,
-    MSG_HWRT_STARTED,
     MSG_DISPLAY_MESSAGE,
 } msg_id_t;
 #define MSG_ID_CNT (0x100)

@@ -16,9 +16,9 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-#define RC_SYS_CHVAL_MAX 0xFFFF
-#define RC_SYS_CHVAL_MID 0x8000
-#define RC_SYS_CHVAL_MIN 0x0000
+#define RC_SYS_CHVAL_MAX (10000)
+#define RC_SYS_CHVAL_MID (0)
+#define RC_SYS_CHVAL_MIN (-10000)
 
 /**
  * @brief The RC Receiver Protocols
@@ -42,7 +42,7 @@ typedef struct RCRX_BP_ {
 
 typedef struct RCRX_CHANNEL_DATA_ {
     volatile uint16_t raw_v;     // Raw data (as received)
-    volatile uint16_t v;         // Value 0x8000 = Middle (adjusted based on protocol)
+    volatile int16_t v;          // MAVLink compatible value: -10000 (-100%), 0 (0%), 10000 (+100%) (adjusted based on protocol)
 } rcrx_ch_data_t;
 
 typedef struct RCRX_STATE_ {
@@ -53,7 +53,8 @@ typedef struct RCRX_STATE_ {
     volatile uint32_t local_parity_err_cnt;
     volatile uint32_t frames_lost;
     volatile uint32_t msgs_processed;
-    volatile int8_t rssi; // 0 means 'not connected'. Value <0 is dBm. Value >0 is %R
+    volatile int8_t rssi;       // 0 means 'not connected'. Value <0 is dBm. Value >0 is %R
+    volatile uint16_t changed;   // BIT Flag for each channel indicating if it has changed
     rcrx_ch_data_t ch_data[RCRX_CHANNELS_SUPPORTED];
 } rcrx_state_t;
 

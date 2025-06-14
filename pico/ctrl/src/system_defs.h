@@ -143,11 +143,11 @@ extern "C" {
 //
 #define NEOPIXEL_DRIVE          27              // Neopixel GPIO Drive Pin
 
-// Switch Bank and User Switch
+// Switch Bank and/or User Switch
 //
 #define SW_BANK_GPIO            28              // Switch Matrix Bank
-#define SW_MAIN_USER_GPIO       SW_BANK_GPIO    // Main User Switch is GND on the Switch Matrix Bank
 #define SW_BANK_ADC             ADC_INPUT_2     // Switch bank is read using ADC-2
+#define SW_MAIN_USER_GPIO       28              // Main User Switch is on GPIO28 (or to GND on the Switch Matrix Bank)
 #define SW_MAIN_USER_PRESSED     0              // Input (digital) is low when the main switch is pressed
 #define SW_MAIN_USER_RELEASED    1              // Input (digital) is high when the main switch is not pressed
 

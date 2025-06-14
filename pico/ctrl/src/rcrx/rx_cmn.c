@@ -253,6 +253,8 @@ void rxcmn_list_pio_dma_state(void* data) {
         pio_sm_enbl = piosm_enabled(_rx_srxl2_piosm_msg_cfg.pio, _rx_srxl2_piosm_msg_cfg.sm);
         printf("RC SRXL2-MSG PIO PC: %2hhu  IRQ: %04X  EN: %d  PIO-PIO XFER CNT: %u\n", pio_sm_pc, pio_irqbits, pio_sm_enbl, dma_xfer_cnt);
     }
+    printf("\n");
+    fflush(stdout);
 
     if (retrigger) {
         // trigger another report

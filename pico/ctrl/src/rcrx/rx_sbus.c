@@ -20,6 +20,7 @@
 #include "hardware/clocks.h"
 #include "hardware/dma.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -32,6 +33,13 @@
 #define LOST_FRAME_MASK_ 0x04
 #define FAILSAFE_MASK_ 0x08
 
+#define SBUS_NORM_RANGE     1640    // 172 - 1811
+#define SBUS_NORM_MULT_ADJ  12.1957
+#define SBUS_NORM_ADD_ADJ   (-12098.1344)
+#define SBUS_EXT_RANGE      2048    // 0 - 2047
+#define SBUS_EXT_MULT_ADJ   14.6556
+#define SBUS_EXT_ADD_ADJ   (-14999)
+
 static bool _initialized = false;
 
 static rcrx_state_t* _channel_state;
@@ -41,7 +49,7 @@ static uint16_t _frames_lost;
 // Function Declarations                                            //
 // ///////////////////////////////////////////////////////////////////////// //
 
-static uint16_t _chval_raw_convert(uint16_t raw_val, bool extended);
+static int16_t _chval_raw_convert(uint16_t raw_val, bool extended);
 
 
 // ///////////////////////////////////////////////////////////////////////// //
@@ -69,71 +77,119 @@ void rx_sbus_mh_rx_msg_proc(cmt_msg_t* msg) {
         int ch_index = 0;
         bool extended = false;
         uint16_t rval = (buf[1] | ((buf[2] << 8) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[2] >> 3) | ((buf[3] << 5) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[3] >> 6) | (buf[4] << 2) | ((buf[5] << 10) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[5] >> 1) | ((buf[6] << 7) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[6] >> 4) | ((buf[7] << 4) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[7] >> 7) | (buf[8] << 1) | ((buf[9] << 9) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[9] >> 2) | ((buf[10] << 6) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[10] >> 5) | ((buf[11] << 3) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = (buf[12] | ((buf[13] << 8) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[13] >> 3) | ((buf[14] << 5) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[14] >> 6) | (buf[15] << 2) | ((buf[16] << 10) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[16] >> 1) | ((buf[17] << 7) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[17] >> 4) | ((buf[18] << 4) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[18] >> 7) | (buf[19] << 1) | ((buf[20] << 9) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[20] >> 2) | ((buf[21] << 6) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         rval = ((buf[21] >> 5) | ((buf[22] << 3) & 0x07FF));
-        _channel_state->ch_data[ch_index].raw_v = rval;
-        _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+        if (_channel_state->ch_data[ch_index].raw_v != rval) {
+            _channel_state->ch_data[ch_index].raw_v = rval;
+            _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
+            _channel_state->changed |= (1 << ch_index);
+        }
         ch_index++;
         /* CH 17 */
-        // FrSKY doesn't send these binary channels
+        // FrSKY doesn't seem to send these binary channels
         // rval = ((buf[23] & CH17_MASK_) != 0 ? 1 : 0);
         // _channel_state->ch_data[ch_index].raw_v = rval;
         // _channel_state->ch_data[ch_index].v = (rval == 1 ? RC_SYS_CHVAL_MAX : RC_SYS_CHVAL_MIN);
@@ -167,24 +223,25 @@ void rx_sbus_mh_rx_msg_proc(cmt_msg_t* msg) {
 /**
  * @brief Convert a raw channel value (SBUS value) to our system representation.
  *
- * Convert to the system representation (see the README in this module)
+ * Convert to the system representation (see the README in this module). We are
+ * using MAVLink values where -10000 is -100%, 0 is 0%, 10000 is 100%
  *
  * @param raw_val The raw SBUS channel value.
  * @param extended True for SBUS extended (-150% to 150% : 0 to 2047)
  * @return uint16_t The system value
  */
-static uint16_t _chval_raw_convert(uint16_t raw_val, bool extended) {
-    /* SBUS is 11 bits with FrSky receivers will output a range of 172 - 1811
+static int16_t _chval_raw_convert(uint16_t raw_val, bool extended) {
+    /* SBUS is 11 bits. FrSky receivers will output a range of 172 - 1811
         with channels set to a range of -100% to +100%. Using extended limits
         of -150% to +150% outputs a range of 0 to 2047, which is the maximum
         range achievable with 11 bits of data.
     */
-    uint16_t v;
+    int16_t v;
     if (extended) {
-        v = (raw_val * 16) + 8192; // (rv * 0x10) + 0x2000
+        v = (int16_t)round(((float)raw_val * SBUS_EXT_MULT_ADJ) + SBUS_EXT_ADD_ADJ);
     }
     else {
-        v = (raw_val * 20) + 12928; // (rv * 0x14) + 0x3290
+        v = (int16_t)round(((float)raw_val * SBUS_NORM_MULT_ADJ) + SBUS_NORM_ADD_ADJ);
     }
     return v;
 }

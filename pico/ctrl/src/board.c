@@ -38,7 +38,6 @@
 #include "board.h"
 
 #include "cmt/cmt.h"
-#include "curswitch/curswitch.h"
 #include "debug_support.h"
 #include "display/display.h"
 #include "expio/expio.h"
@@ -83,14 +82,9 @@ int board_init() {
     gpio_set_dir(SPI_ADDR_1, GPIO_OUT);
     gpio_set_drive_strength(SPI_ADDR_0, GPIO_DRIVE_STRENGTH_2MA);           // CS goes to a single device
     gpio_set_drive_strength(SPI_ADDR_1, GPIO_DRIVE_STRENGTH_2MA);           // CS goes to a single device
-    // Display Control/Data
-    gpio_set_function(SPI_DISP_CD, GPIO_FUNC_SIO);
-    gpio_set_dir(SPI_DISP_CD, GPIO_OUT);
-    gpio_set_drive_strength(SPI_DISP_CD, GPIO_DRIVE_STRENGTH_2MA);          // C/D goes to a single device
     // Initial output state
     gpio_put(SPI_ADDR_0, 1);
     gpio_put(SPI_ADDR_1, 1);
-    gpio_put(SPI_DISP_CD, 1);
 
     // SPI 0 Pins for Display and Expansion I/O
     gpio_set_function(SPI_DISP_EXP_SCK, GPIO_FUNC_SPI);
@@ -112,17 +106,6 @@ int board_init() {
     gpio_pull_up(I2C_EXTERN_SCL);
     gpio_set_drive_strength(I2C_EXTERN_SDA, GPIO_DRIVE_STRENGTH_4MA);
     gpio_set_drive_strength(I2C_EXTERN_SCL, GPIO_DRIVE_STRENGTH_4MA);
-
-    // UART Functions.
-    //  UART 0 is used for communication with the host (setup, commands, status)
-    //  UART 1 is used for controlling the Bus-Servos
-    //    Bus-Servo TX Enable
-    gpio_set_function(SERVO_CTRL_TX_EN_GPIO, GPIO_FUNC_SIO);
-    gpio_set_dir(SERVO_CTRL_TX_EN_GPIO, GPIO_OUT);
-    gpio_set_drive_strength(SERVO_CTRL_TX_EN_GPIO, GPIO_DRIVE_STRENGTH_2MA);
-    //    Initial output state
-    gpio_put(SERVO_CTRL_TX_EN_GPIO, SERVO_CTRL_TX_DIS);     // Bus-Servo TX Disabled
-
 
     // GPIO Outputs (other than SPI, I2C, UART, and chip-selects
 
@@ -168,8 +151,6 @@ int board_init() {
             .min = 00,
             .sec = 01
     };
-    disp_line_clear(4, false);
-    disp_string(4, 0, "Init: RTC", false, true);
     rtc_init();
     rtc_set_datetime(&t);
     // clk_sys is >2000x faster than clk_rtc, so datetime is not updated immediately when rtc_set_datetime() is called.
@@ -186,10 +167,32 @@ int board_init() {
     //
     // Do board specific initialization based on ADDR 0 or 1
     //
-    if (board_addr() == 0) {
+#if (BOARD_ADDR == 0)
+        // UART Functions.
+        //  UART 0 is used for communication with the host (setup, commands, status)
+        //  UART 1 is used for controlling the Bus-Servos
+        //    Bus-Servo TX Enable
+        gpio_set_function(SERVO_CTRL_TX_EN_GPIO, GPIO_FUNC_SIO);
+        gpio_set_dir(SERVO_CTRL_TX_EN_GPIO, GPIO_OUT);
+        gpio_set_drive_strength(SERVO_CTRL_TX_EN_GPIO, GPIO_DRIVE_STRENGTH_2MA);
+        //    Initial output state
+        gpio_put(SERVO_CTRL_TX_EN_GPIO, SERVO_CTRL_TX_DIS);     // Bus-Servo TX Disabled
+        //    User Switch
+        gpio_set_function(SW_MAIN_USER_GPIO, GPIO_FUNC_SIO);
+        gpio_set_dir(SW_MAIN_USER_GPIO, GPIO_IN);
+        gpio_set_pulls(SW_MAIN_USER_GPIO, false, false);
+#endif
+    // This could be an else, but it's only done once and this allows for more than 0 & 1.
+#if (BOARD_ADDR == 1)
         //
-        // Board '0' has the Display and Switch board connected.
+        // Board '1' has the Display and Switch board connected.
         //
+        // Display Control/Data signal
+        gpio_set_function(SPI_DISP_CD, GPIO_FUNC_SIO);
+        gpio_set_dir(SPI_DISP_CD, GPIO_OUT);
+        gpio_set_drive_strength(SPI_DISP_CD, GPIO_DRIVE_STRENGTH_2MA);          // C/D goes to a single device
+        // Initial output state
+        gpio_put(SPI_DISP_CD, 1);
         // SPI 1 Pins for Touch Panel
         gpio_set_function(SPI_TOUCH_SCK, GPIO_FUNC_SPI);
         gpio_set_function(SPI_TOUCH_MOSI, GPIO_FUNC_SPI);
@@ -210,11 +213,7 @@ int board_init() {
         gpio_set_function(SW_BANK_GPIO, GPIO_FUNC_SIO);
         gpio_set_dir(SW_BANK_GPIO, GPIO_IN);
         gpio_set_pulls(SW_BANK_GPIO, false, false);
-        // Initialize the display
-        disp_module_init();
-        // Cursor Switches module.
-        curswitch_module_init();
-    }
+#endif
 
 
     // Check the user input switch to see if it's pressed during startup.
@@ -326,6 +325,7 @@ void debug_printf(const char* format, ...) {
         va_start(xArgs, format);
         index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
         va_end(xArgs);
+#if (BOARD_ADDR == 1)
         if (disp_ready()) {
             text_color_pair_t cp;
             disp_text_colors_get(&cp);
@@ -333,6 +333,9 @@ void debug_printf(const char* format, ...) {
             disp_prints(buf, Paint);
             disp_text_colors_cp_set(&cp);
         }
+#else
+        printf("%s", buf);
+#endif
     }
 }
 
@@ -343,6 +346,7 @@ void error_printf(const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
+#if (BOARD_ADDR == 1)
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -350,6 +354,9 @@ void error_printf(const char* format, ...) {
         disp_prints(buf, Paint);
         disp_text_colors_cp_set(&cp);
     }
+#else
+    printf("%s", buf);
+#endif
 }
 
 void info_printf(const char* format, ...) {
@@ -359,6 +366,7 @@ void info_printf(const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
+#if (BOARD_ADDR == 1)
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -366,6 +374,9 @@ void info_printf(const char* format, ...) {
         disp_prints(buf, Paint);
         disp_text_colors_cp_set(&cp);
     }
+#else
+    printf("%s", buf);
+#endif
 }
 
 void warn_printf(const char* format, ...) {
@@ -375,6 +386,7 @@ void warn_printf(const char* format, ...) {
     va_start(xArgs, format);
     index += vsnprintf(&buf[index], sizeof(buf) - index, format, xArgs);
     va_end(xArgs);
+#if (BOARD_ADDR == 1)
     if (disp_ready()) {
         text_color_pair_t cp;
         disp_text_colors_get(&cp);
@@ -382,6 +394,9 @@ void warn_printf(const char* format, ...) {
         disp_prints(buf, Paint);
         disp_text_colors_cp_set(&cp);
     }
+#else
+    printf("%s", buf);
+#endif
 }
 
 void board_panic(const char* fmt, ...) {
