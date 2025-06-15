@@ -18,18 +18,24 @@ extern "C" {
 
 #include "hardware/dma.h"
 
-extern msg_handler_fn _rxcmn_proto_spec_rx_err_hndlr;
-extern msg_handler_fn _rxcmn_mh_data_rdy;  // Current message handler for RX Data Available
-extern msg_handler_fn _rxcmn_mh_proc_protocol_msg;  // Current message handler for process protocol message
-extern msg_id_t _rxcmn_data_rdy_msg;
-extern volatile bool _rxcmn_msg_processing;
-
 /**
  * @brief Function prototype for the enable_next_rx.
  */
 typedef void (*enrx_fn)(void);
 extern enrx_fn _rxcmn_en_next_rx;
 
+/**
+ * @brief Function prototype for protocol specific handling of RC RX frame/message received.
+ *
+ * Return is bit-flags of changed channels from this invocation.
+ */
+typedef uint16_t (*rcrx_msg_rcvd_fn)();
+
+extern msg_handler_fn _rxcmn_proto_spec_rx_err_hndlr;
+extern msg_handler_fn _rxcmn_mh_data_rdy;  // Current message handler for RX Data Available
+extern rcrx_msg_rcvd_fn _rxcmn_protocol_spec_proc;  // Current handler for protocol specific processing
+extern msg_id_t _rxcmn_data_rdy_msg;
+extern volatile bool _rxcmn_msg_processing;
 
 // Memory Buffers for receiving and maintaining channel/control data
 //   We use this ordering of the RC_RX buffers to allow doing a

@@ -278,6 +278,10 @@ static void _get_baud_protocol() {
 // Public Methods                                                            //
 // ///////////////////////////////////////////////////////////////////////// //
 
+void rcrx_clear_ch_changed() {
+    _channel_state.changed = 0x00;
+}
+
 void rcrx_clear_ch_state() {
     for (int i = 0; i < RCRX_CHANNELS_SUPPORTED; i++) {
         rcrx_ch_data_t* cd = &_channel_state.ch_data[i];

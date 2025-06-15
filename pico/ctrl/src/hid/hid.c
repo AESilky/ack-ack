@@ -164,7 +164,7 @@ static void _handle_input_sw_debounce(cmt_msg_t* msg) {
 static void _handle_rotary_change(cmt_msg_t* msg) {
     // The rotary encoder has been turned.
     int32_t rotary_cnt = re_count();
-    debug_printf("RE: p:%5d d:%3hd\n", rotary_cnt, msg->data.rotary_delta);
+    debug_printf("RE: p:%5d d:%3hd\n", rotary_cnt, msg->data.value16);
 }
 
 static void _handle_sensbank_change(cmt_msg_t* msg) {

@@ -48,6 +48,8 @@ typedef enum MSG_ID_ {
     MSG_HWRT_STARTED,
     MSG_INPUT_SW_PRESS,
     MSG_INPUT_SW_RELEASE,
+    MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed
+    MSG_RC_RECEIVED,        // A Radio Control message has been received and processed (ready for use)
     MSG_SENSBANK_CHG,
     MSG_SWITCH_ACTION,
     MSG_SWITCH_LONGPRESS,
@@ -61,9 +63,9 @@ typedef enum MSG_ID_ {
     MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
     MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
     MSG_RC_DETECTED,    // Radio Control BAUD & Protocol detected
-    MSG_RC_RX_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
-    MSG_RC_RX_MSG_RCVD, // Radio Control receiver message had been received
-    MSG_RC_RX_MSG_RDY,  // Radio Control receiver message is ready
+    MSG_RC_RX_RAW_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
+    MSG_RC_RX_RAW_MSG_RCVD, // Radio Control receiver message had been received
+    MSG_RC_RX_RAW_MSG_RDY,  // Radio Control receiver message is ready
     MSG_ROTARY_CHG,
     MSG_SERVO_DATA_RCVD,
     MSG_SERVO_DATA_RX_TO,
@@ -77,6 +79,7 @@ typedef enum MSG_ID_ {
     MSG_DCS_NOOP = 0xC0,
     MSG_HID_NOOP = 0xC0,
     MSG_DCS_TEST,
+    MSG_DIRECT_CTRL_CHG,
     MSG_DISPLAY_MESSAGE,
 } msg_id_t;
 #define MSG_ID_CNT (0x100)
@@ -115,7 +118,8 @@ union MSG_DATA_VALUE_ {
     bool bv;
     bool debug;
     cmt_sleep_data_t cmt_sleep;
-    int16_t rotary_delta;
+    int16_t value16;
+    uint16_t value16u;
     int32_t status;
     uint32_t value32u;
     char* str;

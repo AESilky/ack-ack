@@ -33,11 +33,11 @@
  */
 
 #include "servos.h"
-#include "servo.h"
 
 #include "board.h"
-#include "rover_info.h"
 #include "cmt/cmt.h"
+#include "rover/rover_info.h"
+#include "servo/servo.h"
 
 #include "pico/stdlib.h"
 
@@ -48,10 +48,6 @@
 // ############################################################################
 //
 #define DIRECTIONAL_SERVO_POS_CENTER 500
-/** @brief Left-Front and Right-Rear position for Rotate-In-Place */
-#define RIP_LFRR_POS ((uint16_t)(DIRECTIONAL_SERVO_POS_CENTER - 400))  // SERVO_POS_RIP
-/** @brief Right-Front and Left-Rear position for Rotate-In-Place */
-#define RIP_RFLR_POS ((uint16_t)(DIRECTIONAL_SERVO_POS_CENTER + 400))  // SERVO_POS_RIP
 
 typedef enum DIRECTIONAL_SERVOS_ID_ {
     SRVDIR_LF = 0,
@@ -99,6 +95,10 @@ typedef struct DRIVE_SERVO_CTRL_ {
 static dir_servo_ctrl_t _dir_servos[4];
 static drv_servo_ctrl_t _drv_servos[6];
 
+/** @brief Left-Front and Right-Rear position for Rotate-In-Place */
+static uint16_t _rip_lfrr_pos;
+/** @brief Right-Front and Left-Rear position for Rotate-In-Place */
+static uint16_t _rip_rflr_pos;
 
 // ############################################################################
 // Function Declarations
@@ -254,10 +254,10 @@ static bool _position_rr(uint16_t pos, uint16_t time) {
 //
 
 void servos_rip_position() {
-    _position_lf(RIP_LFRR_POS, 800);
-    _position_rr(RIP_LFRR_POS, 800);
-    _position_lr(RIP_RFLR_POS, 800);
-    _position_rf(RIP_RFLR_POS, 800);
+    _position_lf(_rip_lfrr_pos, 800);
+    _position_rr(_rip_lfrr_pos, 800);
+    _position_lr(_rip_rflr_pos, 800);
+    _position_rf(_rip_rflr_pos, 800);
 }
 
 void servos_zero_position() {

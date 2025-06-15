@@ -36,7 +36,9 @@
 			"pio_sm.h": "c",
 			"compare": "c",
 			"inttypes.h": "c",
-			"config.h": "c"
+			"config.h": "c",
+			"servos.h": "c",
+			"servo_t.h": "c"
 		},
 		"cSpell.words": [
 			"AGPI",

@@ -15,18 +15,12 @@
 extern "C" {
 #endif
 
-#include "rover_info.h"
-
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-/** @brief Radians to Servo Position Value (0-1000 | 0-1500). Servo Position is 0.24° */
-#define SERVO_RAD_2_POS_FCTR ((180/M_PI) * 0.24)
-static inline uint16_t servo_rads2pos(float rads) {
-    return ((uint16_t)(rads * SERVO_RAD_2_POS_FCTR));
-}
-#define SERVO_POS_RIP (servo_rads2pos(ROVER_ANGL_RIP))
+/** @brief Servo Position Unit is 0.24° */
+#define SERVO_DEG_PER_UNIT 0.24
 
 typedef enum BUS_SERVO_MODE_ {
     BS_POSITION_MODE = 0,

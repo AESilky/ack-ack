@@ -16,8 +16,6 @@
 #include "cmt/cmt.h"
 #include "dcs/dcs.h"
 #include "rcrx/rcrx.h"
-#include "rover/rover.h"
-#include "servo/servos.h"
 #include "util/util.h"
 
 #include "pico/stdlib.h"
@@ -66,14 +64,6 @@ static void _handle_hwrt_housekeeping(cmt_msg_t* msg) {
     static int cnt = 0;
 
     cnt++;
-
-    if (cnt % 312 == 0) { // ~5 seconds
-        rcrx_print_ch_state(true);
-    }
-
-    // Do cleanup, status updates, heartbeat, etc.
-    servos_housekeeping();
-    rover_housekeeping();
 }
 
 static void _handle_hwrt_test(cmt_msg_t* msg) {
@@ -153,9 +143,6 @@ void hwrt_started() {
     // Remote Control
     rcrx_start();
     //
-    // Start the Rover processing.
-    rover_start();
-    //
     // Done with the Hardware Runtime Startup - Let the DSC know.
     cmt_msg_t msg;
     cmt_msg_init(&msg, MSG_HWRT_STARTED);
@@ -187,9 +174,6 @@ void hwrt_module_init() {
 
     // Set up the Drive Control System
     dcs_module_init();
-
-    // Init the rover control functionality.
-    rover_module_init();
 
     // Remote control
     rcrx_module_init();

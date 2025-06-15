@@ -26,6 +26,8 @@ extern "C" {
 #define postHWRTMsgDiscardable( pmsg )          post_to_core0_nowait( pmsg )
 #define postDCSMsg( pmsg )                      post_to_core1( pmsg )
 #define postDCSMsgDiscardable( pmsg )           post_to_core1_nowait( pmsg )
+#define postHIDMsg( pmsg )                      post_to_core1( pmsg )
+#define postHIDMsgDiscardable( pmsg )           post_to_core1_nowait( pmsg )
 #define postBothMsgDiscardable( pmsg )          post_to_cores_nowait( pmsg )
 
 typedef struct _PROC_STATUS_ACCUM_ {

@@ -33,6 +33,8 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+extern void rcrx_clear_ch_changed();
+
 extern void rcrx_clear_ch_state();
 
 extern const rcrx_state_t* rcrx_get_ch_state();

@@ -1,7 +1,8 @@
 /**
- * dcs Drive Control System - Base.
+ * dcs - Drive Control System - Base.
  *
  * Setup for the message loop and idle processing.
+ * Process driving operations.
  *
  * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
@@ -10,22 +11,29 @@
 
 #include "dcs.h"
 #include "core1_main.h"
+#include "dcs_rc.h"
 
 #include "board.h"
 #include "debug_support.h"
 
 #include "cmt/cmt.h"
-#include "hid/hid.h"
+#include "rcrx/rcrx.h"
+#include "rover/rover.h"
 #include "util/util.h"
 
 #include "lib/json-maker/json-maker.h"
 
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
+
 #include <stdio.h>
 
-#define DCS_STATUS_PERIOD 313 // Every 5 seconds (313 * 0.016 = 5.008)
+// Period values for periodic housekeeping/updates.
+// Housekeeping message is every 16ms, so a divisor of 625 is 10 seconds
+//
+#define DCS_STATUS_PERIOD 313       // Every 5 seconds (313 * 0.016 = 5.008)
 #define DCS_HOST_STATUS_PERIOD 938  // Send status to host every 15 seconds
+#define RC_CH_STATUS_PERIOD 125     // Print the RC Channel values every 2 seconds (for now)
 
 static bool _dcs_initialized = false;
 static bool _hwrt_started = false;
@@ -63,19 +71,26 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     // We do status updates at certain periods, and we
     // offset different operations a bit, just so not to
     // do too much all in one time slot.
-    if (++_dcs_hk_cnt % DCS_STATUS_PERIOD == 0) {
+    _dcs_hk_cnt++;
+    if (_dcs_hk_cnt % DCS_STATUS_PERIOD == 0) {
         debug_printf("DCS: %d\n", _dcs_hk_cnt);
     }
     if ((_dcs_hk_cnt % DCS_HOST_STATUS_PERIOD) == 0) {
         // Send our status to the host.
         //printf("DCS: %d A:%d B:%d\n", _dcs_hk_cnt, aon, bon);
     }
+    if (_dcs_hk_cnt % RC_CH_STATUS_PERIOD == 0) {
+        rcrx_print_ch_state(true);
+    }
+
+    // Do cleanup, status updates, heartbeat, etc.
+    rover_housekeeping();
 }
 
 static void _handle_dcs_test(cmt_msg_t* msg) {
     // Test `scheduled_msg_ms` error
     static int times = 1;
-    
+
     cmt_msg_t msg_time = { MSG_DCS_TEST, MSG_PRI_NORM };
     uint64_t period = 60;
 
@@ -90,6 +105,14 @@ static void _handle_dcs_test(cmt_msg_t* msg) {
     msg_time.data.ts_us = now_us(); // Get the 'next' -> 'last_time' fresh
     schedule_msg_in_ms((period * 1000), &msg_time);
     times++;
+}
+
+static void _handle_direct_ctrl_chg(cmt_msg_t* msg) {
+    // The 'Direct Control' state has changed. The state
+    // is in the 'bool value' of the message.
+    bool dc_new = msg->data.bv;
+
+    info_printf("\nDirect Control state: %s\n", (dc_new ? "ON" : "OFF"));
 }
 
 static void _handle_hwrt_started(cmt_msg_t* msg) {
@@ -117,11 +140,18 @@ static void _handle_hwrt_started(cmt_msg_t* msg) {
 static void _dcs_started() {
     static bool _started = false;
     if (_started) {
-        board_panic("_dcs_started - Called more than once.");
+        board_panic("!!! `_dcs_started` - Called more than once. !!!");
     }
 
     cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping);
     cmt_msg_hdlr_add(MSG_DCS_TEST, _handle_dcs_test);
+    cmt_msg_hdlr_add(MSG_DIRECT_CTRL_CHG, _handle_direct_ctrl_chg);
+
+    dcs_rc_start();
+
+    //
+    // Start the Rover processing.
+    rover_start();
 
     // Let the HW level know that we are started.
     cmt_msg_t msg;
@@ -146,9 +176,13 @@ void dcs_module_init() {
     if (_dcs_initialized) {
         board_panic("dcs_module_init called multiple times");
     }
-
     _dcs_initialized = true;
     _dcs_hk_cnt = 0;
+
+    dcs_rc_module_init();
+
+    // Init the rover control functionality.
+    rover_module_init();
 }
 
 void start_dcs() {

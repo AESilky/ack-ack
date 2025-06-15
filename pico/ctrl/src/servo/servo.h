@@ -59,6 +59,17 @@ extern int16_t servo_position(servo_t* servo);
 extern bool servo_position_read(servo_t* servo);
 
 /**
+ * @brief Convert a radian value to a Servo Position Delta value.
+ *
+ * Note: This is a position movement (delta) value. Not an absolute
+ *      position.
+ *
+ * @param rads Radian value to convert
+ * @return uint16_t Servo Position Delta value
+ */
+extern uint16_t servo_rads_to_posd(float rads);
+
+/**
  * @brief Shortcut for setting the servo mode to 'motor' and setting the speed.
  * @ingroup servo
  *
@@ -67,6 +78,17 @@ extern bool servo_position_read(servo_t* servo);
  */
 extern bool servo_run(servo_t* servo, int16_t speed);
 
+/**
+ * @brief Function that sets (changes) the ID of a servo.
+ *
+ * Typically, this operation is done on the bench using the HiWonder
+ * utility and servo test tool.
+ *
+ * @param oldID
+ * @param newID
+ * @return true
+ * @return false
+ */
 extern bool servo_set_id(uint8_t oldID, uint8_t newID);
 
 /**
@@ -94,6 +116,16 @@ extern bool servo_status_inbound_pending(void);
  */
 extern bool servo_set_mode(servo_t* servo, servo_mode_t mode, int16_t speed);
 
+/**
+ * @brief Stop the movement of the servo.
+ *
+ * This can stop a single servo or with the 'ALL' Servo ID, all the servos
+ * can be stopped at once.
+ *
+ * @param servo
+ * @return true
+ * @return false
+ */
 extern bool servo_stop_move(servo_t* servo);
 
 /**
@@ -131,8 +163,6 @@ extern bool servo_vin_read(servo_t* servo);
 /**
  * @brief Initialize the Serial Bus Servo control module.
  * @ingroup servo
- *
- * @param servo_ids Array of servo IDs that will be controlled. -1 for unused.
  */
 extern void servo_module_init(void);
 

@@ -29,6 +29,7 @@
 #include "cmt/cmt.h"
 #include "system_defs.h"
 
+#include <math.h>
 #include <string.h>
 
 //Macro function  get lower 8 bits of A
@@ -100,6 +101,9 @@ static void _write_bs(const uint8_t* buf);
 // ############################################################################
 //
 auto_init_mutex(tx_mutex);
+
+/** Radians to Servo Position Delta Value factor. Calculated once in module_init. */
+static float _radians_to_servo_posd_fctr;
 
 static char _input_buf[INPUT_BUF_SIZE_];
 static bool _input_buf_overflow = false;
@@ -527,6 +531,10 @@ bool servo_position_read(servo_t *servo) {
     return (_send_rd_status_cmd(servo, buf));
 }
 
+uint16_t servo_rads_to_posd(float rads) {
+    return ((uint16_t)round(rads * _radians_to_servo_posd_fctr));
+}
+
 bool servo_run(servo_t *servo, int16_t speed) {
     return (servo_set_mode(servo, BS_MOTOR_MODE, speed));
 }
@@ -611,6 +619,12 @@ void servo_module_init() {
     cmt_msg_hdlr_add(MSG_SERVO_DATA_RCVD, _handle_servo_rxd);
     _initialized = true;
     _tx_disable();
+
+    //
+    // Calculate our static conversion values.
+    // Radians to Servo Position Value (0-1000 | 0-1500). Servo Position is 0.24° */
+    _radians_to_servo_posd_fctr = ((180.0/M_PI) * SERVO_DEG_PER_UNIT);
+
     //
     // Clear out the servo in progress.
     _servo_in_proc = SERVO_NONE;

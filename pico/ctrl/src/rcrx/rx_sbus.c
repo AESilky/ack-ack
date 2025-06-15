@@ -61,9 +61,10 @@ static int16_t _chval_raw_convert(uint16_t raw_val, bool extended);
 // Message Handlers                                                          //
 // ///////////////////////////////////////////////////////////////////////// //
 
-void rx_sbus_mh_rx_msg_proc(cmt_msg_t* msg) {
+uint16_t rx_sbus_protocol_processor() {
     // Check that it appears to be valid (has the correct header and footer byte values)
     volatile uint8_t* buf = _rc_bufs.msg_bufs.msg_enqueue;
+    uint16_t changes = 0;
     if (buf[SBUS_HEADER_IDX] != SBUS_HEADER_VALUE || buf[SBUS_FOOTER_IDX] != SBUS_FOOTER_VALUE) {
         rxcmn_update_error_count();
         printf("RC-SBUS Header/Footer incorrect: %02hX|%02hX\n", buf[SBUS_HEADER_IDX], buf[SBUS_FOOTER_IDX]);
@@ -76,116 +77,132 @@ void rx_sbus_mh_rx_msg_proc(cmt_msg_t* msg) {
         // Process the channel data from the received message.
         int ch_index = 0;
         bool extended = false;
-        uint16_t rval = (buf[1] | ((buf[2] << 8) & 0x07FF));
+        //  CH-1
+        uint16_t rval = ((uint16_t)buf[1] | (((uint16_t)buf[2] << 8) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[2] >> 3) | ((buf[3] << 5) & 0x07FF));
+        //  CH-2
+        rval = (((uint16_t)buf[2] >> 3) | (((uint16_t)buf[3] << 5) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[3] >> 6) | (buf[4] << 2) | ((buf[5] << 10) & 0x07FF));
+        //  CH-3
+        rval = (((uint16_t)buf[3] >> 6) | ((uint16_t)buf[4] << 2) | ((uint16_t)(buf[5] << 10) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[5] >> 1) | ((buf[6] << 7) & 0x07FF));
+        //  CH-4
+        rval = (((uint16_t)buf[5] >> 1) | (((uint16_t)buf[6] << 7) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[6] >> 4) | ((buf[7] << 4) & 0x07FF));
+        //  CH-5
+        rval = (((uint16_t)buf[6] >> 4) | (((uint16_t)buf[7] << 4) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[7] >> 7) | (buf[8] << 1) | ((buf[9] << 9) & 0x07FF));
+        //  CH-6
+        rval = (((uint16_t)buf[7] >> 7) | ((uint16_t)buf[8] << 1) | ((buf[9] << 9) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[9] >> 2) | ((buf[10] << 6) & 0x07FF));
+        //  CH-7
+        rval = ((uint16_t)(buf[9] >> 2) | ((uint16_t)(buf[10] << 6) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[10] >> 5) | ((buf[11] << 3) & 0x07FF));
+        //  CH-8
+        rval = ((uint16_t)(buf[10] >> 5) | ((uint16_t)(buf[11] << 3) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = (buf[12] | ((buf[13] << 8) & 0x07FF));
+        //  CH-9
+        rval = ((uint16_t)buf[12] | (((uint16_t)buf[13] << 8) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[13] >> 3) | ((buf[14] << 5) & 0x07FF));
+        //  CH-10
+        rval = (((uint16_t)buf[13] >> 3) | (((uint16_t)buf[14] << 5) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[14] >> 6) | (buf[15] << 2) | ((buf[16] << 10) & 0x07FF));
+        //  CH-11
+        rval = (((uint16_t)buf[14] >> 6) | ((uint16_t)buf[15] << 2) | (((uint16_t)buf[16] << 10) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[16] >> 1) | ((buf[17] << 7) & 0x07FF));
+        //  CH-12
+        rval = (((uint16_t)buf[16] >> 1) | (((uint16_t)buf[17] << 7) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[17] >> 4) | ((buf[18] << 4) & 0x07FF));
+        //  CH-13
+        rval = (((uint16_t)buf[17] >> 4) | (((uint16_t)buf[18] << 4) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[18] >> 7) | (buf[19] << 1) | ((buf[20] << 9) & 0x07FF));
+        //  CH-14
+        rval = (((uint16_t)buf[18] >> 7) | ((uint16_t)buf[19] << 1) | (((uint16_t)buf[20] << 9) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[20] >> 2) | ((buf[21] << 6) & 0x07FF));
+        //  CH-15
+        rval = (((uint16_t)buf[20] >> 2) | (((uint16_t)buf[21] << 6) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
-        rval = ((buf[21] >> 5) | ((buf[22] << 3) & 0x07FF));
+        //  CH-16
+        rval = (((uint16_t)buf[21] >> 5) | (((uint16_t)buf[22] << 3) & 0x07FF));
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
-            _channel_state->changed |= (1 << ch_index);
+            changes |= (1 << ch_index);
         }
         ch_index++;
         /* CH 17 */
@@ -210,9 +227,13 @@ void rx_sbus_mh_rx_msg_proc(cmt_msg_t* msg) {
         b = ((buf[23] & FAILSAFE_MASK_) != 0);
         _channel_state->failsafe = b;
 
+        _channel_state->changed |= changes;
+
         ledB_on(false);
     }
     _rxcmn_en_next_rx();
+
+    return (changes);
 }
 
 
@@ -253,8 +274,8 @@ static void _enable_rx() {
     ledA_on(false);
     // Set up the message and handler to use for receiving RX messages
     _rxcmn_mh_data_rdy = rxcmn_mh_rx_msg_proc;      // Message handler to process RC RX message.
-    _rxcmn_data_rdy_msg = MSG_RC_RX_MSG_RDY;        // Message for RC RX message received
-    _rxcmn_mh_proc_protocol_msg = rx_sbus_mh_rx_msg_proc;
+    _rxcmn_data_rdy_msg = MSG_RC_RX_RAW_MSG_RDY;        // Message for RC RX message received
+    _rxcmn_protocol_spec_proc = rx_sbus_protocol_processor;
     _rxcmn_en_next_rx = rxcmn_enable_next_msg;      // The 'common' processing does everything we need
     _rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
 
@@ -397,9 +418,9 @@ void rx_sbus_module_init(uint baud, rcrx_state_t* channel_state) {
     _channel_state = channel_state;
     rxcmn_module_init(channel_state);
 
-    _rxcmn_mh_data_rdy = NULL_MSG_HDLR;    // No message handler to start.
-    _rxcmn_data_rdy_msg = MSG_HWRT_NOOP;   // No message to start with.
-    _rxcmn_mh_proc_protocol_msg = NULL_MSG_HDLR;  // No message handler to start.
+    _rxcmn_mh_data_rdy = NULL_MSG_HDLR;     // No message handler to start.
+    _rxcmn_data_rdy_msg = MSG_HWRT_NOOP;    // No message to start with.
+    _rxcmn_protocol_spec_proc = NULL;       // No message handler to start.
 
     // Get a DMA channel that will take data from the PIO-SM RXFIFO,
     _rxcmn_dma_pio_rd = dma_claim_unused_channel(true);

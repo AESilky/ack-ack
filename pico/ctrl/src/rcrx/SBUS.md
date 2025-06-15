@@ -25,12 +25,30 @@ A single SBUS message is 25 bytes long and therefore, with the configuration des
 1 Footer byte 00000000b (0x00)
 Each byte is composed of 8 bits with IDs as follows [7 6 5 4 3 2 1 0] where bit 0 is the least significant bit. The data of the 16 channels are distributed onto the 22 data bytes starting with the least significant bit of channel 1 as follows (using the notation CHANNEL.BIT_ID):
 
-data byte 0: [1.7 1.6 1.5 1.4 1.3 1.2 1.1 1.0]
-data byte 1: [2.4 2.3 2.2 2.1 2.0 1.10 1.9 1.8]
-data byte 2: [3.1 3.0 2.10 2.9 2.8 2.7 2.6 2.5]
-data byte 3: ...
-The digital channels and flag bytes is composed as:
+data byte 00 (01): [01.07 01.06 01.05 01.04 01.03 01.02 01.01 01.00]
+data byte 01 (02): [02.04 02.03 02.02 02.01 02.00 01.10 01.09 01.08]
+data byte 02 (03): [03.01 03.00 02.10 02.09 02.08 02.07 02.06 02.05]
+data byte 03 (04): [03.09 03.08 03.07 03.06 03.05 03.04 03.03 03.02]
+data byte 04 (05): [04.06 04.05 04.04 04.03 04.02 04.01 04.00 03.10]
+data byte 05 (06): [05.03 05.02 05.01 05.00 04.10 04.09 04.08 04.07]
+data byte 06 (07): [06.00 05.10 05.09 05.08 05.07 05.06 05.05 05.04]
+data byte 07 (08): [06.08 06.07 06.06 06.05 06.04 06.03 06.02 06.01]
+data byte 08 (09): [07.05 07.04 07.03 07.02 07.01 07.00 06.10 06.09]
+data byte 09 (10): [08.02 08.01 08.00 07.10 07.09 07.08 07.07 07.06]
+data byte 10 (11): [08.10 08.09 08.08 08.07 08.06 08.05 08.04 08.03]
+data byte 11 (12): [09.07 09.06 09.05 09.04 09.03 09.02 09.01 09.00]
+data byte 12 (13): [10.04 10.03 10.02 10.01 10.00 09.10 09.09 09.08]
+data byte 13 (14): [11.01 11.00 10.10 10.09 10.08 10.07 10.06 10.05]
+data byte 14 (15): [11.09 11.08 11.07 11.06 11.05 11.04 11.03 11.02]
+data byte 15 (16): [12.06 12.05 12.04 12.03 12.02 12.01 12.00 11.10]
+data byte 16 (17): [13.03 13.02 13.01 13.00 12.10 12.09 12.08 12.07]
+data byte 17 (18): [14.00 13.10 13.09 13.08 13.07 13.06 13.05 13.04]
+data byte 18 (19): [14.08 14.07 14.06 14.05 14.04 14.03 14.02 14.01]
+data byte 19 (20): [15.05 15.04 15.03 15.02 15.01 15.00 14.10 14.09]
+data byte 20 (21): [16.02 16.01 16.00 15.10 15.09 15.08 15.07 15.06]
+data byte 21 (22): [16.10 16.09 16.08 16.07 16.06 16.05 16.04 16.03]
 
+The digital channels and flag bytes is composed as:
 flag byte: [0 0 0 0 failsafe frame_lost ch18 ch17]
 Since the least significant bit is sent first over the serial port, the following bit sequence is transmitted:
 

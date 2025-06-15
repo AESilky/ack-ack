@@ -21,7 +21,7 @@ msg_handler_fn _rxcmn_proto_spec_rx_err_hndlr;
 /** @brief Message handler for RX data available. */
 msg_handler_fn _rxcmn_mh_data_rdy;
 /** @brief   Message handler for processing protocol message */
-msg_handler_fn _rxcmn_mh_proc_protocol_msg;
+rcrx_msg_rcvd_fn _rxcmn_protocol_spec_proc;
 /** @brief The Message ID to post when RX data is ready. */
 msg_id_t _rxcmn_data_rdy_msg;
 /** @brief Flag indicating that an RX message is being processed. */
@@ -81,7 +81,7 @@ void __isr rxcmn_irq_dma_from_pio() {
 /**
  * @brief IRQ Handler for RX Error (Parity +/ Framing).
  *
- * Posts a MSG_RC_RX_ERR message with the IRQ flags and the handler set
+ * Posts a MSG_RC_RX_RAW_ERR message with the IRQ flags and the handler set
  * to mh_rcrx_error.
  */
 void __isr rxcmn_irq_pio_rx_err_handler() {
@@ -95,7 +95,7 @@ void __isr rxcmn_irq_pio_rx_err_handler() {
     //
     // Initialize and post the message
     //
-    cmt_msg_init3(&msg, MSG_RC_RX_ERR, MSG_PRI_NORM, rxcmn_mh_pio_rx_error);
+    cmt_msg_init3(&msg, MSG_RC_RX_RAW_ERR, MSG_PRI_NORM, rxcmn_mh_pio_rx_error);
     msg.data.value32u = pio_irqbits;
     postHWRTMsg(&msg);
 }
@@ -178,8 +178,27 @@ void rxcmn_mh_rx_msg_proc(cmt_msg_t* msg) {
             //
             _rc_bufs.msg_bufs.crc32_last = a_crc;
             //
-            if (_rxcmn_mh_proc_protocol_msg) {
-                _rxcmn_mh_proc_protocol_msg(msg);
+            if (_rxcmn_protocol_spec_proc) {
+                bool failsafe_was = _channel_state->failsafe;
+                uint16_t chgs = _rxcmn_protocol_spec_proc();
+                //
+                // If failsafe changed, post a message.
+                bool failsafe_now = _channel_state->failsafe;
+                if (failsafe_was != failsafe_now) {
+                    cmt_msg_t mfs;
+                    cmt_msg_init(&mfs, MSG_RC_FAILSAFE_CHG);
+                    mfs.data.bv = failsafe_now;
+                    postHWRTMsg(&mfs);
+                    postDCSMsg(&mfs);
+                }
+                //
+                // If any channels have changed, let the system know.
+                if (chgs != 0) {
+                    cmt_msg_t mchcng;
+                    cmt_msg_init(&mchcng, MSG_RC_RECEIVED);
+                    mchcng.data.value16u = chgs;
+                    postBothMsgDiscardable(&mchcng);
+                }
             }
         }
     }
