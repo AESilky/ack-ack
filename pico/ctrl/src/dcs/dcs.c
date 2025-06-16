@@ -115,6 +115,25 @@ static void _handle_direct_ctrl_chg(cmt_msg_t* msg) {
     info_printf("\nDirect Control state: %s\n", (dc_new ? "ON" : "OFF"));
 }
 
+static void _handle_frr_chg(cmt_msg_t* msg) {
+    // The 'Forward-Rotate-Reverse' control has changed. The new
+    // value is in the 'value16' of the message.
+    dcs_frr_t frr = (dcs_frr_t)msg->data.value16;
+    char* s;
+    switch(frr) {
+        case DCS_FRR_FORWARD:
+            s = "FORWARD";
+            break;
+        case DCS_FRR_REVERSE:
+            s = "REVERSE";
+            break;
+        case DCS_FRR_ROTATE:
+            s = "ROTATE";
+            break;
+    }
+    info_printf("\nForward-Rotate-Reverse control: %s\n", s);
+}
+
 static void _handle_hwrt_started(cmt_msg_t* msg) {
     // The Hardware Operating System has reported that it is started.
     // Since we are responding to a message, it means we
@@ -146,7 +165,7 @@ static void _dcs_started() {
     cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping);
     cmt_msg_hdlr_add(MSG_DCS_TEST, _handle_dcs_test);
     cmt_msg_hdlr_add(MSG_DIRECT_CTRL_CHG, _handle_direct_ctrl_chg);
-
+    cmt_msg_hdlr_add(MSG_FORWARD_ROTATE_REVERSE_CHG, _handle_frr_chg);
     dcs_rc_start();
 
     //

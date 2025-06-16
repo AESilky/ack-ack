@@ -80,6 +80,7 @@ typedef enum MSG_ID_ {
     MSG_HID_NOOP = 0xC0,
     MSG_DCS_TEST,
     MSG_DIRECT_CTRL_CHG,
+    MSG_FORWARD_ROTATE_REVERSE_CHG,
     MSG_DISPLAY_MESSAGE,
 } msg_id_t;
 #define MSG_ID_CNT (0x100)

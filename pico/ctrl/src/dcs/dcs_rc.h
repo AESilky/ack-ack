@@ -21,7 +21,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define DIRECT_CTRL_SEL_CH (14-1) // Channel data is 0-based
+// RC Channels defaults (Channel data is 0-based)
+#define CH_DIRECT_CTRL_SEL (13)     // CH-14
+#define CH_FWD_ROT_REV (9)          // CH-10
+
+typedef enum DCS_FRR_ {
+    DCS_FRR_FORWARD,
+    DCS_FRR_ROTATE,
+    DCS_FRR_REVERSE,
+} dcs_frr_t;
 
 /**
  * @brief Get the state of the 'Direct Control' flag from the RC system.
@@ -34,16 +42,37 @@ extern bool dcs_rc_direct_ctrl();
 /**
  * @brief Get the 'Direct Control' channel number.
  *
- * @return uint8_t Channel number
+ * @return uint8_t Channel number (0-based)
  */
 extern uint8_t dcs_rc_dcch();
 
 /**
  * @brief Set the 'Direct Control' selection channel.
  *
- * @param channel
+ * @param channel 0-based channel number
  */
 extern void dcs_rc_dcch_set(uint8_t channel);
+
+/**
+ * @brief Get the 'Forward-Rotate-Reverse' control channel.
+ *
+ * @return uint8_t Channel number (0-based)
+ */
+extern uint8_t dcs_rc_frrch();
+
+/**
+ * @brief Set the 'Forward-Rotate-Reverse' control channel.
+ *
+ * @param channel 0-based channel number
+ */
+extern void dcs_rc_frrch_set(uint8_t channel);
+
+/**
+ * @brief Get the state of the 'Forward-Rotate-Reverse' control from the RC system.
+ *
+ * @return dcs_frr_t One of: DCS_FORWARD, DCS_ROTATE, DCS_REVERSE
+ */
+extern dcs_frr_t dcs_rc_fwd_rot_rev();
 
 /**
  * @brief Start the RC processing for the DCS
