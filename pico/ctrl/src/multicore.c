@@ -8,22 +8,19 @@
  *
 */
 #include "multicore.h"
+#include "hwrt/hwrt.h"   // For `core1_main`
 
-#include "system_defs.h"
 #include "board.h"
 #include "debug_support.h"
 
-#include "cmt/cmt_t.h"
-#include "dcs/core1_main.h"
+#include "pico/util/queue.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #define CORE0_QUEUE_NP_ENTRIES_MAX 64
-#define CORE0_QUEUE_L9_ENTRIES_MAX 8
 #define CORE0_QUEUE_LP_ENTRIES_MAX 8
 #define CORE1_QUEUE_NP_ENTRIES_MAX 64
-#define CORE1_QUEUE_L9_ENTRIES_MAX 8
 #define CORE1_QUEUE_LP_ENTRIES_MAX 8
 
 static int32_t _msg_num;

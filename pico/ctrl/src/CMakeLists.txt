@@ -36,7 +36,7 @@ add_subdirectory(curswitch)
 add_subdirectory(dcs)
 add_subdirectory(display)
 add_subdirectory(gfx)
-add_subdirectory(hid)
+add_subdirectory(hid_nav)
 add_subdirectory(hwrt)
 add_subdirectory(neopix)
 add_subdirectory(rcrx)
@@ -166,7 +166,7 @@ target_link_libraries(hwctrl_1
   display
   fonts
   gfx
-  hid
+  hid_nav
   hwrt1
   neopix
   rotary_encoder

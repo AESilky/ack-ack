@@ -26,24 +26,9 @@
 #include <string.h>
 
 
-#define SCHEDULED_MESSAGES_MAX 32
-
-#define SM_OVERHEAD_US_PER_MS_ (20)
-#define SMD_FREE_INDICATOR_ (-1)
+#define SM_OVERHEAD_US_PER_MS_ (19)
 
 typedef bool (*get_msg_nowait_fn)(cmt_msg_t* msg);
-
-typedef struct _scheduled_msg_data_ {
-    int32_t remaining;
-    uint8_t corenum;
-    int32_t ms_requested;
-    cmt_msg_t client_msg;  // Message gets copied into this
-    cmt_msg_t sleep_msg;
-} _scheduled_msg_data_t;
-
-
-auto_init_mutex(sm_mutex);
-_scheduled_msg_data_t _scheduled_message_datas[SCHEDULED_MESSAGES_MAX]; // Objects to use (no malloc/free). Global for debugging.
 
 static bool _msg_loop_0_running = false;
 static bool _msg_loop_1_running = false;
@@ -51,12 +36,27 @@ static bool _msg_loop_1_running = false;
 static proc_status_accum_t _psa[2];         // One Proc Status Accumulator for each core
 static proc_status_accum_t _psa_sec[2];     // Proc Status Accumulator per second for each core
 
-void cmt_handle_sleep(cmt_msg_t* msg);
-
 static uint8_t _housekeep_rt;  // Incremented each ms. Generates a Housekeeping msg every 16ms (62.5Hz)
 
 /** @brief The message handler(s) list. One entry for each (possible) message ID. Contains pointer to first handler link-list entry. */
-static cmt_msg_hdlr_ll_ent_t* _msg_hdlr[MSG_ID_CNT];
+cmt_msg_hdlr_ll_ent_t* cmt_msg_hdlrs[MSG_ID_CNT];
+
+/** @brief `sm_mutex` is used for scheduling and processing scheduled messages and sleep. */
+auto_init_mutex(sm_mutex);
+/** @brief Pointer to first entry of a linked list of scheduled messages and sleeps. */
+cmt_schmsgdata_ll_ent_t* cmt_smd_ll;
+
+
+// ######################################################################################
+// Local Method Declarations                                                          ###
+// ######################################################################################
+
+static void _cmt_handle_sleep(cmt_msg_t* msg);
+
+
+// ######################################################################################
+// Interrupt Handlers                                                                 ###
+// ######################################################################################
 
 /**
  * @brief Recurring Interrupt Handler (1ms from PWM).
@@ -70,36 +70,140 @@ static cmt_msg_hdlr_ll_ent_t* _msg_hdlr[MSG_ID_CNT];
  *
  */
 static void _on_recurring_interrupt(void) {
-        // Adjust scheduled messages.
-        for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-            _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-            if (smd->remaining > 0) {
-                if (0 == --smd->remaining) {
-                    if (0 == smd->corenum) {
-                        post_to_core0(&(smd->client_msg));
-                    }
-                    else {
-                        post_to_core1(&(smd->client_msg));
-                    }
-                    smd->remaining = SMD_FREE_INDICATOR_;
-                }
+    // Adjust scheduled messages time.
+    if (cmt_smd_ll != (cmt_schmsgdata_ll_ent_t*)NULL && 0 >= --cmt_smd_ll->schmsg_data.remaining) {
+        // The head entry has timed-out. So, at least it needs to be
+        // processed. It is possible that more need to be processed.
+        // Plus, the head entry needs to be updated.
+        while (cmt_smd_ll != (cmt_schmsgdata_ll_ent_t*)NULL && 0 >= cmt_smd_ll->schmsg_data.remaining) {
+            if (0 == cmt_smd_ll->schmsg_data.corenum) {
+                post_to_core0(&cmt_smd_ll->schmsg_data.msg);
             }
+            else {
+                post_to_core1(&cmt_smd_ll->schmsg_data.msg);
+            }
+            // Get the next entry and free this one.
+            cmt_schmsgdata_ll_ent_t* next = cmt_smd_ll->next;
+            cmt_return_smdllent(cmt_smd_ll);
+            // Adjust the head entry to the next...
+            cmt_smd_ll = next;
         }
-        _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
-        if (_housekeep_rt == 0) {
-            cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LOW);
-            postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
-        }
+    }
+    _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
+    if (_housekeep_rt == 0) {
+        cmt_msg_t msg;
+        cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LOW);
+        postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
+    }
     // Clear the interrupt flag that brought us here so it can occur again.
     pwm_clear_irq(CMT_PWM_RECINT_SLICE);
 }
 
-static void _scheduled_msg_init() {
-    for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-        // Initialize these as 'free'
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        smd->remaining = SMD_FREE_INDICATOR_;
+
+// ######################################################################################
+// Local Methods                                                                      ###
+// ######################################################################################
+
+static void _schedule_core_msg_in_ms(uint8_t core_num, int32_t ms, const cmt_msg_t* msg) {
+    uint32_t flags = save_and_disable_interrupts();
+    mutex_enter_blocking(&sm_mutex);
+    // Get a free smd
+    cmt_schmsgdata_ll_ent_t* new_entry = cmt_alloc_smdllent();
+    // Set the info
+    new_entry->schmsg_data.corenum = core_num;
+    new_entry->schmsg_data.ms_requested = ms;
+    new_entry->schmsg_data.remaining = ms;
+    memcpy(&new_entry->schmsg_data.msg, msg, sizeof(cmt_msg_t));
+    //
+    // Now, calculate where to insert this entry - adjusting the time value as needed.
+    cmt_schmsgdata_ll_ent_t** pnext = &cmt_smd_ll;
+    while (*pnext != (cmt_schmsgdata_ll_ent_t*)NULL) {
+        cmt_schmsgdata_ll_ent_t* entry = *pnext;
+        if (new_entry->schmsg_data.remaining <= entry->schmsg_data.remaining) {
+            // The time for the new entry is less than the time remaining for the entry,
+            // so adjust entry's time remaining and insert the new one here.
+            entry->schmsg_data.remaining -= new_entry->schmsg_data.remaining;
+            break;
+        }
+        else {
+            // The time remaining for the new entry is greater, so reduce the new entry's
+            // time remaining and move to the next entry.
+            new_entry->schmsg_data.remaining -= entry->schmsg_data.remaining;
+            pnext = &entry->next;
+        }
+    }
+    // pnext is where we need to put this entry and the time has been adjusted as needed.
+    new_entry->next = *pnext;
+    *pnext = new_entry;
+
+    mutex_exit(&sm_mutex);
+    restore_interrupts_from_disabled(flags);
+}
+
+static void _cmt_handle_sleep(cmt_msg_t* msg) {
+    cmt_sleep_fn fn = msg->data.cmt_sleep.sleep_fn;
+    if (fn) {
+        (fn)(msg->data.cmt_sleep.user_data);
+    }
+}
+
+
+// ######################################################################################
+// Public Methods                                                                     ###
+// ######################################################################################
+
+bool cmt_message_loop_0_running() {
+    return (_msg_loop_0_running);
+}
+
+bool cmt_message_loop_1_running() {
+    return (_msg_loop_1_running);
+}
+
+bool cmt_message_loops_running() {
+    return (_msg_loop_0_running && _msg_loop_1_running);
+}
+
+void cmt_msg_hdlr_add(msg_id_t id, msg_handler_fn hdlr) {
+    uint corenum = get_core_num();
+    cmt_msg_hdlr_add_for_core(id, hdlr, corenum);
+}
+
+void cmt_msg_hdlr_add_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
+    cmt_msg_hdlr_ll_ent_t* ent = cmt_alloc_mhllent();
+    ent->handler = hdlr;
+    ent->corenum = corenum;
+    // Link it into the handler entries
+    cmt_msg_hdlr_ll_ent_t* head = cmt_msg_hdlrs[id];
+    ent->next = head;
+    cmt_msg_hdlrs[id] = ent;
+}
+
+void cmt_msg_hdlr_rm(msg_id_t id, msg_handler_fn hdlr) {
+    uint corenum = get_core_num();
+    cmt_msg_hdlr_rm_for_core(id, hdlr, corenum);
+}
+
+void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
+    cmt_msg_hdlr_ll_ent_t* ent = cmt_msg_hdlrs[id];
+    cmt_msg_hdlr_ll_ent_t* prev = (cmt_msg_hdlr_ll_ent_t*)NULL;
+    // Find the entry and remove it
+    while (ent) { // As long as we have an entry
+        if (ent->corenum == corenum && ent->handler == hdlr) {
+            // This is the entry to remove.
+            if (prev) {
+                // If this wasn't the first entry, have the prior entry point to the next.
+                prev->next = ent->next;
+            }
+            else {
+                // This was the first entry. Make the 'next' the first.
+                cmt_msg_hdlrs[id] = ent->next;
+            }
+            // Now we are done with this entry, return it to the heap.
+            cmt_return_mhllent(ent);
+            break;
+        }
+        ent = ent->next;
     }
 }
 
@@ -127,70 +231,8 @@ void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_han
     msg->t = 0;
 }
 
-void cmt_msg_rm_forced_hdlr(cmt_msg_t* msg) {
+void cmt_msg_rm_set_hdlr(cmt_msg_t* msg) {
     msg->hdlr = NULL;
-}
-
-void cmt_msg_hdlr_add(msg_id_t id, msg_handler_fn hdlr) {
-    uint corenum = get_core_num();
-    cmt_msg_hdlr_add_for_core(id, hdlr, corenum);
-}
-
-void cmt_msg_hdlr_add_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
-    cmt_msg_hdlr_ll_ent_t* ent = cmt_alloc_mhllent();
-    ent->handler = hdlr;
-    ent->corenum = corenum;
-    // Link it into the handler entries
-    cmt_msg_hdlr_ll_ent_t* head = _msg_hdlr[id];
-    ent->next = head;
-    _msg_hdlr[id] = ent;
-}
-
-void cmt_msg_hdlr_rm(msg_id_t id, msg_handler_fn hdlr) {
-    uint corenum = get_core_num();
-    cmt_msg_hdlr_rm_for_core(id, hdlr, corenum);
-}
-
-void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
-    cmt_msg_hdlr_ll_ent_t* ent = _msg_hdlr[id];
-    cmt_msg_hdlr_ll_ent_t* prev = (cmt_msg_hdlr_ll_ent_t*)NULL;
-    // Find the entry and remove it
-    while (ent) { // As long as we have an entry
-        if (ent->corenum == corenum && ent->handler == hdlr) {
-            // This is the entry to remove.
-            if (prev) {
-                // If this wasn't the first entry, have the prior entry point to the next.
-                prev->next = ent->next;
-            }
-            else {
-                // This was the first entry. Make the 'next' the first.
-                _msg_hdlr[id] = ent->next;
-            }
-            // Now we are done with this entry, return it to the heap.
-            cmt_return_mhllent(ent);
-            break;
-        }
-        ent = ent->next;
-    }
-}
-
-bool cmt_message_loop_0_running() {
-    return (_msg_loop_0_running);
-}
-
-bool cmt_message_loop_1_running() {
-    return (_msg_loop_1_running);
-}
-
-bool cmt_message_loops_running() {
-    return (_msg_loop_0_running && _msg_loop_1_running);
-}
-
-void cmt_handle_sleep(cmt_msg_t* msg) {
-    cmt_sleep_fn fn = msg->data.cmt_sleep.sleep_fn;
-    if (fn) {
-        (fn)(msg->data.cmt_sleep.user_data);
-    }
 }
 
 void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
@@ -205,98 +247,15 @@ void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
     }
 }
 
-int cmt_sched_msg_waiting() {
-    int count = 0;
-    uint32_t flags = save_and_disable_interrupts();
-    mutex_enter_blocking(&sm_mutex);
-    for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (SMD_FREE_INDICATOR_ != smd->remaining) {
-            count++;
-        }
-    }
-    mutex_exit(&sm_mutex);
-    restore_interrupts_from_disabled(flags);
-
-    return (count);
-}
-
-bool cmt_sched_msg_waiting_ids(int max, uint16_t *buf) {
-    bool msgs_waiting = false;
-    int values_num = (max > SCHEDULED_MESSAGES_MAX ? SCHEDULED_MESSAGES_MAX : max);
-    int values_index = 0;
-    buf[0] = -1; // Put a '-1' in to indicate the end
-    uint32_t flags = save_and_disable_interrupts();
-    mutex_enter_blocking(&sm_mutex);
-    for (int i = 0; i < values_num; i++) {
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (SMD_FREE_INDICATOR_ != smd->remaining) {
-            msgs_waiting = true;
-            buf[values_index] = smd->client_msg.id;
-            values_index++;
-        }
-        // If we are less than the 'max' put a '-1' in to indicate the end.
-        if (i+1 < max) {
-            buf[i+1] = -1;
-        }
-    }
-    mutex_exit(&sm_mutex);
-    restore_interrupts_from_disabled(flags);
-
-    return (msgs_waiting);
-}
-
 void cmt_sleep_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data) {
-    bool scheduled = false;
-
-    uint8_t core_num = (uint8_t)get_core_num();
-    uint32_t flags = save_and_disable_interrupts();
-    mutex_enter_blocking(&sm_mutex);
-    // Get a free smd
-    for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (SMD_FREE_INDICATOR_ == smd->remaining) {
-            // This is free;
-            smd->sleep_msg.id = MSG_CMT_SLEEP;
-            smd->sleep_msg.data.cmt_sleep.sleep_fn = sleep_fn;
-            smd->sleep_msg.data.cmt_sleep.user_data = user_data;
-            smd->client_msg = smd->sleep_msg;
-            smd->ms_requested = ms;
-            smd->corenum = core_num;
-            smd->remaining = ms;
-            scheduled = true;
-            break;
-        }
-    }
-    mutex_exit(&sm_mutex);
-    restore_interrupts_from_disabled(flags);
-    if (!scheduled) {
-        board_panic("CMT - No SMD available for use for sleep.");
-    }
-}
-
-void _schedule_core_msg_in_ms(uint8_t core_num, int32_t ms, const cmt_msg_t* msg) {
-    bool scheduled = false;
-    uint32_t flags = save_and_disable_interrupts();
-    mutex_enter_blocking(&sm_mutex);
-    // Get a free smd
-    for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (SMD_FREE_INDICATOR_ == smd->remaining) {
-            // This is free;
-            smd->client_msg = *msg;
-            smd->ms_requested = ms;
-            smd->corenum = core_num;
-            smd->remaining = ms;
-            scheduled = true;
-            break;
-        }
-    }
-    mutex_exit(&sm_mutex);
-    restore_interrupts_from_disabled(flags);
-    if (!scheduled) {
-        board_panic("CMT - No SM Data slot available for use.");
-    }
+    // For sleep, we schedule ourself a sleep message with the `sleep_fn`
+    // and `user_data` as the data.
+    cmt_msg_t sleep_msg;
+    cmt_msg_init3(&sleep_msg, MSG_CMT_SLEEP, MSG_PRI_NORM, _cmt_handle_sleep);
+    sleep_msg.data.cmt_sleep.sleep_fn = sleep_fn;
+    sleep_msg.data.cmt_sleep.user_data = user_data;
+    // Schedule it.
+    schedule_msg_in_ms(ms, &sleep_msg);
 }
 
 void schedule_core0_msg_in_ms(int32_t ms, const cmt_msg_t* msg) {
@@ -312,43 +271,80 @@ void schedule_msg_in_ms(int32_t ms, const cmt_msg_t* msg) {
     _schedule_core_msg_in_ms(core_num, ms, msg);
 }
 
-void scheduled_msg_cancel(msg_id_t sched_msg_id) {
+int32_t scheduled_msg_cancel(msg_id_t sched_msg_id) {
+    uint32_t retval = 0;  // We return the time remaining in the scheduled msg
+    uint8_t corenum = (uint8_t)get_core_num();
     uint32_t flags = save_and_disable_interrupts();
     mutex_enter_blocking(&sm_mutex);
-    for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (smd->remaining != SMD_FREE_INDICATOR_ && smd->client_msg.id == sched_msg_id) {
-            // This matches, so set the remaining to -1;
-            smd->remaining = SMD_FREE_INDICATOR_;
-            smd->client_msg.id = MSG_NOOP; // This doesn't really matter, but just to keep things clean.
+    cmt_schmsgdata_ll_ent_t** pnext = &cmt_smd_ll;
+    while (*pnext != (cmt_schmsgdata_ll_ent_t*)NULL) {
+        cmt_schmsgdata_ll_ent_t* entry = *pnext;
+        cmt_sch_msg_data_t smd = entry->schmsg_data;
+        if (smd.corenum == corenum && smd.msg.id == sched_msg_id) {
+            // This is the one to cancel.
+            retval = smd.remaining;
+            // This amount of time needs to be added to the next
+            entry->next->schmsg_data.remaining += retval;
+            // Put the next in the pnext
+            *pnext = entry->next;
+            break;
         }
+        pnext = &entry->next;
     }
     mutex_exit(&sm_mutex);
     restore_interrupts_from_disabled(flags);
+
+    return (retval);
 }
 
-extern bool scheduled_message_exists(msg_id_t sched_msg_id) {
+extern bool scheduled_msg_exists(msg_id_t sched_msg_id) {
     bool exists = false;
+    uint8_t corenum = (uint8_t)get_core_num();
+    cmt_schmsgdata_ll_ent_t* entry = cmt_smd_ll;
     uint32_t flags = save_and_disable_interrupts();
     mutex_enter_blocking(&sm_mutex);
-    for (int i = 0; i < SCHEDULED_MESSAGES_MAX; i++) {
-        _scheduled_msg_data_t* smd = &_scheduled_message_datas[i];
-        if (smd->remaining != SMD_FREE_INDICATOR_ && smd->client_msg.id == sched_msg_id) {
-            // This matches
+    while (entry != (cmt_schmsgdata_ll_ent_t*)NULL) {
+        if (entry->schmsg_data.corenum == corenum && entry->schmsg_data.msg.id == sched_msg_id) {
             exists = true;
             break;
         }
+        entry = entry->next;
     }
     mutex_exit(&sm_mutex);
     restore_interrupts_from_disabled(flags);
     return (exists);
 }
 
+cmt_sm_counts_t scheduled_msgs_waiting() {
+    cmt_sm_counts_t counts = {0, 0, 0, 0};
+    cmt_schmsgdata_ll_ent_t* entry = cmt_smd_ll;
+    uint32_t flags = save_and_disable_interrupts();
+    mutex_enter_blocking(&sm_mutex);
+    while (entry != (cmt_schmsgdata_ll_ent_t*)NULL) {
+        counts.total++;
+        if (entry->schmsg_data.corenum == 0) {
+            counts.core0++;
+        }
+        else {
+            counts.core1++;
+        }
+        if (entry->schmsg_data.msg.hdlr == _cmt_handle_sleep) {
+            counts.sleeps++;
+        }
+        entry = entry->next;
+    }
+    mutex_exit(&sm_mutex);
+    restore_interrupts_from_disabled(flags);
+
+    return (counts);
+}
+
+
 /*
  * Endless loop reading and dispatching messages.
  * This is called/started once from each core, so two instances are running.
  */
-void message_loop(start_fn fstart) {
+void message_loop(msg_handler_fn fstart) {
     // Setup occurs once when called by a core.
     uint8_t corenum = get_core_num();
     get_msg_nowait_fn get_msg_function = (corenum == 0 ? get_core0_msg_nowait : get_core1_msg_nowait);
@@ -365,9 +361,19 @@ void message_loop(start_fn fstart) {
         _msg_loop_1_running = true;
     }
 
-    // Call the 'started' notification function...
+    // Post a message for the 'started' notification function...
     if (fstart) {
-        fstart();
+        cmt_msg_t msg;
+        cmt_msg_init3(&msg, MSG_LOOP_STARTED, MSG_PRI_NORM, fstart);
+        if (corenum == 0) {
+            post_to_core0(&msg);
+        }
+        else if (corenum == 1) {
+            post_to_core1(&msg);
+        }
+        else {
+            board_panic("!!! `corenum` was other than 0 or 1. corenum:%hhu !!!", corenum);
+        }
     }
 
     // Enter into the endless loop reading and dispatching messages to the handlers...
@@ -398,7 +404,7 @@ void message_loop(start_fn fstart) {
                 gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
             }
             else {
-                cmt_msg_hdlr_ll_ent_t* handler_entry = _msg_hdlr[msg.id];
+                cmt_msg_hdlr_ll_ent_t* handler_entry = cmt_msg_hdlrs[msg.id];
                 while (handler_entry) {
                     if (handler_entry->corenum == corenum || handler_entry->corenum == MSG_HDLR_CORE_BOTH) {
                         // NOTE: Turning the LED on/off isn't core-safe (one could turn it on and the
@@ -447,14 +453,13 @@ void cmt_module_init() {
     pwm_set_irq_enabled(CMT_PWM_RECINT_SLICE, true);
     irq_set_exclusive_handler(PWM_DEFAULT_IRQ_NUM(), _on_recurring_interrupt);
 
-    mutex_enter_blocking(&sm_mutex);
-    _scheduled_msg_init();
-    mutex_exit(&sm_mutex);
-
-    // Initialize the message handler entries heap so that we can add/remove handlers
+    // Initialize the message handler entries and scheduled message datas
+    // heaps so that we can add/remove handlers and schedule messages and sleeps.
     cmt_heap_module_init();
-    // Register our message handlers
-    cmt_msg_hdlr_add(MSG_CMT_SLEEP, cmt_handle_sleep);
+    // Set the head of the scheduled message linked list to NULL (empty)
+    mutex_enter_blocking(&sm_mutex);
+    cmt_smd_ll = (cmt_schmsgdata_ll_ent_t*)NULL;
+    mutex_exit(&sm_mutex);
 
     // Enable the PWM and interrupts from it.
     irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), true);

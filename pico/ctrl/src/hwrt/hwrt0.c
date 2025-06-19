@@ -45,7 +45,7 @@ static void _handle_dcs_started(cmt_msg_t* msg);
 // ====================================================================
 
 static void _handle_dcs_started(cmt_msg_t* msg) {
-    // The UI has reported that it is initialized.
+    // The DCS has reported that it is initialized.
     // Since we are responding to a message, it means we
     // are also initialized, so -
     //
@@ -114,12 +114,12 @@ static void _input_sw_irq_handler(uint32_t events) {
     if (events & GPIO_IRQ_EDGE_FALL) {
         // Delay to see if it is user input.
         // Check to see if we have already scheduled a debounce message.
-        if (!scheduled_message_exists(MSG_INPUT_SW_DEBOUNCE)) {
+        if (!scheduled_msg_exists(MSG_INPUT_SW_DEBOUNCE)) {
             schedule_msg_in_ms(80, &_input_sw_debounce_msg);
         }
     }
     if (events & GPIO_IRQ_EDGE_RISE) {
-        if (scheduled_message_exists(MSG_INPUT_SW_DEBOUNCE)) {
+        if (scheduled_msg_exists(MSG_INPUT_SW_DEBOUNCE)) {
             scheduled_msg_cancel(MSG_INPUT_SW_DEBOUNCE);
         }
         if (_input_sw_pressed) {
@@ -136,44 +136,13 @@ static void _input_sw_irq_handler(uint32_t events) {
 // Initialization and Startup functions
 // ====================================================================
 
-void hwrt_started() {
-    // Will be called by the CMT message loop processor when the message loop is ready.
-    //
-
-    // Remote Control
-    rcrx_start();
-    //
-    // Done with the Hardware Runtime Startup - Let the DSC know.
-    cmt_msg_t msg;
-    cmt_msg_init(&msg, MSG_HWRT_STARTED);
-    postDCSMsg(&msg);
-}
-
-void start_hwrt() {
-    static bool _started = false;
-    // Make sure we aren't already started and that we are being called from core-0.
-    assert(!_started && 0 == get_core_num());
-    _started = true;
-
-    // Launch the Drive Control System (core-1 Message Dispatching Loop)
-    //  This also starts other 'core-1' functionality.
-    start_dcs();
-
-    // Enter into the message loop.
-    message_loop(hwrt_started);
-}
-
-
-void hwrt_module_init() {
+static void _hwrt_module_init() {
     cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_hwrt_housekeeping);
     cmt_msg_hdlr_add(MSG_HWRT_TEST, _handle_hwrt_test);
     cmt_msg_hdlr_add(MSG_DCS_STARTED, _handle_dcs_started);
 
 
     _input_sw_pressed = false;
-
-    // Set up the Drive Control System
-    dcs_module_init();
 
     // Remote control
     rcrx_module_init();
@@ -182,4 +151,72 @@ void hwrt_module_init() {
     cmt_msg_t msg;
     cmt_msg_init2(&msg, MSG_HWRT_TEST, MSG_PRI_LOW);
     postHWRTMsgDiscardable(&msg);
+}
+
+/**
+ * @brief Will be called by the CMT from the Core-1 message loop processor
+ * when the message loop is running.
+ *
+ * @param msg Nothing important in the message
+ */
+static void _core1_started(cmt_msg_t* msg) {
+    static bool _core1_started = false;
+    // Make sure we aren't already started and that we are being called from core-0.
+    if (_core1_started || 1 != get_core_num()) {
+        board_panic("!!! `_core1_started` called more than once or on the wrong core. Core is: %hhd !!!", get_core_num());
+    }
+    _core1_started = true;
+
+    // Launch the Drive Control System
+    //  The DCS starts other 'core-1' functionality.
+    start_dcs();
+}
+
+/**
+ * @brief For Board-0, The `core1_main` kicks off the message loop with the DCS
+ * as the primary functionality.
+ *
+ */
+void core1_main() {
+    static bool _core1_main_called = false;
+    // Make sure we aren't already called and that we are being called from core-1.
+    if (_core1_main_called || 1 != get_core_num()) {
+        board_panic("!!! `core1_main` called more than once or on the wrong core. Core is: %hhd !!!", get_core_num());
+    }
+    _core1_main_called = true;
+    info_printf("\nCORE-%d - *** Started ***\n", get_core_num());
+
+    // Enter into the (endless) Message Dispatching Loop
+    message_loop(_core1_started);
+}
+
+/**
+ * @brief Will be called by the CMT from the Core-0 message loop processor
+ * when the message loop is running.
+ *
+ * @param msg Nothing important in the message
+ */
+static void _hwrt_started(cmt_msg_t* msg) {
+    // Initialize now that the message loop is running.
+    _hwrt_module_init();
+
+    // Remote Control
+    rcrx_start();
+    //
+    // Done with the Hardware Runtime Startup - Let the DSC know.
+    cmt_msg_t msg2;
+    cmt_msg_init(&msg2, MSG_HWRT_STARTED);
+    postDCSMsg(&msg2);
+}
+
+void start_hwrt() {
+    static bool _started = false;
+    // Make sure we aren't already started and that we are being called from core-0.
+    if(_started || 0 != get_core_num()) {
+        board_panic("!!! `start_hwrt` called more than once or on the wrong core. Core is: %hhd !!!", get_core_num());
+    }
+    _started = true;
+
+    // Enter into the message loop.
+    message_loop(_hwrt_started);
 }

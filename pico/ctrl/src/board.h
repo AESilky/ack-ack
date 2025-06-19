@@ -143,11 +143,14 @@ extern void info_printf(const char* format, ...) __attribute__((format(_printf_,
 extern void warn_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 
 /**
- * @brief Board level (common) panic location.
+ * @brief Board level (common) PANIC.
  * @ingroup board
  *
  * This should be used in preference to directly using the Pico `panic` to make
  * it better for debugging and common fatal error handling.
+ *
+ * This attempts to turn the Pico LED on and Error-Print the message before
+ * performing the `panic`.
  *
  * @param fmt format string (printf-like)
  * @param ...  printf-like arguments

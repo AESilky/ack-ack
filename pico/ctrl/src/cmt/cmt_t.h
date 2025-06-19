@@ -38,6 +38,7 @@ typedef enum MSG_PRI_ {
 typedef enum MSG_ID_ {
     // Common messages 0x00 - 0x5F (used by both HWRT and DCS/HID)
     MSG_NOOP = 0x00,
+    MSG_LOOP_STARTED,
     MSG_EXEC,               // General purpose message to use when specifying a handler.
     MSG_CONFIG_CHANGED,
     MSG_CMT_SLEEP,
@@ -46,19 +47,20 @@ typedef enum MSG_ID_ {
     MSG_HID_STARTED,
     MSG_HOUSEKEEPING_RT,    // Housekeeping Repeating - Every 16ms (62.5Hz)
     MSG_HWRT_STARTED,
+    MSG_INPUT_SW_DEBOUNCE,
     MSG_INPUT_SW_PRESS,
     MSG_INPUT_SW_RELEASE,
     MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed
     MSG_RC_RECEIVED,        // A Radio Control message has been received and processed (ready for use)
     MSG_SENSBANK_CHG,
-    MSG_SWITCH_ACTION,
-    MSG_SWITCH_LONGPRESS,
+    MSG_SW_ACTION,
+    MSG_SW_LONGPRESS,
+    MSG_SW_LONGPRESS_DELAY,
     MSG_TERM_CHAR_RCVD,
     //
     // Hardware-Runtime (HWRT) messages 0x60 - 0xBF
     MSG_HWRT_NOOP = 0x60,
     MSG_HWRT_TEST,
-    MSG_INPUT_SW_DEBOUNCE,
     MSG_MAIN_USER_SWITCH_PRESS,
     MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
     MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
@@ -66,22 +68,21 @@ typedef enum MSG_ID_ {
     MSG_RC_RX_RAW_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
     MSG_RC_RX_RAW_MSG_RCVD, // Radio Control receiver message had been received
     MSG_RC_RX_RAW_MSG_RDY,  // Radio Control receiver message is ready
-    MSG_ROTARY_CHG,
     MSG_SERVO_DATA_RCVD,
     MSG_SERVO_DATA_RX_TO,
     MSG_SERVO_READ_ERROR,
     MSG_SERVO_STATUS_RCVD,
     MSG_STDIO_CHAR_READY,
-    MSG_SW_LONGPRESS_DELAY,
     MSG_TOUCH_PANEL,
     //
-    // Drive Control System (DCS) and Human Interface Devices (HID) messages 0xC0 - 0xFF
+    // Drive Control System (DCS), Human Interface Devices (HID), and Navigation (NAV) messages 0xC0 - 0xFF
     MSG_DCS_NOOP = 0xC0,
     MSG_HID_NOOP = 0xC0,
     MSG_DCS_TEST,
     MSG_DIRECT_CTRL_CHG,
-    MSG_FORWARD_ROTATE_REVERSE_CHG,
     MSG_DISPLAY_MESSAGE,
+    MSG_FORWARD_ROTATE_REVERSE_CHG,
+    MSG_ROTARY_CHG,
 } msg_id_t;
 #define MSG_ID_CNT (0x100)
 
@@ -151,20 +152,6 @@ typedef struct CMT_MSG_ {
     int32_t n;
     uint32_t t;
 } cmt_msg_t;
-
-/**
- * @brief Function prototype for the start function.
- * @ingroup cmt
- */
-typedef void (*start_fn)(void);
-
-/**
- * @brief Message handler entry. Used in the message handler list.
- */
-// typedef struct _MSG_HANDLER_ENTRY {
-//     int msg_id;
-//     msg_handler_fn msg_handler;
-// } msg_handler_entry_t;
 
 
 #ifdef __cplusplus

@@ -10,7 +10,6 @@
 */
 
 #include "dcs.h"
-#include "core1_main.h"
 #include "dcs_rc.h"
 
 #include "board.h"
@@ -35,7 +34,6 @@
 #define DCS_HOST_STATUS_PERIOD 938  // Send status to host every 15 seconds
 #define RC_CH_STATUS_PERIOD 125     // Print the RC Channel values every 2 seconds (for now)
 
-static bool _dcs_initialized = false;
 static bool _hwrt_started = false;
 
 static int _dcs_hk_cnt;
@@ -53,7 +51,6 @@ static void _dcs_idle_function_2();
 // Hardware functions...
 
 // Internal functions
-static void _dcs_started();
 
 
 // ====================================================================
@@ -136,12 +133,7 @@ static void _handle_frr_chg(cmt_msg_t* msg) {
 
 static void _handle_hwrt_started(cmt_msg_t* msg) {
     // The Hardware Operating System has reported that it is started.
-    // Since we are responding to a message, it means we
-    // are also initialized, so -
-    //
-    // Start things running.
     _hwrt_started = true;
-    _dcs_started();
 }
 
 
@@ -191,11 +183,7 @@ static void _dcs_started() {
 // ====================================================================
 
 
-void dcs_module_init() {
-    if (_dcs_initialized) {
-        board_panic("dcs_module_init called multiple times");
-    }
-    _dcs_initialized = true;
+static void _dcs_module_init() {
     _dcs_hk_cnt = 0;
 
     dcs_rc_module_init();
@@ -206,11 +194,14 @@ void dcs_module_init() {
 
 void start_dcs() {
     static bool _started = false;
-    // Make sure we aren't already started and that we are being called from core-0.
-    assert(!_started && 0 == get_core_num());
+    // Make sure we aren't already started and that we are being called from core-1.
+    if(_started || 1 != get_core_num()) {
+        board_panic("!!! `start_dcs` called more than once, or on the wrong core. Corenum: %hhu !!!", get_core_num());
+    }
     _started = true;
-    // Register our handler for the Hardware Control Runtime started, saying that it is for the DCS Core.
-    cmt_msg_hdlr_add_for_core(MSG_HWRT_STARTED, _handle_hwrt_started, DCS_CORE_NUM);
+    // Register our handler for the Hardware Control Runtime started.
+    cmt_msg_hdlr_add(MSG_HWRT_STARTED, _handle_hwrt_started);
 
-    start_core1(); // The Core-1 main starts the DCS
+    _dcs_module_init();
+    _dcs_started();
 }

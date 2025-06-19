@@ -302,6 +302,6 @@ void term_module_init() {
     }
     _initialized = true;
 
-    cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
+    cmt_msg_hdlr_add(MSG_SW_ACTION, _handle_switch_action);
     cmt_msg_hdlr_add(MSG_TOUCH_PANEL, _handle_touch);
 }

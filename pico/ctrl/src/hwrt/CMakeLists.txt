@@ -6,6 +6,7 @@ target_sources(hwrt0 INTERFACE
 )
 
 target_link_libraries(hwrt0 INTERFACE
+    pico_multicore
     pico_stdlib
 )
 
@@ -17,5 +18,6 @@ target_sources(hwrt1 INTERFACE
 )
 
 target_link_libraries(hwrt1 INTERFACE
+    pico_multicore
     pico_stdlib
 )

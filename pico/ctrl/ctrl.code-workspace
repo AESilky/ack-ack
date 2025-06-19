@@ -9,7 +9,6 @@
 			"curswitch.h": "c",
 			"cmt.h": "c",
 			"hwrt.h": "c",
-			"core1_main.h": "c",
 			"string.h": "c",
 			"font.h": "c",
 			"display_i.h": "c",

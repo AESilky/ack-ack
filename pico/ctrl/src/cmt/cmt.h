@@ -20,6 +20,12 @@ extern "C" {
 
 #include "multicore.h"
 
+typedef struct cmt_sm_counts_ {
+    uint16_t total;
+    uint16_t sleeps;
+    uint16_t core0;
+    uint16_t core1;
+} cmt_sm_counts_t;
 
 // Define functional names for the 'Core' message queue functions (Camel-case to help flag as aliases).
 #define postHWRTMsg( pmsg )                     post_to_core0( pmsg )
@@ -38,11 +44,6 @@ typedef struct _PROC_STATUS_ACCUM_ {
     volatile msg_id_t msg_longest;
     volatile uint64_t t_msg_longest;
 } proc_status_accum_t;
-
-// typedef struct _MSG_LOOP_CNTX {
-//     uint8_t corenum;                                // The core number the loop is running on
-//     const msg_handler_entry_t** handler_entries;    // NULL terminated list of message handler entries
-// } msg_loop_cntx_t;
 
 /**
  * @brief Initialize a CMT Message with Normal Priority so that it is ready to be posted.
@@ -91,7 +92,7 @@ extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, 
  *
  * @param msg The message to remove the handler from
  */
-extern void cmt_msg_rm_forced_hdlr(cmt_msg_t* msg);
+extern void cmt_msg_rm_set_hdlr(cmt_msg_t* msg);
 
 /**
  * @brief Add (register) a handler for a message.
@@ -175,36 +176,12 @@ extern bool cmt_message_loop_1_running();
 extern bool cmt_message_loops_running();
 
 /**
- * @brief Handle a Scheduled Message timer Tick.
- *
- * @param msg (not used)
- */
-extern void cmt_handle_sleep(cmt_msg_t* msg);
-
-/**
  * @brief Get the last Process Status Accumulator per second values.
  *
  * @param psas Pointer to Process Status Accumulator structure to fill with values.
  * @param corenum The core number (0|1) to get the process status values for.
  */
 extern void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum);
-
-/**
- * @brief The number of scheduled messages waiting.
- *
- * @return int Number of scheduled messages.
- */
-extern int cmt_sched_msg_waiting();
-
-/**
- * @brief Get the ID's of the scheduled messages waiting.
- *
- * @param max The maximum number of ID's to return
- * @param buf Buffer (of uint16's) to hold the values
- *
- * @return True is any messages are waiting
- */
-extern bool cmt_sched_msg_waiting_ids(int max, uint16_t *buf);
 
 /**
  * @brief Sleep for milliseconds and call a function.
@@ -254,8 +231,9 @@ extern void schedule_msg_in_ms(int32_t ms, const cmt_msg_t* msg);
  * passed and the message was posted.
  *
  * @param sched_msg_id The ID of the message that was scheduled.
+ * @return int32_t Number of milliseconds remaining.
  */
-extern void scheduled_msg_cancel(msg_id_t sched_msg_id);
+extern int32_t scheduled_msg_cancel(msg_id_t sched_msg_id);
 
 /**
  * @brief Indicate if a scheduled message exists.
@@ -266,7 +244,15 @@ extern void scheduled_msg_cancel(msg_id_t sched_msg_id);
  * @param sched_msg_id The ID of the message to check for.
  * @return True if there is a scheduled message for the ID.
  */
-extern bool scheduled_message_exists(msg_id_t sched_msg_id);
+extern bool scheduled_msg_exists(msg_id_t sched_msg_id);
+
+/**
+ * @brief The number of scheduled messages waiting.
+ *
+ * @return cmt_sm_counts_t Counts of the number of scheduled messages,
+ *      including the number of sleeps and the number for each core.
+ */
+extern cmt_sm_counts_t scheduled_msgs_waiting();
 
 /**
  * @brief Enter into a message processing loop.
@@ -275,9 +261,9 @@ extern bool scheduled_message_exists(msg_id_t sched_msg_id);
  * Enter into a message processing loop using a loop context.
  * This function will not return.
  *
- * @param fstart Function to be called once the message loop is started.
+ * @param fstart Function to be called once the message loop is started (by posting a message).
  */
-extern void message_loop(start_fn fstart);
+extern void message_loop(msg_handler_fn fstart);
 
 /**
  * @brief Initialize the Cooperative Multi-Tasking system.

@@ -400,9 +400,12 @@ void warn_printf(const char* format, ...) {
 }
 
 void board_panic(const char* fmt, ...) {
+    // Turn the LED on before the panic
+    gpio_put(PICO_DEFAULT_LED_PIN, true);
     va_list xArgs;
     va_start(xArgs, fmt);
     error_printf(fmt, xArgs);
+    gpio_put(PICO_DEFAULT_LED_PIN, true);
     panic(fmt, xArgs);
     va_end(xArgs);
 }

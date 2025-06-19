@@ -26,19 +26,12 @@ extern "C" {
 extern void hid_update_sensbank(sensbank_chg_t sb);
 
 /**
- * @brief Starts the status display.
- * @ingroup hid
+ * @brief Starts the HID and NAV.
+ * @ingroup hid_nav
  *
  * This should be called after the messaging system is up and running.
  */
-extern void hid_start(void);
-
-/**
- * @brief Initialize the Sensor Bank.
- * @ingroup hid
- */
-extern void hid_module_init(void);
-
+extern void start_hid_nav(void);
 
 #ifdef __cplusplus
     }

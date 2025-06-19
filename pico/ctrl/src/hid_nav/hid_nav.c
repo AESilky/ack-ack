@@ -9,7 +9,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "hid.h"
+#include "hid_nav.h"
 
 #include "board.h"
 #include "curswitch/curswitch.h"
@@ -86,13 +86,13 @@ static void _input_sw_irq_handler(uint32_t events) {
     if (events & GPIO_IRQ_EDGE_FALL) {
         // Delay to see if it is user input or an IR received.
         // Check to see if we have already scheduled a debounce message.
-        if (!scheduled_message_exists(MSG_INPUT_SW_DEBOUNCE)) {
+        if (!scheduled_msg_exists(MSG_INPUT_SW_DEBOUNCE)) {
             schedule_msg_in_ms(80, &_input_sw_debounce_msg);
         }
     }
     if (events & GPIO_IRQ_EDGE_RISE) {
         // If we haven't recorded the input switch as pressed, this is probably the IR-B
-        if (scheduled_message_exists(MSG_INPUT_SW_DEBOUNCE)) {
+        if (scheduled_msg_exists(MSG_INPUT_SW_DEBOUNCE)) {
             scheduled_msg_cancel(MSG_INPUT_SW_DEBOUNCE);
         }
         if (_input_sw_pressed) {
@@ -214,7 +214,7 @@ static void _handle_switch_longpress_delay(cmt_msg_t* msg) {
     if (sw_id != SW_NONE) {
         // Yes, the same switch is still pressed
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_SWITCH_LONGPRESS);
+        cmt_msg_init(&msg, MSG_SW_LONGPRESS);
         msg.data.sw_action.switch_id = sw_id;
         msg.data.sw_action.pressed = true;
         msg.data.sw_action.repeat = repeat;
@@ -271,31 +271,11 @@ void hid_update_sensbank(sensbank_chg_t sb) {
 // Initialization and Maintainence Functions
 // ############################################################################
 //
-
-void hid_start(void) {
-    // Setup the screen for the status display and a scroll area for messages.
-    disp_scroll_area_define(0, 0);
-    disp_text_colors_set(C16_LT_GREEN, C16_BLACK);
-    disp_clear(Paint);
-    disp_scroll_area_define(10, 5);
-    disp_cursor_home();
-    //
-    // Start the Terminal
-    term_start();
-    //
-    // Start the NeoPixel panels
-    neopix_start();
-    //
-    // Output status every 7 seconds
-    //cmt_sleep_ms(7000, _disp_proc_status, NULL);
-}
-
-
-void hid_module_init(void) {
+static void _module_init(void) {
     static bool _initialized = false;
 
     if (_initialized) {
-        board_panic("hid_module_init already called");
+        board_panic("!!! HID _module_init already called. !!!");
     }
     _initialized = true;
 
@@ -303,7 +283,7 @@ void hid_module_init(void) {
     cmt_msg_hdlr_add(MSG_INPUT_SW_DEBOUNCE, _handle_input_sw_debounce);
     cmt_msg_hdlr_add(MSG_ROTARY_CHG, _handle_rotary_change);
     cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
-    cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
+    cmt_msg_hdlr_add(MSG_SW_ACTION, _handle_switch_action);
     cmt_msg_hdlr_add(MSG_SW_LONGPRESS_DELAY, _handle_switch_longpress_delay);
 
     re_pbsw_module_init();
@@ -323,4 +303,25 @@ void hid_module_init(void) {
     term_module_init();
 
     neopix_module_init();
+}
+
+void start_hid_nav(void) {
+    // Initialize modules used by the HID
+    _module_init();
+    
+    // Setup the screen for the status display and a scroll area for messages.
+    disp_scroll_area_define(0, 0);
+    disp_text_colors_set(C16_LT_GREEN, C16_BLACK);
+    disp_clear(Paint);
+    disp_scroll_area_define(10, 5);
+    disp_cursor_home();
+    //
+    // Start the Terminal
+    term_start();
+    //
+    // Start the NeoPixel panels
+    neopix_start();
+    //
+    // Output status every 7 seconds
+    //cmt_sleep_ms(7000, _disp_proc_status, NULL);
 }

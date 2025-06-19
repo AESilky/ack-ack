@@ -18,12 +18,6 @@ extern "C" {
 #define DCS_CORE_NUM 1
 
 /**
- * @brief Initialize the Drive Control System
- * @ingroup dcs
- */
-extern void dcs_module_init(void);
-
-/**
  * @brief Start the Drive Control System  (DCS core 1 (endless) message-loop).
  * @ingroup dcs
  */

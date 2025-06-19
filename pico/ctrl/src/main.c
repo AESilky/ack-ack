@@ -54,7 +54,7 @@ int main()
     bi_decl(bi_program_description("Runtime and Control for AckAck-Rover Hardware"));
     char board = '0';
 #else
-    bi_decl(bi_program_description("Human Interface Device (HID) for AckAck-Rover"));
+    bi_decl(bi_program_description("Human Interface Device & Navigation (HID_NAV) for AckAck-Rover"));
     char board = '1';
 #endif
 
@@ -89,11 +89,12 @@ int main()
     // Initialize the Cooperative Multi-Tasking subsystem
     cmt_module_init();
 
-    // Set up the Hardware Runtime (needs to be done before starting the Direction Control System)
-    hwrt_module_init();
-
-    // Turn the green LED on.
+    // Turn the Secondary 'A' LED on.
     ledA_on(true);
+
+    // Starting Core-1 will run the `core1_main` which is defined for the appropriate
+    // Board-0 or Board-1 functionality.
+    start_core1();
 
     // Launch the Hardware Runtime (core-0 (endless) Message Dispatching Loop).
     // The HWRT starts the appropriate secondary operations (core-1 message loop)
