@@ -90,7 +90,7 @@ static void _handle_dcs_test(cmt_msg_t* msg) {
     // Test `scheduled_msg_ms` error
     static int times = 1;
 
-    cmt_msg_t msg_time = { MSG_DCS_TEST, MSG_PRI_NORM };
+    cmt_msg_t msg_time = { MSG_DCS_TEST };
     uint64_t period = 60;
 
     if (debug_mode_enabled()) {

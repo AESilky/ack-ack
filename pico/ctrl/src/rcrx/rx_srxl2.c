@@ -135,7 +135,7 @@ void __isr rx_srxl2_irq_pio_msgcmplt_handler() {
     //
     // Initialize and post the message
     //
-    cmt_msg_init3(&msg, MSG_RC_RX_RAW_MSG_RCVD, MSG_PRI_NORM, rx_srxl2_mh_rx_msg_rcvd);
+    cmt_msg_init2(&msg, MSG_RC_RX_RAW_MSG_RCVD, rx_srxl2_mh_rx_msg_rcvd);
     msg.data.value32u = pio_irqbits;
     postHWRTMsg(&msg);
 }

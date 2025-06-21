@@ -92,7 +92,7 @@ static void _on_recurring_interrupt(void) {
     _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
     if (_housekeep_rt == 0) {
         cmt_msg_t msg;
-        cmt_msg_init2(&msg, MSG_HOUSEKEEPING_RT, MSG_PRI_LOW);
+        cmt_msg_init(&msg, MSG_HOUSEKEEPING_RT);
         postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
     }
     // Clear the interrupt flag that brought us here so it can occur again.
@@ -209,31 +209,13 @@ void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
 
 void cmt_msg_init(cmt_msg_t* msg, msg_id_t id) {
     msg->id = id;
-    msg->priority = MSG_PRI_NORM;
     msg->hdlr = NULL_MSG_HDLR;
     msg->n = 0;
     msg->t = 0;
 }
 
-void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority) {
+void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr) {
     msg->id = id;
-    msg->priority = priority;
-    msg->hdlr = NULL_MSG_HDLR;
-    msg->n = 0;
-    msg->t = 0;
-}
-
-void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hdlr) {
-    msg->id = id;
-    msg->priority = priority;
-    msg->hdlr = hdlr;
-    msg->n = 0;
-    msg->t = 0;
-}
-
-void cmt_msg_init4(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr) {
-    msg->id = id;
-    msg->priority = MSG_PRI_NORM;
     msg->hdlr = hdlr;
     msg->n = 0;
     msg->t = 0;
@@ -259,7 +241,7 @@ void cmt_sleep_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data) {
     // For sleep, we schedule ourself a sleep message with the `sleep_fn`
     // and `user_data` as the data.
     cmt_msg_t sleep_msg;
-    cmt_msg_init3(&sleep_msg, MSG_CMT_SLEEP, MSG_PRI_NORM, _cmt_handle_sleep);
+    cmt_msg_init2(&sleep_msg, MSG_CMT_SLEEP, _cmt_handle_sleep);
     sleep_msg.data.cmt_sleep.sleep_fn = sleep_fn;
     sleep_msg.data.cmt_sleep.user_data = user_data;
     // Schedule it.
@@ -376,7 +358,7 @@ void message_loop(msg_handler_fn fstart) {
     // Post a message for the 'started' notification function...
     if (fstart) {
         cmt_msg_t msg;
-        cmt_msg_init3(&msg, MSG_LOOP_STARTED, MSG_PRI_NORM, fstart);
+        cmt_msg_init2(&msg, MSG_LOOP_STARTED, fstart);
         if (corenum == 0) {
             post_to_core0(&msg);
         }

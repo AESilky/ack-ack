@@ -61,9 +61,9 @@ static void _handle_switch_longpress_delay(cmt_msg_t* msg);
 // ############################################################################
 //
 static switch_id_t _sw_pressed = SW_NONE;
-static cmt_msg_t _sw_longpress_msg = { MSG_SW_LONGPRESS_DELAY, MSG_PRI_NORM };
+static cmt_msg_t _sw_longpress_msg = { MSG_SW_LONGPRESS_DELAY };
 static bool _input_sw_pressed;
-static cmt_msg_t _input_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE, MSG_PRI_NORM };
+static cmt_msg_t _input_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE };
 
 
 // ====================================================================

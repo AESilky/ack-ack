@@ -92,7 +92,7 @@ static void _rc_rd_dc_state() {
             // We want to wait for the value to be consistent for the
             // 'settle' time.
             cmt_msg_t msg;
-            cmt_msg_init4(&msg, MSG_EXEC, _dc_chg_delay);
+            cmt_msg_init2(&msg, MSG_EXEC, _dc_chg_delay);
             msg.data.bv = dc_now;
             schedule_msg_in_ms(RC_SW_STEADY_MS, &msg);
         }
@@ -146,7 +146,7 @@ static void _rc_rd_frr_control() {
             // We want to wait for the value to be consistent for the
             // 'settle' time.
             cmt_msg_t msg;
-            cmt_msg_init4(&msg, MSG_EXEC, _frr_chg_delay);
+            cmt_msg_init2(&msg, MSG_EXEC, _frr_chg_delay);
             msg.data.value16 = frr_now;
             schedule_msg_in_ms(RC_SW_STEADY_MS, &msg);
         }
@@ -192,7 +192,8 @@ static void _rc_rd_strthrt() {
     float avg = ((float)(_steering + scal) / 2.0);
     _steering = (uint16_t)round(avg);
     avg = ((float)(_throttle + tcal) / 2.0);
-    _throttle = (uint16_t)round(avg);
+    tcal = (uint16_t)round(avg);
+    _throttle = ((tcal < 5) ? 0 : tcal); // Make 0~4 = 0 to avoid drift
 }
 
 // ====================================================================

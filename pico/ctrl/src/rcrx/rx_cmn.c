@@ -72,7 +72,7 @@ void __isr rxcmn_irq_dma_from_pio() {
     if (_rxcmn_mh_data_rdy) {
         cmt_msg_t msg;
         msg.data.value32u = crc; // Include the CRC in the message
-        cmt_msg_init3(&msg, _rxcmn_data_rdy_msg, MSG_PRI_NORM, _rxcmn_mh_data_rdy);
+        cmt_msg_init2(&msg, _rxcmn_data_rdy_msg, _rxcmn_mh_data_rdy);
         postHWRTMsg(&msg);
     }
 }
@@ -95,7 +95,7 @@ void __isr rxcmn_irq_pio_rx_err_handler() {
     //
     // Initialize and post the message
     //
-    cmt_msg_init3(&msg, MSG_RC_RX_RAW_ERR, MSG_PRI_NORM, rxcmn_mh_pio_rx_error);
+    cmt_msg_init2(&msg, MSG_RC_RX_RAW_ERR, rxcmn_mh_pio_rx_error);
     msg.data.value32u = pio_irqbits;
     postHWRTMsg(&msg);
 }

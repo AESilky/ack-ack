@@ -630,7 +630,7 @@ void servo_module_init() {
     // Clear out the servo in progress.
     _servo_in_proc = SERVO_NONE;
     _rxd_handler = _rxd_discard;
-    cmt_msg_init3(&_msg_rxd_to, MSG_SERVO_DATA_RX_TO, MSG_PRI_NORM, _rxd_status_asm_to);  // Handler for RX receive timeout
+    cmt_msg_init2(&_msg_rxd_to, MSG_SERVO_DATA_RX_TO, _rxd_status_asm_to);  // Handler for RX receive timeout
     // Set up our UART with the required speed.
     uart_init(SERVO_CTRL_UART, BS_BAUDRATE);
     uart_set_hw_flow(SERVO_CTRL_UART, false, false);  // CTS/RTS off

@@ -26,7 +26,7 @@
 
 static bool _dcs_started = false;
 
-static cmt_msg_t _input_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE, MSG_PRI_NORM };
+static cmt_msg_t _input_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE };
 static bool _input_sw_pressed;
 
 
@@ -70,7 +70,7 @@ static void _handle_hwrt_test(cmt_msg_t* msg) {
     // Test `scheduled_msg_ms` error
     static int times = 1;
 
-    cmt_msg_t msg_time = { MSG_HWRT_TEST, MSG_PRI_NORM };
+    cmt_msg_t msg_time = { MSG_HWRT_TEST };
     uint64_t period = 60;
 
     // if (debug_mode_enabled()) {
@@ -147,7 +147,7 @@ static void _hwrt_module_init() {
 
     // Post a TEST to ourself in case we have any tests set up.
     cmt_msg_t msg;
-    cmt_msg_init2(&msg, MSG_HWRT_TEST, MSG_PRI_LOW);
+    cmt_msg_init(&msg, MSG_HWRT_TEST);
     postHWRTMsgDiscardable(&msg);
 }
 

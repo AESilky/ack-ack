@@ -58,32 +58,6 @@ typedef struct _PROC_STATUS_ACCUM_ {
 extern void cmt_msg_init(cmt_msg_t* msg, msg_id_t id);
 
 /**
- * @brief Initialize a CMT Message with a priority so that it is ready to be posted.
- * @ingroup cmt
- *
- * This initializes the message with the ID and Priority. It also NULLs out
- * the Handler Function pointer (correct for typical messages).
- *
- * @param msg Pointer to the Message to initialize
- * @param id Message ID
- * @param priority Priority
- */
-extern void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority);
-
-/**
- * @brief Initialize a CMT Message with a priority and a handler so that it is ready to be posted.
- * @ingroup cmt
- *
- * This initializes the message with the ID and Priority, and also a Handler Function pointer.
- *
- * @param msg Pointer to the Message to initialize
- * @param id Message ID
- * @param priority Priority
- * @param hdlr Message handler function that will be used, rather than looking one up
- */
-extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hdlr);
-
-/**
  * @brief Initialize a CMT Message with a handler so that it is ready to be posted.
  * @ingroup cmt
  *
@@ -93,7 +67,7 @@ extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, 
  * @param id Message ID
  * @param hdlr Message handler function that will be used, rather than looking one up
  */
-extern void cmt_msg_init4(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr);
+extern void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr);
 
 /**
  * @brief Remove the (forced) message handler set on a message.

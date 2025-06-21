@@ -29,11 +29,6 @@ extern "C" {
 /** @brief Special identifier to specify a handler for both cores. */
 #define MSG_HDLR_CORE_BOTH ((uint)-1)
 
-typedef enum MSG_PRI_ {
-    MSG_PRI_NORM = 0,
-    MSG_PRI_LOW
-} msg_priority_t;
-
 // Keep the total number of messages under 256 to allow indexing into handlers.
 typedef enum MSG_ID_ {
     // Common messages 0x00 - 0x5F (used by both HWRT and DCS/HID)
@@ -139,14 +134,12 @@ typedef union MSG_DATA_VALUE_ msg_data_value_t;
  *
  * @param id The ID (number) of the message.
  * @param data The data for the message.
- * @param priority The message priority.
  * @param hdlr A Handler function to use rather then the one registered (or null).
  * @param n The message number (set by the posting system)
  * @param t The millisecond time msg was posted (set by the posting system)
  */
 typedef struct CMT_MSG_ {
     msg_id_t id;
-    msg_priority_t priority;
     msg_data_value_t data;
     msg_handler_fn hdlr;
     int32_t n;
