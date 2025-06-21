@@ -22,6 +22,7 @@ typedef struct CMT_MSG_HDLR_LL_ENTRY_ {
     msg_handler_fn handler;
     struct CMT_MSG_HDLR_LL_ENTRY_* next;
     uint corenum;  // The core number this handler is for.
+    bool in_use;
 } cmt_msg_hdlr_ll_ent_t;
 
 /**
@@ -38,6 +39,7 @@ typedef struct SCHEDULED_MSG_DATA_ {
 typedef struct CMT_SCHMSGDATA_LL_ENTRY_ {
     cmt_sch_msg_data_t schmsg_data;
     struct CMT_SCHMSGDATA_LL_ENTRY_* next;
+    bool in_use;
 } cmt_schmsgdata_ll_ent_t;
 
 

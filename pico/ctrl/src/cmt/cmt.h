@@ -71,7 +71,7 @@ extern void cmt_msg_init(cmt_msg_t* msg, msg_id_t id);
 extern void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority);
 
 /**
- * @brief Initialize a CMT Message with a priority so that it is ready to be posted.
+ * @brief Initialize a CMT Message with a priority and a handler so that it is ready to be posted.
  * @ingroup cmt
  *
  * This initializes the message with the ID and Priority, and also a Handler Function pointer.
@@ -82,6 +82,18 @@ extern void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority);
  * @param hdlr Message handler function that will be used, rather than looking one up
  */
 extern void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_handler_fn hdlr);
+
+/**
+ * @brief Initialize a CMT Message with a handler so that it is ready to be posted.
+ * @ingroup cmt
+ *
+ * This initializes the message with the ID and a Handler Function pointer at normal priority.
+ *
+ * @param msg Pointer to the Message to initialize
+ * @param id Message ID
+ * @param hdlr Message handler function that will be used, rather than looking one up
+ */
+extern void cmt_msg_init4(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr);
 
 /**
  * @brief Remove the (forced) message handler set on a message.
@@ -224,16 +236,37 @@ extern void schedule_core1_msg_in_ms(int32_t ms, const cmt_msg_t* msg);
 extern void schedule_msg_in_ms(int32_t ms, const cmt_msg_t* msg);
 
 /**
- * @brief Cancel scheduled message(s) for a message ID.
+ * @brief Cancel scheduled message for a message ID.
  * @ingroup cmt
  *
  * This will attempt to cancel the scheduled message. It is possible that the time might have already
  * passed and the message was posted.
  *
+ * If the message was scheduled with a handler specified, then `scheduled_msg_cancel2` must be used
+ * to cancel it. That includes the handler. This method will not cancel a message that specified a
+ * handler.
+ *
  * @param sched_msg_id The ID of the message that was scheduled.
  * @return int32_t Number of milliseconds remaining.
  */
 extern int32_t scheduled_msg_cancel(msg_id_t sched_msg_id);
+
+/**
+ * @brief Cancel scheduled message for a message ID and specified handler.
+ * @ingroup cmt
+ *
+ * This is similar to `scheduled_msg_cancel` except that the scheduled message is also
+ * checked for the specific handler.
+ *
+ * This is typically used to cancel a 'MSG_EXEC' that has a handler function specified,
+ * as there could be multiple 'MSG_EXEC' messages scheduled, but a specific one needs
+ * to be cancelled.
+ *
+ * @param sched_msg_id The ID of the message that was scheduled.
+ * @param hdlr The handler function that was specified for the scheduled message.
+ * @return int32_t Number of milliseconds remaining.
+ */
+extern int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr);
 
 /**
  * @brief Indicate if a scheduled message exists.

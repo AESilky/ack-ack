@@ -51,6 +51,7 @@ static uint16_t _frames_lost;
 
 static int16_t _chval_raw_convert(uint16_t raw_val, bool extended);
 
+static void _debug_print_bufraw(const volatile uint8_t* buf);
 
 // ///////////////////////////////////////////////////////////////////////// //
 // Interrupt Handlers                                                        //
@@ -78,145 +79,145 @@ uint16_t rx_sbus_protocol_processor() {
         int ch_index = 0;
         bool extended = false;
         //  CH-1
-        uint16_t rval = ((uint16_t)buf[1] | (((uint16_t)buf[2] << 8) & 0x07FF));
+        uint16_t rval = ((((uint16_t)buf[1]) | ((uint16_t)buf[2] << 8)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 1;
         //  CH-2
-        rval = (((uint16_t)buf[2] >> 3) | (((uint16_t)buf[3] << 5) & 0x07FF));
+        rval = ((((uint16_t)buf[2] >> 3) | ((uint16_t)buf[3] << 5)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 2;
         //  CH-3
-        rval = (((uint16_t)buf[3] >> 6) | ((uint16_t)buf[4] << 2) | ((uint16_t)(buf[5] << 10) & 0x07FF));
+        rval = ((((uint16_t)buf[3] >> 6) | ((uint16_t)buf[4] << 2) | ((uint16_t)(buf[5] << 10))) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 3;
         //  CH-4
-        rval = (((uint16_t)buf[5] >> 1) | (((uint16_t)buf[6] << 7) & 0x07FF));
+        rval = ((((uint16_t)buf[5] >> 1) | ((uint16_t)buf[6] << 7)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 4;
         //  CH-5
-        rval = (((uint16_t)buf[6] >> 4) | (((uint16_t)buf[7] << 4) & 0x07FF));
+        rval = ((((uint16_t)buf[6] >> 4) | ((uint16_t)buf[7] << 4)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 5;
         //  CH-6
-        rval = (((uint16_t)buf[7] >> 7) | ((uint16_t)buf[8] << 1) | ((buf[9] << 9) & 0x07FF));
+        rval = ((((uint16_t)buf[7] >> 7) | ((uint16_t)buf[8] << 1) | ((uint16_t)buf[9] << 9)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 6;
         //  CH-7
-        rval = ((uint16_t)(buf[9] >> 2) | ((uint16_t)(buf[10] << 6) & 0x07FF));
+        rval = ((((uint16_t)buf[9] >> 2) | ((uint16_t)buf[10] << 6)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 7;
         //  CH-8
-        rval = ((uint16_t)(buf[10] >> 5) | ((uint16_t)(buf[11] << 3) & 0x07FF));
+        rval = ((((uint16_t)buf[10] >> 5) | ((uint16_t)buf[11] << 3)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 8;
         //  CH-9
-        rval = ((uint16_t)buf[12] | (((uint16_t)buf[13] << 8) & 0x07FF));
+        rval = ((((uint16_t)buf[12]) | ((uint16_t)buf[13] << 8)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 9;
         //  CH-10
-        rval = (((uint16_t)buf[13] >> 3) | (((uint16_t)buf[14] << 5) & 0x07FF));
+        rval = ((((uint16_t)buf[13] >> 3) | ((uint16_t)buf[14] << 5)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 10;
         //  CH-11
-        rval = (((uint16_t)buf[14] >> 6) | ((uint16_t)buf[15] << 2) | (((uint16_t)buf[16] << 10) & 0x07FF));
+        rval = ((((uint16_t)buf[14] >> 6) | ((uint16_t)buf[15] << 2) | ((uint16_t)buf[16] << 10)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 11;
         //  CH-12
-        rval = (((uint16_t)buf[16] >> 1) | (((uint16_t)buf[17] << 7) & 0x07FF));
+        rval = ((((uint16_t)buf[16] >> 1) | ((uint16_t)buf[17] << 7)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 12;
         //  CH-13
-        rval = (((uint16_t)buf[17] >> 4) | (((uint16_t)buf[18] << 4) & 0x07FF));
+        rval = ((((uint16_t)buf[17] >> 4) | ((uint16_t)buf[18] << 4)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 13;
         //  CH-14
-        rval = (((uint16_t)buf[18] >> 7) | ((uint16_t)buf[19] << 1) | (((uint16_t)buf[20] << 9) & 0x07FF));
+        rval = ((((uint16_t)buf[18] >> 7) | ((uint16_t)buf[19] << 1) | ((uint16_t)buf[20] << 9)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 14;
         //  CH-15
-        rval = (((uint16_t)buf[20] >> 2) | (((uint16_t)buf[21] << 6) & 0x07FF));
+        rval = ((((uint16_t)buf[20] >> 2) | ((uint16_t)buf[21] << 6)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 15;
         //  CH-16
-        rval = (((uint16_t)buf[21] >> 5) | (((uint16_t)buf[22] << 3) & 0x07FF));
+        rval = ((((uint16_t)buf[21] >> 5) | ((uint16_t)buf[22] << 3)) & 0x07FF);
         if (_channel_state->ch_data[ch_index].raw_v != rval) {
             _channel_state->ch_data[ch_index].raw_v = rval;
             _channel_state->ch_data[ch_index].v = _chval_raw_convert(rval, extended);
             changes |= (1 << ch_index);
         }
-        ch_index++;
+        ch_index = 16;
         /* CH 17 */
         // FrSKY doesn't seem to send these binary channels
         // rval = ((buf[23] & CH17_MASK_) != 0 ? 1 : 0);
         // _channel_state->ch_data[ch_index].raw_v = rval;
         // _channel_state->ch_data[ch_index].v = (rval == 1 ? RC_SYS_CHVAL_MAX : RC_SYS_CHVAL_MIN);
-        // ch_index++;
+        // ch_index = 17;
         /* CH 18 */
         // FrSKY doesn't send these binary channels
         // rval = ((buf[23] & CH18_MASK_) != 0 ? 1 : 0);
         // _channel_state->ch_data[ch_index].raw_v = rval;
         // _channel_state->ch_data[ch_index].v = (rval == 1 ? RC_SYS_CHVAL_MAX : RC_SYS_CHVAL_MIN);
-        // ch_index++;
+        // ch_index = 18;
         /* Lost Frame */
         bool b = ((buf[23] & LOST_FRAME_MASK_) != 0);
         if (b) {
@@ -228,6 +229,33 @@ uint16_t rx_sbus_protocol_processor() {
         _channel_state->failsafe = b;
 
         _channel_state->changed |= changes;
+        // ZZZ - DEBUG
+        static int zzz = 15;
+        static int zzz_test = 0;
+        if ((changes & 0x10) == zzz_test) {
+            if (0 == --zzz) {
+                if (zzz_test == 0) {
+                    // We've had 15 times that CH5 didn't change.
+                    // Print the incoming buffer and the raw values.
+                    printf("SBUS-RX CH5 no change...\n");
+                    _debug_print_bufraw(buf);
+                    zzz_test = 0x10;
+                    zzz = 1;
+                }
+                else {
+                    // We had 15+ times that CH5 didn't change and now CH5 has changed
+                    // Print the incoming buffer and the raw values.
+                    printf("SBUS-RX CH5 changed...\n");
+                    _debug_print_bufraw(buf);
+                    // Put things back to check again.
+                    zzz = 15;
+                    zzz_test = 0;
+                }
+            }
+        }
+        else if (zzz_test == 0) {
+            zzz = 15;
+        }
 
         ledB_on(false);
     }
@@ -265,6 +293,23 @@ static int16_t _chval_raw_convert(uint16_t raw_val, bool extended) {
         v = (int16_t)round(((float)raw_val * SBUS_NORM_MULT_ADJ) + SBUS_NORM_ADD_ADJ);
     }
     return v;
+}
+
+/**
+ * @brief Debug print the incoming buffer (as bytes) and the raw values (11-bit values).
+ *
+ * @param buf The incoming byte buffer (25 bytes)
+ */
+static void _debug_print_bufraw(const volatile uint8_t* buf) {
+    printf("\nINCOMING SBUS RX BUFFER and RAW values\n");
+    for (int i = 0; i < 25; i++) {
+        printf("%02hhX ", buf[i]);
+    }
+    printf("\n   ");
+    for (int j = 0; j < 16; j++) {
+        printf("%03hX ", _channel_state->ch_data[j].raw_v);
+    }
+    printf("\n\n");
 }
 
 /**

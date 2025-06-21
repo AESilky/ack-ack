@@ -231,6 +231,14 @@ void cmt_msg_init3(cmt_msg_t* msg, msg_id_t id, msg_priority_t priority, msg_han
     msg->t = 0;
 }
 
+void cmt_msg_init4(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr) {
+    msg->id = id;
+    msg->priority = MSG_PRI_NORM;
+    msg->hdlr = hdlr;
+    msg->n = 0;
+    msg->t = 0;
+}
+
 void cmt_msg_rm_set_hdlr(cmt_msg_t* msg) {
     msg->hdlr = NULL;
 }
@@ -272,6 +280,10 @@ void schedule_msg_in_ms(int32_t ms, const cmt_msg_t* msg) {
 }
 
 int32_t scheduled_msg_cancel(msg_id_t sched_msg_id) {
+    return scheduled_msg_cancel2(sched_msg_id, (msg_handler_fn)NULL);
+}
+
+int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr) {
     uint32_t retval = 0;  // We return the time remaining in the scheduled msg
     uint8_t corenum = (uint8_t)get_core_num();
     uint32_t flags = save_and_disable_interrupts();
@@ -280,7 +292,7 @@ int32_t scheduled_msg_cancel(msg_id_t sched_msg_id) {
     while (*pnext != (cmt_schmsgdata_ll_ent_t*)NULL) {
         cmt_schmsgdata_ll_ent_t* entry = *pnext;
         cmt_sch_msg_data_t smd = entry->schmsg_data;
-        if (smd.corenum == corenum && smd.msg.id == sched_msg_id) {
+        if (smd.corenum == corenum && smd.msg.id == sched_msg_id && smd.msg.hdlr == hdlr) {
             // This is the one to cancel.
             retval = smd.remaining;
             // This amount of time needs to be added to the next

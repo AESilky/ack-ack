@@ -119,9 +119,7 @@ static void _input_sw_irq_handler(uint32_t events) {
         }
     }
     if (events & GPIO_IRQ_EDGE_RISE) {
-        if (scheduled_msg_exists(MSG_INPUT_SW_DEBOUNCE)) {
-            scheduled_msg_cancel(MSG_INPUT_SW_DEBOUNCE);
-        }
+        scheduled_msg_cancel(MSG_INPUT_SW_DEBOUNCE);
         if (_input_sw_pressed) {
             _input_sw_pressed = false;
             cmt_msg_t msg;

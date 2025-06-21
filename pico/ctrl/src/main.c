@@ -51,7 +51,7 @@ int main()
 {
     // useful information for picotool
 #if (BOARD_ADDR == 0)
-    bi_decl(bi_program_description("Runtime and Control for AckAck-Rover Hardware"));
+    bi_decl(bi_program_description("Runtime and Drive Control for AckAck-Rover"));
     char board = '0';
 #else
     bi_decl(bi_program_description("Human Interface Device & Navigation (HID_NAV) for AckAck-Rover"));

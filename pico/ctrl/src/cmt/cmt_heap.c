@@ -30,6 +30,7 @@ cmt_msg_hdlr_ll_ent_t* cmt_alloc_mhllent() {
         board_panic("!!! cmt_alloc_mhllent - Out of Message Handler LL entries. !!!");
     }
     _mh_free_list = ent->next;
+    ent->in_use = true;
     ent->next = (cmt_msg_hdlr_ll_ent_t*)NULL;
     return (ent);
 }
@@ -37,6 +38,7 @@ cmt_msg_hdlr_ll_ent_t* cmt_alloc_mhllent() {
 void cmt_return_mhllent(cmt_msg_hdlr_ll_ent_t* mhllent) {
     // Put the entry back into the free list.
     if (mhllent != (cmt_msg_hdlr_ll_ent_t*)NULL) {
+        mhllent->in_use = false;
         mhllent->next = _mh_free_list;
         _mh_free_list = mhllent;
     }
@@ -49,6 +51,7 @@ cmt_schmsgdata_ll_ent_t* cmt_alloc_smdllent() {
         board_panic("!!! cmt_alloc_smdllent - Out of Scheduled Message Data LL entries. !!!");
     }
     _smd_free_list = ent->next;
+    ent->in_use = true;
     ent->next = (cmt_schmsgdata_ll_ent_t*)NULL;
     return (ent);
 }
@@ -56,6 +59,7 @@ cmt_schmsgdata_ll_ent_t* cmt_alloc_smdllent() {
 void cmt_return_smdllent(cmt_schmsgdata_ll_ent_t* smdllent) {
     // Put the entry back into the free list.
     if (smdllent != (cmt_schmsgdata_ll_ent_t*)NULL) {
+        smdllent->in_use = false;
         smdllent->next = _smd_free_list;
         _smd_free_list = smdllent;
     }
@@ -66,12 +70,16 @@ void cmt_heap_module_init() {
     // Link all of our entries into the free lists.
     _mh_free_list = &_cmt_mhllent[0];
     for (int i=0; i < (CMT_MHLLENT_CNT - 1); i++) {
-        _cmt_mhllent[i].next = &_cmt_mhllent[i+1];
-        _cmt_mhllent[i+1].next = (cmt_msg_hdlr_ll_ent_t*)NULL;
+        _cmt_mhllent[i].in_use = false;
+        _cmt_mhllent[i].next = &_cmt_mhllent[i + 1];
+        _cmt_mhllent[i + 1].in_use = false;
+        _cmt_mhllent[i + 1].next = (cmt_msg_hdlr_ll_ent_t*)NULL;
     }
     _smd_free_list = &_cmt_smllent[0];
     for (int i = 0; i < (CMT_SCHEDULED_MESSAGES_MAX - 1); i++) {
+        _cmt_smllent[i].in_use = false;
         _cmt_smllent[i].next = &_cmt_smllent[i + 1];
+        _cmt_smllent[i + 1].in_use = false;
         _cmt_smllent[i + 1].next = (cmt_schmsgdata_ll_ent_t*)NULL;
     }
 }

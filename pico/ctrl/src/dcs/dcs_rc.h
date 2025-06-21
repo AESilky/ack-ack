@@ -22,14 +22,23 @@
 #include <stdint.h>
 
 // RC Channels defaults (Channel data is 0-based)
-#define CH_DIRECT_CTRL_SEL (13)     // CH-14
-#define CH_FWD_ROT_REV (9)          // CH-10
+#define CH_DIRECT_CTRL_SEL (13)     // CH-14 (Left 2-Pos SW)
+#define CH_FWD_ROT_REV (9)          // CH-10 (Left long 3-Pos SW)
+#define CH_STEERING (0)             // CH-1 (Left Stick)
+#define CH_THROTTLE (2)             // CH-3 (Left Stick)
 
+/** @brief Forward-Rotate-Reverse */
 typedef enum DCS_FRR_ {
     DCS_FRR_FORWARD,
     DCS_FRR_ROTATE,
     DCS_FRR_REVERSE,
 } dcs_frr_t;
+
+/** @brief Combined Steering and Throttle values */
+typedef struct DCS_ST_ {
+    uint16_t steering;
+    uint16_t throttle;
+} dcs_st_t;
 
 /**
  * @brief Get the state of the 'Direct Control' flag from the RC system.
@@ -73,6 +82,56 @@ extern void dcs_rc_frrch_set(uint8_t channel);
  * @return dcs_frr_t One of: DCS_FORWARD, DCS_ROTATE, DCS_REVERSE
  */
 extern dcs_frr_t dcs_rc_fwd_rot_rev();
+
+/**
+ * @brief Steering and Throttle values.
+ *
+ * @return dcs_st_t int16_t Steering and uint16_t Throttle
+ */
+extern dcs_st_t dcs_rc_st();
+
+/**
+ * @brief Get the Steering channel
+ *
+ * @return uint8_t 0-based channel number
+ */
+extern uint8_t dcs_rc_strch();
+
+/**
+ * @brief Set the Steering channel.
+ *
+ * @param channel 0-based channel number
+ */
+extern void dcs_rc_strch_set(uint8_t channel);
+
+/**
+ * @brief Steering value (rolling average)
+ *
+ * @return uint16_t 0 to 1000 servo value (500 is center)
+ */
+extern uint16_t dcs_rc_steering();
+
+/**
+ * @brief Get the Throttle channel
+ *
+ * @return uint8_t 0-based channel number
+ */
+extern uint8_t dcs_rc_thrtch();
+
+/**
+ * @brief Get the Throttle channel
+ *
+ * @return uint8_t 0-based channel number
+ */
+extern void dcs_rc_thrtch_set(uint8_t channel);
+
+/**
+ * @brief Throttle value (rolling average, adjusted to 0-900)
+ *
+ * @return uint16_t 0 to 900 adjusted servo speed value
+ */
+extern uint16_t dcs_rc_throttle();
+
 
 /**
  * @brief Start the RC processing for the DCS

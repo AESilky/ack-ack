@@ -74,7 +74,7 @@ extern uint16_t servo_rads_to_posd(float rads);
  * @ingroup servo
  *
  * @param servo Servo to control
- * @param speed Speed from -1000 to 0 to +1000
+ * @param speed Speed from -1000 to 0 to +1000 (<0 is reverse, >0 is forward)
  */
 extern bool servo_run(servo_t* servo, int16_t speed);
 

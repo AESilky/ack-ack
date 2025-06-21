@@ -89,6 +89,7 @@ inline static bool _rxd_input_available(void);
 static void _rxd_discard();
 static void _rxd_stash(uint8_t ch);
 static void _rxd_status_asm_cont();
+static void _rxd_status_asm_to(cmt_msg_t* msg);
 static void _rxd_status_clr(servo_t* rxs);
 static bs_rx_status_t* _store_bs_status(bs_rx_status_t* bs_status);
 static void _uart_drain();
@@ -215,13 +216,13 @@ static void _rxd_stash(uint8_t ch) {
 /**
  * @brief Begin a Status Read Operation if possible.
  * @ingroup servo
- * 
+ *
  * This checks to see if we are already waiting for an inbound message,
  * and if so, it returns `false`. If not, it enters into the 'tx_mutex'
  * and sets everything up to be ready to receive the response.
- * 
+ *
  * !!! Enters the 'tx_mutex' and doesn't exit it if successful !!!
- * 
+ *
  * @param servo The servo to collect the response into.
  * @return true Ready to receive a response.
  * @return false Already waiting for a response.
@@ -243,7 +244,7 @@ static bool _rxd_status_asm_bgn(servo_t *servo) {
     _rxd_status_clr(servo);
     servo->_rxstatus.pending = true;
     _servo_in_proc = servo;
-    scheduled_msg_cancel(MSG_SERVO_DATA_RX_TO);
+    scheduled_msg_cancel2(MSG_SERVO_DATA_RX_TO, _rxd_status_asm_to);
     _rxd_clear();
     _rxd_handler = _rxd_status_asm_cont;
     schedule_core0_msg_in_ms(BS_RXD_TIMEOUT_MS, &_msg_rxd_to);
@@ -271,7 +272,7 @@ static void _rxd_status_asm_cont() {
                 // Receiving 2 header bytes in a row signals the start of a frame.
                 if (_servo_in_proc->_rxstatus.data_off == 2) {
                     _servo_in_proc->_rxstatus.frame_started = true;
-                    scheduled_msg_cancel(MSG_SERVO_DATA_RX_TO);
+                    scheduled_msg_cancel2(MSG_SERVO_DATA_RX_TO, _rxd_status_asm_to);
                 }
             }
             else {
@@ -327,7 +328,7 @@ static void _rxd_status_asm_cont() {
  *
  * @param msg Message
  */
-static void _rxd_status_asm_to(cmt_msg_t *msg) { 
+static void _rxd_status_asm_to(cmt_msg_t *msg) {
     servo_t* servo = _servo_in_proc;
     _post_servo_error_msg(servo);
     mutex_exit(&tx_mutex);  // Exit out of the 'tx_mutex' protected area!
@@ -629,8 +630,7 @@ void servo_module_init() {
     // Clear out the servo in progress.
     _servo_in_proc = SERVO_NONE;
     _rxd_handler = _rxd_discard;
-    cmt_msg_init(&_msg_rxd_to, MSG_SERVO_DATA_RX_TO);
-    _msg_rxd_to.hdlr = _rxd_status_asm_to;  // Handler for RX receive timeout
+    cmt_msg_init3(&_msg_rxd_to, MSG_SERVO_DATA_RX_TO, MSG_PRI_NORM, _rxd_status_asm_to);  // Handler for RX receive timeout
     // Set up our UART with the required speed.
     uart_init(SERVO_CTRL_UART, BS_BAUDRATE);
     uart_set_hw_flow(SERVO_CTRL_UART, false, false);  // CTS/RTS off

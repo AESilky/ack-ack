@@ -78,6 +78,8 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     }
     if (_dcs_hk_cnt % RC_CH_STATUS_PERIOD == 0) {
         rcrx_print_ch_state(true);
+        dcs_st_t st = dcs_rc_st();
+        printf("\nSteering: %hu   Throttle: %hu\n\n", st.steering, st.throttle);
     }
 
     // Do cleanup, status updates, heartbeat, etc.
