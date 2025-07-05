@@ -18,6 +18,7 @@
 #include "cmt/cmt.h"
 #include "rcrx/rcrx.h"
 #include "rover/rover.h"
+#include "rover/servos.h"
 #include "util/util.h"
 
 #include "lib/json-maker/json-maker.h"
@@ -32,21 +33,22 @@
 //
 #define DCS_STATUS_PERIOD 313       // Every 5 seconds (313 * 0.016 = 5.008)
 #define DCS_HOST_STATUS_PERIOD 938  // Send status to host every 15 seconds
-#define RC_CH_STATUS_PERIOD 125     // Print the RC Channel values every 2 seconds (for now)
+#define RC_CH_RD_PERIOD 3           // Read RC Channels and act on them every 48ms
+#define RC_CH_STATUS_PERIOD 126     // Print the RC Channel values (~2 seconds for now)
 
 static bool _hwrt_started = false;
 
 static int _dcs_hk_cnt;
 
+/** Last Yaw and Throttle values from radio (sent to the servos). */
+static dcs_yt_t _yt_srvo_last = { .yaw = 0, .throttle = 0 };
+/** Last Forward-Rotate-Reverse value from the RC. */
+static dcs_frr_t _frr;
 
 // Message handler functions...
 static void _handle_dcs_housekeeping(cmt_msg_t* msg);
 static void _handle_dcs_test(cmt_msg_t* msg);
 static void _handle_hwrt_started(cmt_msg_t* msg);
-
-// Idle functions...
-static void _dcs_idle_function_1();
-static void _dcs_idle_function_2();
 
 // Hardware functions...
 
@@ -76,10 +78,45 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
         // Send our status to the host.
         //printf("DCS: %d A:%d B:%d\n", _dcs_hk_cnt, aon, bon);
     }
-    if (_dcs_hk_cnt % RC_CH_STATUS_PERIOD == 0) {
-        rcrx_print_ch_state(true);
-        dcs_st_t st = dcs_rc_st();
-        printf("\nSteering: %hu   Throttle: %hu\n\n", st.steering, st.throttle);
+    if (_dcs_hk_cnt % RC_CH_RD_PERIOD == 0) {
+        // Get the yaw and throttle and send it to the servos if in 'direct control'
+        dcs_yt_t st = dcs_rc_yt();
+        if (dcs_rc_direct_ctrl()) {
+            if (_frr != DCS_FRR_ROTATE) {
+                if (st.yaw != _yt_srvo_last.yaw) {
+                    _yt_srvo_last.yaw = st.yaw;
+                    _yt_srvo_last.throttle = st.throttle;
+                    int16_t tv = ((_frr == DCS_FRR_FORWARD) ? st.throttle : (0 - st.throttle));
+                    servos_yaw_set(st.yaw, tv);
+                }
+                if (st.throttle != _yt_srvo_last.throttle) {
+                    _yt_srvo_last.throttle = st.throttle;
+                    int16_t tv = ((_frr == DCS_FRR_FORWARD) ? st.throttle : (0 - st.throttle));
+                    servos_velocity_set(tv);
+                }
+            }
+            else {
+                if (st.yaw != _yt_srvo_last.yaw) {
+                    if (!servos_rip()) {
+                        servos_rip_position();
+                    }
+                    // The radio rudder value, not the throttle, is used to control the RIP speed.
+                    int16_t rsp = dcs_rc_yaw_raw();
+                    servos_rip_speed(rsp);
+                    _yt_srvo_last = st;
+                }
+            }
+        }
+        if (_dcs_hk_cnt % RC_CH_STATUS_PERIOD == 0) {
+            printf("\nSteering: %hu   Throttle: %hu\n\n", st.yaw, st.throttle);
+            rxprotocol_t rx = rcrx_get_protocol();
+            if (rx == RXP_UNKNOWN) {
+                printf("RC not determined (is radio on?)\n");
+            }
+            else {
+                rcrx_print_ch_state(true);
+            }
+        }
     }
 
     // Do cleanup, status updates, heartbeat, etc.
@@ -117,9 +154,10 @@ static void _handle_direct_ctrl_chg(cmt_msg_t* msg) {
 static void _handle_frr_chg(cmt_msg_t* msg) {
     // The 'Forward-Rotate-Reverse' control has changed. The new
     // value is in the 'value16' of the message.
-    dcs_frr_t frr = (dcs_frr_t)msg->data.value16;
+    _frr = (dcs_frr_t)msg->data.value16;
+    _yt_srvo_last.throttle = 0; // Set the 'last' throttle to 0 to pick up change in control.
     char* s;
-    switch(frr) {
+    switch(_frr) {
         case DCS_FRR_FORWARD:
             s = "FORWARD";
             break;
@@ -192,6 +230,12 @@ static void _dcs_module_init() {
 
     // Init the rover control functionality.
     rover_module_init();
+
+    // Once the rover module in initialized, we can get the yaw and throttle limits
+    // and set them in our RC module.
+    pair_uint16_t limits = servos_yaw_limits();
+    dcs_rc_yawmin_set(limits.a);
+    dcs_rc_yawmax_set(limits.b);
 }
 
 void start_dcs() {

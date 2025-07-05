@@ -24,7 +24,7 @@
 // RC Channels defaults (Channel data is 0-based)
 #define CH_DIRECT_CTRL_SEL (13)     // CH-14 (Left 2-Pos SW)
 #define CH_FWD_ROT_REV (9)          // CH-10 (Left long 3-Pos SW)
-#define CH_STEERING (0)             // CH-1 (Left Stick)
+#define CH_YAW (0)                  // CH-1 (Left Stick)
 #define CH_THROTTLE (2)             // CH-3 (Left Stick)
 
 /** @brief Forward-Rotate-Reverse */
@@ -34,11 +34,11 @@ typedef enum DCS_FRR_ {
     DCS_FRR_REVERSE,
 } dcs_frr_t;
 
-/** @brief Combined Steering and Throttle values */
-typedef struct DCS_ST_ {
-    uint16_t steering;
+/** @brief Combined Yaw (Steering) and Throttle (Velocity/Speed) values */
+typedef struct DCS_YT_ {
+    uint16_t yaw;
     uint16_t throttle;
-} dcs_st_t;
+} dcs_yt_t;
 
 /**
  * @brief Get the state of the 'Direct Control' flag from the RC system.
@@ -86,30 +86,9 @@ extern dcs_frr_t dcs_rc_fwd_rot_rev();
 /**
  * @brief Steering and Throttle values.
  *
- * @return dcs_st_t int16_t Steering and uint16_t Throttle
+ * @return dcs_yt_t int16_t Steering and uint16_t Throttle
  */
-extern dcs_st_t dcs_rc_st();
-
-/**
- * @brief Get the Steering channel
- *
- * @return uint8_t 0-based channel number
- */
-extern uint8_t dcs_rc_strch();
-
-/**
- * @brief Set the Steering channel.
- *
- * @param channel 0-based channel number
- */
-extern void dcs_rc_strch_set(uint8_t channel);
-
-/**
- * @brief Steering value (rolling average)
- *
- * @return uint16_t 0 to 1000 servo value (500 is center)
- */
-extern uint16_t dcs_rc_steering();
+extern dcs_yt_t dcs_rc_yt();
 
 /**
  * @brief Get the Throttle channel
@@ -119,19 +98,78 @@ extern uint16_t dcs_rc_steering();
 extern uint8_t dcs_rc_thrtch();
 
 /**
- * @brief Get the Throttle channel
+ * @brief Set the Throttle channel
  *
  * @return uint8_t 0-based channel number
  */
 extern void dcs_rc_thrtch_set(uint8_t channel);
 
 /**
- * @brief Throttle value (rolling average, adjusted to 0-900)
+ * @brief Throttle value (rolling average), adjusted to 0 to throttle_limit.
  *
- * @return uint16_t 0 to 900 adjusted servo speed value
+ * @return uint16_t 0 to throttle_limit adjusted servo speed value
  */
 extern uint16_t dcs_rc_throttle();
 
+/**
+ * @brief Get the Yaw (Steering) channel
+ *
+ * @return uint8_t 0-based channel number
+ */
+extern uint8_t dcs_rc_yawch();
+
+/**
+ * @brief Set the Yaw (Steering) channel.
+ *
+ * @param channel 0-based channel number
+ */
+extern void dcs_rc_yawch_set(uint8_t channel);
+
+/**
+ * @brief Yaw value (rolling average), adjusted to yaw_min ~ 0 ~ yaw_max.
+ *
+ * @return uint16_t servo value (500 is center)
+ */
+extern uint16_t dcs_rc_yaw();
+
+/**
+ * @brief Get the maximum allowed yaw value (servo units).
+ *
+ * @return uint16_t maximum yaw value
+ */
+extern uint16_t dcs_rc_yawmax();
+
+/**
+ * @brief Set the maximum allowed yaw value (servo units)
+ *
+ * Used to calculate the yaw value from the Yaw (Steering) channel.
+ *
+ * @param value The maximum value to use (in servo control units)
+ */
+extern void dcs_rc_yawmax_set(uint16_t value);
+
+/**
+ * @brief Get the minimum allowed yaw value (servo units).
+ *
+ * @return uint16_t minimum yaw value
+ */
+extern uint16_t dcs_rc_yawmin();
+
+/**
+ * @brief Set the minimum allowed yaw value (servo units)
+ *
+ * Used to calculate the yaw value from the Yaw (Steering) channel.
+ *
+ * @param value The minimum value to use (in servo control units)
+ */
+extern void dcs_rc_yawmin_set(uint16_t value);
+
+/**
+ * @brief Get the raw yaw value from the RC.
+ *
+ * @return int16_t Raw yaw value (-10000~0~10000)
+ */
+extern int16_t dcs_rc_yaw_raw();
 
 /**
  * @brief Start the RC processing for the DCS

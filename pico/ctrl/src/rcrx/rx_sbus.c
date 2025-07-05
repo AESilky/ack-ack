@@ -231,7 +231,7 @@ uint16_t rx_sbus_protocol_processor() {
         _channel_state->changed |= changes;
         // ZZZ - DEBUG
         static int zzz = 15;
-        static int zzz_test = 0;
+        static int zzz_test = -1;  // Set to 0 to enable the below debugging
         if ((changes & 0x10) == zzz_test) {
             if (0 == --zzz) {
                 if (zzz_test == 0) {

@@ -41,64 +41,107 @@
 
 #include "pico/stdlib.h"
 
+#include <math.h>
 
 
 // ############################################################################
 // Constants, Enumerations and Structures
 // ############################################################################
 //
-#define DIRECTIONAL_SERVO_POS_CENTER 500
+#define DIRECTIONAL_SERVO_POS_CENTER 500    // The Bus Servos control is 0 to 1000
+#define DIRECTIONAL_SERVO_POS_MAX 875       // +90° = 500 (center) + (90 / 0.24)
+#define DIRECTIONAL_SERVO_POS_MIN 125       // -90° = 500 (center) - (90 / 0.24)
+
+#define LOGICAL_YAW_SERVO_POS_MAX 700       // -48.1° This generates 90° on the right side
+#define LOGICAL_YAW_SERVO_POS_MIN 300       // +48.1° This generates 90° on the left side
 
 typedef enum DIRECTIONAL_SERVOS_ID_ {
     SRVDIR_LF = 0,
-    SRVDIR_LR,
-    SRVDIR_RF,
-    SRVDIR_RR
+    SRVDIR_RF = 1,
+    SRVDIR_LR = 2,
+    SRVDIR_RR = 3
 } dir_servo_id_t;
 #define DIRECTIONAL_SERVO_CNT 4
 
 typedef enum DRIVE_SERVOS_ID_ {
     SRVDRV_LF = 0,
-    SRVDRV_LM,
-    SRVDRV_LR,
-    SRVDRV_RF,
-    SRVDRV_RM,
-    SRVDRV_RR
+    SRVDRV_RF = 1,
+    SRVDRV_LR = 2,
+    SRVDRV_RR = 3,
+    SRVDRV_LM = 4,
+    SRVDRV_RM = 5
 } drv_servo_id_t;
 #define DRIVE_SERVO_CNT 6
 
-/**
- * @brief Control structure for a directional (position controlled) servo.
- */
-typedef struct DIRECTIONAL_SERVO_CTRL_ {
-    servo_t servo;
-    dir_servo_id_t loc;
-    uint16_t max_pos;
-    uint16_t pos;
-    uint16_t req_pos;
-} dir_servo_ctrl_t;
+// /**
+//  * @brief Control structure for a directional (position controlled) servo.
+//  */
+// typedef struct DIRECTIONAL_SERVO_CTRL_ {
+//     servo_t servo;
+//     dir_servo_id_t loc;
+//     uint16_t max_pos;
+//     uint16_t min_pos;
+//     uint16_t pos;
+//     uint16_t req_pos;
+// } dir_servo_ctrl_t;
 
-/**
- * @brief Control structure for a drive (speed controlled) servo.
- */
-typedef struct DRIVE_SERVO_CTRL_ {
-    servo_t servo;
-    drv_servo_id_t loc;
-    int16_t speed;
-} drv_servo_ctrl_t;
+// /**
+//  * @brief Control structure for a drive (speed controlled) servo.
+//  */
+// typedef struct DRIVE_SERVO_CTRL_ {
+//     servo_t servo;
+//     drv_servo_id_t loc;
+//     int16_t speed;
+// } drv_servo_ctrl_t;
 
 
 // ############################################################################
 // Data
 // ############################################################################
 //
-static dir_servo_ctrl_t _dir_servos[4];
-static drv_servo_ctrl_t _drv_servos[6];
+// static dir_servo_ctrl_t _dir_servo_ctrls[4];
+// static drv_servo_ctrl_t _drv_servo_ctrls[6];
+// Directional Servos
+// static servo_t _srvdir_lf = { .id = SRVO_ID_DIR_LF };
+// static servo_t _srvdir_rf = { .id = SRVO_ID_DIR_RF };
+// static servo_t _srvdir_lr = { .id = SRVO_ID_DIR_LR };
+// static servo_t _srvdir_rr = { .id = SRVO_ID_DIR_RR };
+/** Array of Directional servo IDs for use in the multi-servo calls */
+static uint8_t _dir_servo_ids[] = { SRVO_ID_DIR_LF, SRVO_ID_DIR_RF, SRVO_ID_DIR_LR, SRVO_ID_DIR_RR };
+static uint16_t _dir_positions[DIRECTIONAL_SERVO_CNT];
+//
+// Drive Servos
+// static servo_t _srvdrv_lf = { .id = SRVO_ID_DRV_LF };
+// static servo_t _srvdrv_rf = { .id = SRVO_ID_DRV_RF };
+// static servo_t _srvdrv_lr = { .id = SRVO_ID_DRV_LR };
+// static servo_t _srvdrv_rr = { .id = SRVO_ID_DRV_RR };
+// static servo_t _srvdrv_lm = { .id = SRVO_ID_DRV_LM };
+// static servo_t _srvdrv_rm = { .id = SRVO_ID_DRV_RM };
+/** Array of Drive servos for use in the multi-servo calls */
+static uint8_t _drv_servo_ids[] = { SRVO_ID_DRV_LF, SRVO_ID_DRV_RF, SRVO_ID_DRV_LR, SRVO_ID_DRV_RR, SRVO_ID_DRV_LM, SRVO_ID_DRV_RM };
+static int16_t _drv_speeds[DRIVE_SERVO_CNT];
 
+/** @brief Flag indicating that the rover wheels are positioned for Rotate-In-Place */
+static bool _rip;
+/** @brief The speed factor for the center/middle wheels for Rotate-In-Place */
+static float _rip_spdfctr_c;
 /** @brief Left-Front and Right-Rear position for Rotate-In-Place */
 static uint16_t _rip_lfrr_pos;
 /** @brief Right-Front and Left-Rear position for Rotate-In-Place */
 static uint16_t _rip_rflr_pos;
+/** @brief The logical yaw value (in servo position units) */
+static uint16_t _yaw;
+/** @brief Speed Factor of the Center-Left drive wheel */
+static float _spdfctr_cl;
+/** @brief Speed Factor of the Center-Right drive wheel */
+static float _spdfctr_cr;
+/** @brief Speed Factor of the Steered-Left drive wheel */
+static float _spdfctr_sl;
+/** @brief Speed Factor of the Steered-Left drive wheel */
+static float _spdfctr_sr;
+/** @brief Last velocity used to set the drive wheel speeds */
+static int16_t _velo_last;
+
 
 // ############################################################################
 // Function Declarations
@@ -145,6 +188,31 @@ static void _position_rr_mh(cmt_msg_t* msg) {
 //
 
 /**
+ * @brief Calculate the speeds of each of the drive wheels from the 'virtual model'
+ * center-wheel speed.
+ *
+ * Note1: The speed factors are calculated in the yaw function or the Rotate-In-Place,
+ * as changes in yaw effect the speeds needed at each of the wheels.
+ *
+ * @param velo Speed as percentage value from 0 to 100 (negative means reverse)
+ */
+static void _calc_drive_speeds(int16_t velo) {
+    // Top servo speed is 1000 (or -1000), so multiply velo by 10 to get a value
+    // to use with the speed-factor.
+    int16_t srvospd = velo * 10;
+    int16_t lcds = (int16_t)(srvospd * _spdfctr_cl);
+    int16_t rcds = (int16_t)(srvospd * _spdfctr_cr);
+    int16_t lsds = (int16_t)(srvospd * _spdfctr_sl);
+    int16_t rsds = (int16_t)(srvospd * _spdfctr_sr);
+    _drv_speeds[SRVDRV_LF] = lsds;
+    _drv_speeds[SRVDRV_RF] = rsds;
+    _drv_speeds[SRVDRV_LR] = lsds;
+    _drv_speeds[SRVDRV_RR] = rsds;
+    _drv_speeds[SRVDRV_LM] = lcds;
+    _drv_speeds[SRVDRV_RM] = rcds;
+}
+
+/**
  * @brief Dedicated function to control the Left-Front servo.
  *
  * The reason for this is to handle the case when the servo can't immediately
@@ -158,7 +226,7 @@ static void _position_rr_mh(cmt_msg_t* msg) {
  * @return false The operation couldn't be performed (will keep trying)
  */
 static bool _position_lf(uint16_t pos, uint16_t time) {
-    if (servo_move(&_dir_servos[SRVDIR_LF].servo, pos, time)) {
+    if (servo_move(SRVO_ID_DIR_LF, pos, time)) {
         return true;
     }
     // Command couldn't be sent, post ourself a message to try again.
@@ -184,7 +252,7 @@ static bool _position_lf(uint16_t pos, uint16_t time) {
  * @return false The operation couldn't be performed (will keep trying)
  */
 static bool _position_lr(uint16_t pos, uint16_t time) {
-    if (servo_move(&_dir_servos[SRVDIR_LR].servo, pos, time)) {
+    if (servo_move(SRVO_ID_DIR_LR, pos, time)) {
         return true;
     }
     // Command couldn't be sent, post ourself a message to try again.
@@ -210,7 +278,7 @@ static bool _position_lr(uint16_t pos, uint16_t time) {
  * @return false The operation couldn't be performed (will keep trying)
  */
 static bool _position_rf(uint16_t pos, uint16_t time) {
-    if (servo_move(&_dir_servos[SRVDIR_LF].servo, pos, time)) {
+    if (servo_move(SRVO_ID_DIR_LF, pos, time)) {
         return true;
     }
     // Command couldn't be sent, post ourself a message to try again.
@@ -236,7 +304,7 @@ static bool _position_rf(uint16_t pos, uint16_t time) {
  * @return false The operation couldn't be performed (will keep trying)
  */
 static bool _position_rr(uint16_t pos, uint16_t time) {
-    if (servo_move(&_dir_servos[SRVDIR_LR].servo, pos, time)) {
+    if (servo_move(SRVO_ID_DIR_LR, pos, time)) {
         return true;
     }
     // Command couldn't be sent, post ourself a message to try again.
@@ -253,18 +321,136 @@ static bool _position_rr(uint16_t pos, uint16_t time) {
 // ############################################################################
 //
 
-void servos_rip_position() {
-    _position_lf(_rip_lfrr_pos, 800);
-    _position_rr(_rip_lfrr_pos, 800);
-    _position_lr(_rip_rflr_pos, 800);
-    _position_rf(_rip_rflr_pos, 800);
+bool servos_rip() {
+    return _rip;
 }
 
-void servos_zero_position() {
-    _position_lf(DIRECTIONAL_SERVO_POS_CENTER, 800);
-    _position_rr(DIRECTIONAL_SERVO_POS_CENTER, 800);
-    _position_lr(DIRECTIONAL_SERVO_POS_CENTER, 800);
-    _position_rf(DIRECTIONAL_SERVO_POS_CENTER, 800);
+void servos_rip_position() {
+    // For Rotate-In-Place set the logical yaw to center (it's not used for RIP)
+    _yaw = DIRECTIONAL_SERVO_POS_CENTER;
+    _dir_positions[0] = _rip_lfrr_pos;
+    _dir_positions[1] = _rip_rflr_pos;
+    _dir_positions[2] = _rip_rflr_pos;
+    _dir_positions[3] = _rip_lfrr_pos;
+    servo_move_group(_dir_servo_ids, _dir_positions, 1000, DIRECTIONAL_SERVO_CNT);
+    _rip = true;
+}
+
+void servos_rip_speed(int16_t rsp) {
+    // Top servo speed is 1000 (or -1000), so divide rsp by 10 to get a value
+    // to use for the fastest wheels.
+    if (_rip) {
+        int16_t srvospd = rsp / 10;
+        int16_t srvospd_c = (int16_t)roundf((float)srvospd * _rip_spdfctr_c);
+        // For rsp > 0 (clockwise): Right Side is Reverse, Left Side is Forward.
+        // For rsp < 0 (anti-clockwise): Right Side is Forward, Left Side is Reverse.
+        _drv_speeds[SRVDRV_LF] = srvospd;
+        _drv_speeds[SRVDRV_RF] = 0 - srvospd;
+        _drv_speeds[SRVDRV_LR] = srvospd;
+        _drv_speeds[SRVDRV_RR] = 0 - srvospd;
+        _drv_speeds[SRVDRV_LM] = srvospd_c;
+        _drv_speeds[SRVDRV_RM] = 0 - srvospd_c;
+        servo_run_group(_drv_servo_ids, _drv_speeds, DRIVE_SERVO_CNT);
+    }
+}
+
+
+void servos_velocity_set(int16_t velo) {
+    if (!_rip) {
+        _calc_drive_speeds(velo);
+        _velo_last = velo;
+        servo_run_group(_drv_servo_ids, _drv_speeds, DRIVE_SERVO_CNT);
+    }
+}
+
+uint16_t servos_yaw() {
+    return _yaw;
+}
+
+pair_uint16_t servos_yaw_limits() {
+    pair_uint16_t p = { LOGICAL_YAW_SERVO_POS_MIN, LOGICAL_YAW_SERVO_POS_MAX };
+    return p;
+}
+
+void servos_yaw_set(uint16_t yaw, int16_t velo) {
+    _rip = false;
+    _yaw = ((yaw < LOGICAL_YAW_SERVO_POS_MIN) ? LOGICAL_YAW_SERVO_POS_MIN : ((yaw > LOGICAL_YAW_SERVO_POS_MAX) ? LOGICAL_YAW_SERVO_POS_MAX : yaw));
+    int y = DIRECTIONAL_SERVO_POS_CENTER - _yaw;
+    float sgn = ((y < 0) ? -1.0f : 1.0f);
+    float theta = fabsf(y * servo_rads_per_unit);
+    // Calculate the values for each of the servos.
+    //   The variable names are from the 'Wheels Model Geometry'
+    float l = rover_cp_l();
+    float t = rover_cp_t();
+    uint16_t lf = DIRECTIONAL_SERVO_POS_CENTER;
+    uint16_t lr = DIRECTIONAL_SERVO_POS_CENTER;
+    uint16_t rf = DIRECTIONAL_SERVO_POS_CENTER;
+    uint16_t rr = DIRECTIONAL_SERVO_POS_CENTER;
+    if (theta != 0) {
+        float rC = l / tanf(theta);
+        // Calculate the other radii to be used for the velocity...
+        float rCL, rCR, rSL, rSR; // Center-Left, Center-Right, Steered-Left, Steered-Right
+        if (y <= 0) {
+            rCL = rC + t;
+            rCR = rC - t;
+        }
+        else {
+            rCL = rC - t;
+            rCR = rC + t;
+        }
+        // Calculate the steering values
+        float theta_lf = atan2f(l, (rC - (t * sgn)));
+        double theta_rf = atan2f(l, (rC + (t * sgn)));
+        int16_t lsu = roundf((theta_lf / servo_rads_per_unit) * sgn);
+        int16_t rsu = roundf((theta_rf / servo_rads_per_unit) * sgn);
+        lf -= lsu;
+        lr += lsu;
+        rf -= rsu;
+        rr += rsu;
+        // Speed factor is the speed of the wheel at a radius compared to the speed
+        // of the 'virtual (Wheels Model Geometry)' center wheel at its radius (to the ICR).
+        // The largest radius gets a factor of 1.0 and the rest are adjusted down
+        // proportionally. The corners will always be larger (or equal) to the centers.
+        float l_sqrd = l * l;
+        rSL = sqrtf((rCL * rCL) + l_sqrd);
+        rSR = sqrtf((rCR * rCR) + l_sqrd);
+        float rLG = rSL >= rSR ? rSL : rSR;
+        _spdfctr_cl = rCL / rLG;
+        _spdfctr_cr = rCR / rLG;
+        _spdfctr_sl = rSL / rLG;
+        _spdfctr_sr = rSR / rLG;
+    }
+    else {
+        _spdfctr_cl = 1;
+        _spdfctr_cr = 1;
+        _spdfctr_sl = 1;
+        _spdfctr_sr = 1;
+    }
+    _calc_drive_speeds(velo);
+    _velo_last = velo;
+    _dir_positions[SRVDIR_LF] = lf;
+    _dir_positions[SRVDIR_RF] = rf;
+    _dir_positions[SRVDIR_LR] = lr;
+    _dir_positions[SRVDIR_RR] = rr;
+    servo_move_group(_dir_servo_ids, _dir_positions, 48, DIRECTIONAL_SERVO_CNT);
+    servo_run_group(_drv_servo_ids, _drv_speeds, DRIVE_SERVO_CNT);
+}
+
+void servos_zero_position(int16_t time) {
+    _yaw = DIRECTIONAL_SERVO_POS_CENTER;
+    _dir_positions[0] = DIRECTIONAL_SERVO_POS_CENTER;
+    _dir_positions[1] = DIRECTIONAL_SERVO_POS_CENTER;
+    _dir_positions[2] = DIRECTIONAL_SERVO_POS_CENTER;
+    _dir_positions[3] = DIRECTIONAL_SERVO_POS_CENTER;
+    _spdfctr_cl = 1;
+    _spdfctr_cr = 1;
+    _spdfctr_sl = 1;
+    _spdfctr_sr = 1;
+    _calc_drive_speeds(_velo_last);
+    if (time >= 0) {
+        servo_run_group(_drv_servo_ids, _drv_speeds, DRIVE_SERVO_CNT);
+        servo_move_group(_dir_servo_ids, _dir_positions, (uint16_t)time, DIRECTIONAL_SERVO_CNT);
+    }
 }
 
 
@@ -274,46 +460,22 @@ void servos_zero_position() {
 //
 
 void servos_housekeeping(void) {
-    // ZZZ - Temp, exercise the position servos
-    static uint8_t hk_count = 0;
-    static uint8_t hk_srvo = 0;
-    if (++hk_count % (62 * 3) == 0) {
-        switch (hk_srvo++ & 0x03) {
-            case 0:
-                servo_position_read(&_dir_servos[SRVDIR_LF].servo);
-                break;
-            case 1:
-                servo_position_read(&_dir_servos[SRVDIR_LR].servo);
-                break;
-            case 2:
-                servo_position_read(&_dir_servos[SRVDIR_RF].servo);
-                break;
-            case 3:
-                servo_position_read(&_dir_servos[SRVDIR_RR].servo);
-                break;
-        }
-    }
 }
 
 void servos_start(void) {
     servo_module_start();
-    // Read and set all of the servos and then power them up.
-    //  Initialize all of the drive servos to DRIVE mode at 0 speed.
-    for (int i = 0; i < DRIVE_SERVO_CNT; i++) {
-        drv_servo_ctrl_t* drvscs = &_drv_servos[i];
-        int16_t speed = drvscs->speed;
-        servo_run(&drvscs->servo, speed);  // Mode to 'Motor' with a speed of 0
-        servo_load(&drvscs->servo);        // Power on
-    }
-    // For the positional servos, move them to neutral positions slowly, so as
-    // to not cause undue force or movement.
+    // Set all of the servos and then power them up.
+    // For the directional (positional) servos, set their mode and limits.
     for (int i = 0; i < DIRECTIONAL_SERVO_CNT; i++) {
-        dir_servo_ctrl_t* dirscs = &_dir_servos[i];
-        int16_t pos = (int16_t)(dirscs->max_pos / 2);
-        servo_set_mode(&dirscs->servo, BS_POSITION_MODE, 0);  // Mode to 'Position' with a speed of 0
-        servo_move(&dirscs->servo, pos, 1000);  // Move to the middle and take 1 seconds to do it.
-        servo_load(&dirscs->servo);  // Power on
+        uint8_t id = _dir_servo_ids[i];
+        servo_set_mode(id, BS_POSITION_MODE, 0);  // Mode to 'Position' with a speed of 0
+        servo_set_limits(id, DIRECTIONAL_SERVO_POS_MIN, DIRECTIONAL_SERVO_POS_MAX);
     }
+    // Move them to neutral positions slowly, so as to not cause undue force or movement.
+    // Initialize all of the drive servos to DRIVE mode at 0 speed.
+    servos_zero_position(2000);
+    // Power on all of the servos
+    servo_load(SERVO_ALL_ID);
 }
 
 
@@ -326,48 +488,10 @@ void servos_module_init(void) {
     }
     _initialized = true;
 
-    //  Drive
-    drv_servo_ctrl_t* drvscs = &_drv_servos[SRVDRV_LF];
-    drvscs->loc = SRVDRV_LF;
-    drvscs->speed = 0;
-    drvscs->servo.id = 10;
-    drvscs = &_drv_servos[SRVDRV_LM];
-    drvscs->loc = SRVDRV_LM;
-    drvscs->speed = 0;
-    drvscs->servo.id = 11;
-    drvscs = &_drv_servos[SRVDRV_LR];
-    drvscs->loc = SRVDRV_LR;
-    drvscs->speed = 0;
-    drvscs->servo.id = 12;
-    drvscs = &_drv_servos[SRVDRV_RF];
-    drvscs->loc = SRVDRV_RF;
-    drvscs->speed = 0;
-    drvscs->servo.id = 13;
-    drvscs = &_drv_servos[SRVDRV_RM];
-    drvscs->loc = SRVDRV_RM;
-    drvscs->speed = 0;
-    drvscs->servo.id = 14;
-    drvscs = &_drv_servos[SRVDRV_RR];
-    drvscs->loc = SRVDRV_RR;
-    drvscs->speed = 0;
-    drvscs->servo.id = 15;
-    //  Directional
-    dir_servo_ctrl_t* dirscs = &_dir_servos[SRVDIR_LF];
-    dirscs->loc = SRVDIR_LF;
-    dirscs->max_pos = 1000;
-    dirscs->servo.id = 50;
-    dirscs = &_dir_servos[SRVDIR_LR];
-    dirscs->loc = SRVDIR_LR;
-    dirscs->max_pos = 1000;
-    dirscs->servo.id = 51;
-    dirscs = &_dir_servos[SRVDIR_RF];
-    dirscs->loc = SRVDIR_RF;
-    dirscs->max_pos = 1000;
-    dirscs->servo.id = 52;
-    dirscs = &_dir_servos[SRVDIR_RR];
-    dirscs->loc = SRVDIR_RR;
-    dirscs->max_pos = 1000;
-    dirscs->servo.id = 53;
+    _velo_last = 0;
+    servos_zero_position(-1);
+    // Calculate the center/middle wheel speed factor for rotate-in-place
+    _rip_spdfctr_c = rover_cp_t() / rover_cp_cnr_d(); // half the track divided by center to corner.
 
     servo_module_init();
 }

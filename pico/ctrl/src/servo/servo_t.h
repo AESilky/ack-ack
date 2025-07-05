@@ -27,7 +27,10 @@ typedef enum BUS_SERVO_MODE_ {
     BS_MOTOR_MODE = 1
 } servo_mode_t;
 
+/** @brief ID to broadcast a command to all servos */
 #define BS_BROADCAST_ID 254
+/** @brief ID to send a command to all servos (alias of `BS_BROADCAST_ID`)*/
+#define SERVO_ALL_ID BS_BROADCAST_ID
 
 
 enum BS_STATUS_PACKET_OFFSETS_ {
@@ -49,15 +52,14 @@ typedef struct BS_RX_STATUS_ {
 } bs_rx_status_t;
 
 typedef struct BUS_SERVO_ {
-    uint8_t id;     // Servo ID
-    servo_mode_t mode;
-    bs_rx_status_t _rxstatus;
+    uint8_t id;                 // Servo ID
+    bs_rx_status_t _rxstatus;   // Status received from the servo
 } servo_t;
 #define SERVO_NONE ((servo_t*)0)
 
 typedef struct SERVO_PARAMS_ {
     uint8_t servo_id;
-    uint16_t pos;     // Servo ID
+    uint16_t pos;
     uint16_t time;
 } servo_params_t;
 

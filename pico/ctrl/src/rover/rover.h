@@ -28,7 +28,7 @@ extern void rover_housekeeping(void);
 
 /**
  * @brief Starts the various hardware functions of the rover.
- * @ingroup servo
+ * @ingroup rover
  *
  * This should be called after the messaging system is up and running.
  */

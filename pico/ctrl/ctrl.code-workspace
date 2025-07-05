@@ -37,7 +37,9 @@
 			"inttypes.h": "c",
 			"config.h": "c",
 			"servos.h": "c",
-			"servo_t.h": "c"
+			"servo_t.h": "c",
+			"stddef.h": "c",
+			"math.h": "c"
 		},
 		"cSpell.words": [
 			"AGPI",
@@ -64,6 +66,6 @@
 			"txval",
 			"UART"
 		],
-		"cortex-debug.variableUseNaturalFormat": false
+		"cortex-debug.variableUseNaturalFormat": true
 	}
 }

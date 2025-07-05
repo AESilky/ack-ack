@@ -48,7 +48,7 @@ int _rxcmn_dma_pio_rd;                     // DMA channel used to pull data from
 dma_channel_config _rxcmn_dma_pio_rd_cfg;  // Keep the config so the channel is easy to re-run
 pio_sm_pocfg _rxcmn_pio_smrx_pocfg;        // Configuration for the PIO RX State Machine
 
-
+static volatile bool _rc_rdy_mp;           // RC received, processed, and ready message is pending
 
 // ///////////////////////////////////////////////////////////////////////// //
 // Internal Function Declarations                                            //
@@ -105,9 +105,16 @@ void __isr rxcmn_irq_pio_rx_err_handler() {
 // Message Handlers                                                          //
 // ///////////////////////////////////////////////////////////////////////// //
 
+/**
+ * @brief Handle our MSG_RC_RECEIVED message to clear the pending flag.
+ *
+ * @param msg
+ */
+void _rc_mp_proc(cmt_msg_t* msg) {
+    _rc_rdy_mp = false;
+}
 
 void rxcmn_mh_pio_rx_error(cmt_msg_t* msg) {
-
     // Cancel the DMA handling the received data.
     //  Due to errata RP2350-E5(see the RP2350 datasheet for further detail),
     //  it is necessary to clear the enable bit of the channel being aborted,
@@ -193,7 +200,8 @@ void rxcmn_mh_rx_msg_proc(cmt_msg_t* msg) {
                 }
                 //
                 // If any channels have changed, let the system know.
-                if (chgs != 0) {
+                if (chgs != 0 && !_rc_rdy_mp) {
+                    _rc_rdy_mp = true;
                     cmt_msg_t mchcng;
                     cmt_msg_init(&mchcng, MSG_RC_RECEIVED);
                     mchcng.data.value16u = chgs;
@@ -330,5 +338,5 @@ void rxcmn_module_init(rcrx_state_t* channel_state) {
     _initialized = true;
 
     _channel_state = channel_state;
-
+    cmt_msg_hdlr_add(MSG_RC_RECEIVED, _rc_mp_proc);  // Handle our own message to clear pending flag
 }

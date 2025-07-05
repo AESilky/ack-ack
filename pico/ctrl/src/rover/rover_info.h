@@ -33,6 +33,7 @@ extern "C" {
 #define SRVO_ID_DRV_LM 13
 /** Servo ID Drive Left-Rear */
 #define SRVO_ID_DRV_LR 11
+//
 /** Servo ID Direction (turn) Right-Front */
 #define SRVO_ID_DIR_RF 4
 /** Servo ID Direction (turn) Right-Rear */
@@ -57,11 +58,25 @@ extern float rover_cp_cnr_d();
 extern float rover_cp_l();
 
 /**
- * @brief Rover center-point width (CP to CL of left or right track-line)
+ * @brief Half of the wheelbase in millimeters (as an integer)
+ *
+ * @return int Half of the wheelbase (rounded)
+ */
+extern int rover_cp_l_i();
+
+/**
+ * @brief Rover center-point track (CP to CL of left or right track-line)
  *
  * @return float
  */
-extern float rover_cp_w();
+extern float rover_cp_t();
+
+/**
+ * @brief Half of the track value (as an integer)
+ *
+ * @return int Half of the track (rounded int)
+ */
+extern int rover_cp_t_i();
 
 /**
  * @brief The angle for the (front-right) drive wheel required for 'Rotate-In-Place'.
@@ -87,6 +102,20 @@ extern float rover_track();
 extern int rover_track_i();
 
 /**
+ * @brief Wheel circumference in millimeters.
+ *
+ * @return float circumference
+ */
+extern float rover_wheel_cir();
+
+/**
+ * @brief Wheel diameter in millimeters.
+ *
+ * @return int diameter
+ */
+extern int rover_wheel_dia();
+
+/**
  * @brief The rover wheelbase in millimeters.
  *
  * @see `rover_wheelbase_i` for an integer value.
@@ -103,7 +132,6 @@ extern float rover_wheelbase();
  * @return int The wheelbase
  */
 extern int rover_wheelbase_i();
-
 
 /**
  * @brief Initialize the Rover Info module.
