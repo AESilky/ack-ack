@@ -109,6 +109,8 @@ void rx_srxl2_mh_rx_msg_rcvd(cmt_msg_t* msg);
 
 static void _rx_srxl2_enable_next_msg();
 
+static uint16_t rx_srxl2_protocol_spec_proc();
+
 static uint16_t _srxlCrc16(uint8_t* packet);
 
 static bool _srxlParsePacket(uint8_t* packet, uint8_t length);
@@ -120,7 +122,7 @@ static bool _srxlParsePacket(uint8_t* packet, uint8_t length);
 /**
  * @brief IRQ Handler for RX message complete (from the MSG PIO-SM).
  *
- * Posts a MSG_RC_RX_MSG_RCVD message to initiate processing of the SRXL2 message.
+ * Posts a MSG_RC_RX_RAW_MSG_RCVD message to initiate processing of the SRXL2 message.
  */
 void __isr rx_srxl2_irq_pio_msgcmplt_handler() {
     cmt_msg_t msg;
@@ -133,9 +135,9 @@ void __isr rx_srxl2_irq_pio_msgcmplt_handler() {
     //
     // Initialize and post the message
     //
-    cmt_msg_init3(&msg, MSG_RC_RX_MSG_RCVD, MSG_PRI_NORM, rx_srxl2_mh_rx_msg_rcvd);
+    cmt_msg_init2(&msg, MSG_RC_RX_RAW_MSG_RCVD, rx_srxl2_mh_rx_msg_rcvd);
     msg.data.value32u = pio_irqbits;
-    postHWCtrlMsg(&msg);
+    postHWRTMsg(&msg);
 }
 
 // ///////////////////////////////////////////////////////////////////////// //
@@ -154,22 +156,6 @@ void rx_srxl2_mh_rx_err(cmt_msg_t* msg) {
     // The common handler cancels and cleans up the serial input PIO-SM and
     // the PIO-SM to buffer DMA.
 }
-
-void rx_srxl2_mh_rx_msg_proc(cmt_msg_t* msg) {
-    // Show that we are processing
-    ledB_on(true);
-    //long same_data_cnt = _rcrx_msg_same_data_cnt;
-    _rcrx_msg_same_data_cnt = 0;
-
-    // Parse the received data into the _channel_state
-    uint8_t* db = (uint8_t*)&_rc_bufs.msg_bufs.msg_enqueue;
-    uint8_t len = db[SRXL2_MSG_LEN_IDX];
-    _srxlParsePacket(db, len);
-
-    ledB_on(false);
-    _rxcmn_en_next_rx();
-}
-
 
 
 void rx_srxl2_mh_rx_msg_rcvd(cmt_msg_t* msg) {
@@ -216,8 +202,8 @@ static void _enable_rx() {
     ledA_on(false);
     // Set up the message and handler to use for receiving RX messages
     _rxcmn_mh_data_rdy = rxcmn_mh_rx_msg_proc;      // Message handler to process RC RX message.
-    _rxcmn_data_rdy_msg = MSG_RC_RX_MSG_RDY;        // Message for RC RX message received
-    _rxcmn_mh_proc_protocol_msg = rx_srxl2_mh_rx_msg_proc;
+    _rxcmn_data_rdy_msg = MSG_RC_RX_RAW_MSG_RDY;        // Message for RC RX message received
+    _rxcmn_protocol_spec_proc = rx_srxl2_protocol_spec_proc;
     _rxcmn_en_next_rx = _rx_srxl2_enable_next_msg;   // Set up both PIO-SMs and interrupts
     _rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
 
@@ -307,7 +293,7 @@ static void _enable_rx() {
     pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, true);
     // When a full message has been received the MSG PIO will interrupt and post a message.
     // Use a sleep to periodically print the PIO-SM-PC
-    cmt_sleep_ms(3000, rxcmn_list_pio_ch_state, (void*)true);
+    cmt_sleep_ms(3000, rxcmn_list_pio_dma_state, (void*)1);
     return;
 }
 
@@ -404,6 +390,23 @@ static pio_sm_pocfg _rx_srxl2_pio_uart_init(PIO pio, uint sm, uint pin, uint bau
     pio_sm_init(pio, sm, sm_pocfg.offset, &sm_pocfg.sm_cfg);
 
     return sm_pocfg;
+}
+
+static uint16_t rx_srxl2_protocol_spec_proc() {
+    // Show that we are processing
+    ledB_on(true);
+    //long same_data_cnt = _rcrx_msg_same_data_cnt;
+    _rcrx_msg_same_data_cnt = 0;
+
+    // Parse the received data into the _channel_state
+    uint8_t* db = (uint8_t*)&_rc_bufs.msg_bufs.msg_enqueue;
+    uint8_t len = db[SRXL2_MSG_LEN_IDX];
+    _srxlParsePacket(db, len);
+
+    ledB_on(false);
+    _rxcmn_en_next_rx();
+
+    return (0);
 }
 
 // Compute SRXL CRC over packet buffer (assumes length is correctly set)
@@ -611,9 +614,9 @@ void rx_srxl2_module_init(uint baud, rcrx_state_t* channel_state) {
     _channel_state = channel_state;
     rxcmn_module_init(channel_state);
 
-    _rxcmn_mh_data_rdy = NULL_MSG_HDLR;    // No message handler to start.
-    _rxcmn_data_rdy_msg = MSG_HWRT_NOOP;   // No message to start with.
-    _rxcmn_mh_proc_protocol_msg = NULL_MSG_HDLR;  // No message handler to start.
+    _rxcmn_mh_data_rdy = NULL_MSG_HDLR;     // No message handler to start.
+    _rxcmn_data_rdy_msg = MSG_HWRT_NOOP;    // No message to start with.
+    _rxcmn_protocol_spec_proc = NULL;       // No message handler to start.
 
     // Get a DMA channel that will take data from the PIO-SM RXFIFO,
     _rxcmn_dma_pio_rd = dma_claim_unused_channel(true);

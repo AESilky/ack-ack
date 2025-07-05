@@ -33,6 +33,8 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+extern void rcrx_clear_ch_changed();
+
 extern void rcrx_clear_ch_state();
 
 extern const rcrx_state_t* rcrx_get_ch_state();
@@ -53,6 +55,13 @@ extern const char* rcrx_get_type_name(rxprotocol_t type);
  * @return uint64_t The number of messages/packets received.
  */
 extern uint64_t rcrx_get_rx_cnt();
+
+/**
+ * @brief Print the RC Channels state.
+ *
+ * @param hl_chg Highlight changed channels if true.
+ */
+extern void rcrx_print_ch_state(bool hl_chg);
 
 extern void rcrx_module_init();
 

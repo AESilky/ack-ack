@@ -29,53 +29,55 @@ extern "C" {
 /** @brief Special identifier to specify a handler for both cores. */
 #define MSG_HDLR_CORE_BOTH ((uint)-1)
 
-typedef enum MSG_PRI_ {
-    MSG_PRI_NORM = 0,
-    MSG_PRI_LOW
-} msg_priority_t;
-
 // Keep the total number of messages under 256 to allow indexing into handlers.
 typedef enum MSG_ID_ {
     // Common messages 0x00 - 0x5F (used by both HWRT and DCS/HID)
-    MSG_COMMON_NOOP = 0x00,
+    MSG_NOOP = 0x00,
+    MSG_LOOP_STARTED,
     MSG_EXEC,               // General purpose message to use when specifying a handler.
     MSG_CONFIG_CHANGED,
     MSG_CMT_SLEEP,
+    MSG_DCS_STARTED,
     MSG_DEBUG_CHANGED,
+    MSG_HID_STARTED,
     MSG_HOUSEKEEPING_RT,    // Housekeeping Repeating - Every 16ms (62.5Hz)
+    MSG_HWRT_STARTED,
+    MSG_INPUT_SW_DEBOUNCE,
     MSG_INPUT_SW_PRESS,
     MSG_INPUT_SW_RELEASE,
+    MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed
+    MSG_RC_RECEIVED,        // A Radio Control message has been received and processed (ready for use)
     MSG_SENSBANK_CHG,
-    MSG_SWITCH_ACTION,
-    MSG_SWITCH_LONGPRESS,
+    MSG_SW_ACTION,
+    MSG_SW_LONGPRESS,
+    MSG_SW_LONGPRESS_DELAY,
     MSG_TERM_CHAR_RCVD,
     //
     // Hardware-Runtime (HWRT) messages 0x60 - 0xBF
     MSG_HWRT_NOOP = 0x60,
     MSG_HWRT_TEST,
-    MSG_INPUT_SW_DEBOUNCE,
     MSG_MAIN_USER_SWITCH_PRESS,
     MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
     MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
     MSG_RC_DETECTED,    // Radio Control BAUD & Protocol detected
-    MSG_RC_RX_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
-    MSG_RC_RX_MSG_RCVD, // Radio Control receiver message had been received
-    MSG_RC_RX_MSG_RDY,  // Radio Control receiver message is ready
-    MSG_ROTARY_CHG,
+    MSG_RC_RX_RAW_ERR,      // Radio Control receiver RX error (Parity +/ Framing)
+    MSG_RC_RX_RAW_MSG_RCVD, // Radio Control receiver message had been received
+    MSG_RC_RX_RAW_MSG_RDY,  // Radio Control receiver message is ready
     MSG_SERVO_DATA_RCVD,
     MSG_SERVO_DATA_RX_TO,
     MSG_SERVO_READ_ERROR,
     MSG_SERVO_STATUS_RCVD,
     MSG_STDIO_CHAR_READY,
-    MSG_SW_LONGPRESS_DELAY,
     MSG_TOUCH_PANEL,
-    MSG_DCS_STARTED,
     //
-    // Drive Control System (DCS) and Human Interface Devices (HID) messages 0xC0 - 0xFF
+    // Drive Control System (DCS), Human Interface Devices (HID), and Navigation (NAV) messages 0xC0 - 0xFF
     MSG_DCS_NOOP = 0xC0,
+    MSG_HID_NOOP = 0xC0,
     MSG_DCS_TEST,
-    MSG_HWRT_STARTED,
+    MSG_DIRECT_CTRL_CHG,
     MSG_DISPLAY_MESSAGE,
+    MSG_FORWARD_ROTATE_REVERSE_CHG,
+    MSG_ROTARY_CHG,
 } msg_id_t;
 #define MSG_ID_CNT (0x100)
 
@@ -113,7 +115,8 @@ union MSG_DATA_VALUE_ {
     bool bv;
     bool debug;
     cmt_sleep_data_t cmt_sleep;
-    int16_t rotary_delta;
+    int16_t value16;
+    uint16_t value16u;
     int32_t status;
     uint32_t value32u;
     char* str;
@@ -131,33 +134,17 @@ typedef union MSG_DATA_VALUE_ msg_data_value_t;
  *
  * @param id The ID (number) of the message.
  * @param data The data for the message.
- * @param priority The message priority.
  * @param hdlr A Handler function to use rather then the one registered (or null).
  * @param n The message number (set by the posting system)
  * @param t The millisecond time msg was posted (set by the posting system)
  */
 typedef struct CMT_MSG_ {
     msg_id_t id;
-    msg_priority_t priority;
     msg_data_value_t data;
     msg_handler_fn hdlr;
     int32_t n;
     uint32_t t;
 } cmt_msg_t;
-
-/**
- * @brief Function prototype for the start function.
- * @ingroup cmt
- */
-typedef void (*start_fn)(void);
-
-/**
- * @brief Message handler entry. Used in the message handler list.
- */
-// typedef struct _MSG_HANDLER_ENTRY {
-//     int msg_id;
-//     msg_handler_fn msg_handler;
-// } msg_handler_entry_t;
 
 
 #ifdef __cplusplus

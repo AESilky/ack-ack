@@ -1,7 +1,7 @@
 /**
  * hwctrl Multicore common.
  *
- * Containes the data structures and routines to handle multicore functionality.
+ * Contains the data structures and routines to handle multicore functionality.
  *
  * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
@@ -14,9 +14,6 @@ extern "C" {
 #endif
 
 #include "cmt/cmt_t.h"
-
-#include "pico/multicore.h"
-#include "pico/util/queue.h"
 
 /**
  * @file multicore.h
@@ -138,7 +135,7 @@ extern uint16_t post_to_cores_nowait(const cmt_msg_t* msg);
  * @brief Start the Core 1 functionality.
  * @ingroup multi_core
  *
- * This starts the core1 `main` code_seq (the message dispatching loop).
+ * This starts the core1 `main` (the message dispatching loop).
  */
 extern void start_core1();
 

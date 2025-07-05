@@ -60,7 +60,7 @@ idleloop:
     in y, 6                 ; 4.  shift 6 bits in (ISR has 1010,1010,1010,0000)
     mov osr, isr            ; 6. Put the 1010,1010,1010,0000 into the OSR
     mov isr, NULL [20 - 7]  ; 7. Clear ISR (also clears ISR bit-count) - Delay 1 bit
-    set x, 7 [(20/2) - 5]   ; 1. Preload bit counter and delay total of 1.4 bit time at the point we read below
+    set x, 7 [(20/2) - 4]   ; 1. Preload bit counter and delay total of 1.4 bit time at the point we read below
 bit_loop:
     set y, 0 [3]            ; 1-4. To get 1 or 0 in Y based on the pin (remember PIN is inverse)
     jmp pin, y_has_bit      ; 5. NOTE: Pin test is 5 clocks in (needed to match below for parity bit)
@@ -82,7 +82,7 @@ count_bit:
     mov x, PINS             ; 5. Parity bit into X
 chk_parity:
     ; Check that the parity is correct
-    jmp x!=y, bad_parity [(20-9) + (20/2)]  ; 9. Jump if Parity is bad - Else, delay into the 2nd STOP
+    jmp x!=y bad_parity [(20-9) + (20/2)]  ; 9. Jump if Parity is bad - Else, delay into the 2nd STOP
 chk_stop:
     jmp pin, framing_error  ; 1. Check stop bit. Should be low (remember SBUS is inverse)
     ; Good data (already pushed) - Go back to looking for START-BIT (no delay, to help get clock back aligned)

@@ -9,7 +9,6 @@
 			"curswitch.h": "c",
 			"cmt.h": "c",
 			"hwrt.h": "c",
-			"core1_main.h": "c",
 			"string.h": "c",
 			"font.h": "c",
 			"display_i.h": "c",
@@ -36,7 +35,11 @@
 			"pio_sm.h": "c",
 			"compare": "c",
 			"inttypes.h": "c",
-			"config.h": "c"
+			"config.h": "c",
+			"servos.h": "c",
+			"servo_t.h": "c",
+			"stddef.h": "c",
+			"math.h": "c"
 		},
 		"cSpell.words": [
 			"AGPI",
@@ -63,6 +66,6 @@
 			"txval",
 			"UART"
 		],
-		"cortex-debug.variableUseNaturalFormat": false
+		"cortex-debug.variableUseNaturalFormat": true
 	}
 }

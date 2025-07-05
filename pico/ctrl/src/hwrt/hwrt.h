@@ -1,7 +1,9 @@
 /**
- * HWControl Operating System - Base.
+ * Hardware Runtime.
  *
  * Setup for the message loop and idle processing.
+ * Also, defines the high-level board functionality that runs
+ * on Core-1.
  *
  * Copyright 2023-25 AESilky
  * SPDX-License-Identifier: MIT License
@@ -13,19 +15,18 @@
 extern "C" {
 #endif
 
-#include "cmt/cmt.h"
-
 #define HWRT_CORE_NUM 0
 
 /**
- * @brief Initialize the back-end
- * @ingroup backend
+ * @brief The Hardware Runtime 0 and 1 define a `core1_main` which is run
+ * by the `start_core1` function. That controls the Board (0 or 1) high-level
+ * functionality.
  */
-extern void hwrt_module_init(void);
+extern void core1_main(void);
 
 /**
- * @brief Start the Backend (core 0 (endless) message-loop).
- * @ingroup backend
+ * @brief Start the runtime (core 0 (endless) message-loop).
+ * @ingroup hwrt
  */
 extern void start_hwrt(void);
 

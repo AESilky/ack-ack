@@ -168,7 +168,7 @@ static void _post_msg_if_chars_available() {
         cmt_msg_init(&msg, MSG_TERM_CHAR_RCVD);
         msg.hdlr = _term_notify_on_input;  // Load a handler (or NULL)
         // Post the message.
-        postHWCtrlMsg(&msg);
+        postHWRTMsg(&msg);
     }
 }
 
@@ -302,6 +302,6 @@ void term_module_init() {
     }
     _initialized = true;
 
-    cmt_msg_hdlr_add(MSG_SWITCH_ACTION, _handle_switch_action);
+    cmt_msg_hdlr_add(MSG_SW_ACTION, _handle_switch_action);
     cmt_msg_hdlr_add(MSG_TOUCH_PANEL, _handle_touch);
 }

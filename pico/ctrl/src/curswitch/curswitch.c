@@ -211,7 +211,7 @@ void _read_bank_delayed(void* user_data) {
     if (changed) {
         // Figure out what changed and post messages for the actions.
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_SWITCH_ACTION);
+        cmt_msg_init(&msg, MSG_SW_ACTION);
         // debug_printf("csw: => %d\n", sw);
         for (int i=0; i<SW_COUNT; i++) {
             if (changes[i]) {
