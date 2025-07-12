@@ -11,6 +11,7 @@
 
 #include "sensbank.h"
 #include "sensbank.pio.h"
+#include "adc1015.h"
 
 #include "system_defs.h"
 #include "board.h"
@@ -34,12 +35,12 @@
 // Data
 // ############################################################################
 //
+static bool _adc_present;
 /** Contains the bit values read by the PIO */
-static volatile uint8_t _sensdata;
-static volatile uint8_t _sensdata_p;
+static volatile sensbank_cah_t _sensdata;
 #define SAMPLES_NEEDED_ 2
 static int _sampleindx;
-static uint8_t _samplerd[SAMPLES_NEEDED_];
+static volatile uint8_t _samplerd[SAMPLES_NEEDED_];
 
 
 // ############################################################################
@@ -65,14 +66,14 @@ static void pio_irq_func(void) {
             }
         }
         // There were two consecutive reads the same. Check the value.
-        _sensdata_p = _sensdata;
-        if (d != _sensdata) {
-            _sensdata = d;
+        _sensdata.prev_bits = _sensdata.bits;
+        if (d != _sensdata.bits) {
+            _sensdata.bits = d;
             // Some bits have changed, post a message
             cmt_msg_t msg;
             cmt_msg_init(&msg, MSG_SENSBANK_CHG);
-            msg.data.sensbank_chg.prev_bits = _sensdata_p;
-            msg.data.sensbank_chg.bits = _sensdata;
+            msg.data.sensbank_chg.prev_bits = _sensdata.prev_bits;
+            msg.data.sensbank_chg.bits = _sensdata.bits;
             postHWRTMsg(&msg);
             postDCSMsgDiscardable(&msg); // DCS is for status only
         }
@@ -114,7 +115,7 @@ static void _sensbank_program_init(PIO pio, uint sm, uint offset, uint opin, uin
         false, // Auto-push not enabled
         8      // Auto-push threshold = 8
     );
-    // Date is input only, so disable the TX FIFO to make the RX FIFO deeper.
+    // Data is input only, so join the TX FIFO to the RX FIFO.
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
 
     // Set the clock divider to sample the 8 inputs about 80 times a second.
@@ -133,15 +134,15 @@ static void _sensbank_program_init(PIO pio, uint sm, uint offset, uint opin, uin
 // ############################################################################
 //
 
-uint8_t sensbank_get(void) {
+sensbank_cah_t sensbank_get(void) {
     return _sensdata;
 }
 
-sensbank_chg_t sensbank_get_chg(void) {
-    sensbank_chg_t chg = {.bits = _sensdata, .prev_bits = _sensdata_p};
-    return chg;
+void sensbank_housekeeping() {
+    if (_adc_present) {
+        adc1015_housekeeping();
+    }
 }
-
 
 // ############################################################################
 // Initialization and Maintainence Functions
@@ -152,21 +153,35 @@ void sensbank_start(void) {
     // Set pio to tell us when the FIFO is NOT empty
     pio_set_irqn_source_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_IRQ_IDX, pio_get_rx_fifo_not_empty_interrupt_source(PIO_SENSBANK_SM), true);
     // Enable the interrupt and start the PIO state machine
-    pio_sm_set_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM, true);
     irq_set_enabled(PIO_SENSBANK_IRQ, true);
+    pio_sm_set_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM, true);
+    // If the ADC is connected, start reading the ADC
+    uint8_t adc_addr = 0x48; // The ADC is at address 0x48 or 0x49
+    if (i2c_device_present(adc_addr)) {
+        _adc_present = true;
+    }
+    else if (i2c_device_present(++adc_addr)) {
+        _adc_present = true;
+    }
+    if (_adc_present) {
+        adc1015_module_init(I2C_EXTERN, adc_addr, 21); // Init the ADC and set the rate to 3 per second
+        adc1015_start();
+    }
 }
 
 
 void sensbank_module_init(void) {
     static bool _initialized = false;
-    int offset;
-
     if (_initialized) {
         board_panic("sensbank_module_init already called");
     }
     _initialized = true;
 
-    _sensdata = SENSBANK_ALL_OPEN;
+    _adc_present = false;
+
+    int offset;
+    _sensdata.bits = SENSBANK_ALL_OPEN;
+    _sensdata.prev_bits = SENSBANK_ALL_OPEN;
     _sampleindx = 0;
 
     // Load the PIO program

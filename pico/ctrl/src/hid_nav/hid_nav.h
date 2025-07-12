@@ -23,7 +23,7 @@ extern "C" {
  * @brief Get and display the current Sensbank status.
  * @ingroup hid
  */
-extern void hid_update_sensbank(sensbank_chg_t sb);
+extern void hid_update_sensbank(sensbank_cah_t sb);
 
 /**
  * @brief Starts the HID and NAV.
