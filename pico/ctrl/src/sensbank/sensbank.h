@@ -20,20 +20,20 @@ extern "C" {
 #include <stdint.h>
 
 /**
- * @brief Get the latest bit values read from the sensor bank.
+ * @brief Get the latest and previous bit values read from the sensor bank.
  * @ingroup sensbank
  *
- * @return uint8_t Bit values of the 8 sensor inputs.
+ * @return sensbank_cah_t Bit values of the 8 sensor inputs (.bits) and previous (.prev_bits).
  */
-extern uint8_t sensbank_get(void);
+extern sensbank_cah_t sensbank_get(void);
 
 /**
- * @brief Get the (possible) changes in the sensor bank.
- * @ingroup sensbank
+ * @brief Perform sensor housekeeping.
  *
- * @return sensbank_chg_t Structure containing the latest and previous bits.
+ * This should be called by the main core processing. This module does
+ * not register a Housekeeping message handler.
  */
-extern sensbank_chg_t sensbank_get_chg(void);
+extern void sensbank_housekeeping();
 
 /**
  * @brief Starts reading the Sensor Bank.

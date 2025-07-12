@@ -121,7 +121,7 @@ union MSG_DATA_VALUE_ {
     uint32_t value32u;
     char* str;
     rcrx_bp_t rcrx_bp;
-    sensbank_chg_t sensbank_chg;
+    sensbank_cah_t sensbank_chg;
     servo_params_t servo_params;
     switch_action_data_t sw_action;
     uint32_t ts_ms;

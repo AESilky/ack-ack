@@ -15,8 +15,6 @@
 extern "C" {
 #endif
 
-#define VERSION_INFO "HWControl v0.1"  // ZZZ get from a central name/version string
-
 #include "pico.h"
 #include "pico/stdlib.h"
 #undef putc     // Undefine so the standard macros will not be used
@@ -126,7 +124,7 @@ extern "C" {
 #define I2C_EXTERN              i2c0
 #define I2C_EXTERN_SDA           6              // DP-9  Serial Data
 #define I2C_EXTERN_SCL           7              // DP-10 Serial Clock
-#define I2C_EXTERN_CLK_SPEED     (400 * 1000)   // 400kHz
+#define I2C_EXTERN_CLK_SPEED     (200 * 1000)   // 200kHz (relaxed 'Fast-Mode', FM is 400kHz)
 
 // RC Receiver and Telemetry input from FrSKY SBUS or Spektrum SRXL2
 // This is serial input that is decoded using a PIO

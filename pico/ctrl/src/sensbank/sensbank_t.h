@@ -16,12 +16,17 @@ extern "C" {
 
 #include <stdint.h>
 
-typedef struct SENSBANK_CHG {
+/**
+ * @brief Pair of bytes that have the current and previous sensor bytes.
+ *
+ * Used to read sensor data into and also to publish a sensor change message.
+ */
+typedef struct SENSBANK_CAH_ {
     /** The current sensor bits */
     uint8_t bits;
     /** The previous sensor bits */
     uint8_t prev_bits;
-} sensbank_chg_t;
+} sensbank_cah_t;
 
 #ifdef __cplusplus
     }

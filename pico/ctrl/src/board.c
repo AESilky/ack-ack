@@ -18,6 +18,7 @@
 #include "system_defs.h"
 
 #include "pico.h"
+#include "pico/malloc.h"
 #include "pico/stdio.h"
 #include "pico/stdlib.h"
 #include "pico/printf.h"
@@ -45,9 +46,42 @@
 #include "spi_ops.h"
 #include "util/util.h"
 
+#include <stdlib.h>
+
+typedef struct I2C_DEV_LL {
+    uint8_t addr;
+    struct I2C_DEV_LL *next;
+} i2c_dev_ll_t;
+
+i2c_dev_ll_t* _i2c_devices;
+
 // Internal function declarations
 
-static int _format_printf_datetime(char* buf, size_t len);
+void _i2c_scan() {
+    for (int addr = 0; addr < (1 << 7); ++addr) {
+        // Perform a 1-byte dummy read from the probe address. If a slave
+        // acknowledges this address, the function returns the number of bytes
+        // transferred. If the address byte is ignored, the function returns
+        // -1.
+        int ret;
+        uint8_t rxdata;
+
+        // Skip over reserved addresses...
+        // I2C reserves some addresses for special purposes. We exclude these from the scan.
+        // These are any addresses of the form 000 0xxx or 111 1xxx
+        if ((addr & 0x78) == 0 || (addr & 0x78) == 0x78) {
+            continue;
+        }
+        ret = i2c_read_timeout_us(i2c_default, addr, &rxdata, 1, false, 1500);
+        if (ret >= 0) {
+            // Allocate a device marker and save the address
+            i2c_dev_ll_t *dev = (i2c_dev_ll_t*)malloc(sizeof(i2c_dev_ll_t));
+            dev->next = _i2c_devices;
+            dev->addr = addr;
+            _i2c_devices = dev;
+        }
+    }
+}
 
 /**
  * @brief Initialize the board
@@ -74,6 +108,7 @@ int board_init() {
     //
     // Do initialization that is common for both board addresses (0&1).
     //
+    _i2c_devices = NULL; // This will be filled in with the I2C devices found later
 
     // Chip selects for the SPI peripherals
     gpio_set_function(SPI_ADDR_0, GPIO_FUNC_SIO);
@@ -99,6 +134,7 @@ int board_init() {
     spi_init(SPI_DISP_EXP_DEVICE, SPI_DISP_EXP_SPEED);
 
     // I2C Isn't directly used on the board, but is provided on headers for external use.
+    //   GPIO config is as recommended in the RP2350 Datasheet.
     i2c_init(I2C_EXTERN, I2C_EXTERN_CLK_SPEED);
     gpio_set_function(I2C_EXTERN_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_EXTERN_SCL, GPIO_FUNC_I2C);
@@ -106,6 +142,10 @@ int board_init() {
     gpio_pull_up(I2C_EXTERN_SCL);
     gpio_set_drive_strength(I2C_EXTERN_SDA, GPIO_DRIVE_STRENGTH_4MA);
     gpio_set_drive_strength(I2C_EXTERN_SCL, GPIO_DRIVE_STRENGTH_4MA);
+    gpio_set_slew_rate(I2C_EXTERN_SDA, GPIO_SLEW_RATE_SLOW);
+    gpio_set_slew_rate(I2C_EXTERN_SCL, GPIO_SLEW_RATE_SLOW);
+    gpio_set_input_hysteresis_enabled(I2C_EXTERN_SDA, true);
+    gpio_set_input_hysteresis_enabled(I2C_EXTERN_SCL, true);
 
     // GPIO Outputs (other than SPI, I2C, UART, and chip-selects
 
@@ -222,6 +262,8 @@ int board_init() {
         debug_mode_enable(true);
     }
 
+    // Scan the I2C bus to see what devices (device at an address) are present
+    _i2c_scan();
 
     // The PWM is used for a recurring interrupt in CMT. It will initialize it.
 
@@ -238,6 +280,17 @@ void boot_to_bootsel() {
 
 void display_backlight_on(bool on) {
     eio_display_backlight_on(on);
+}
+
+bool i2c_device_present(uint8_t addr) {
+    i2c_dev_ll_t *i2c_dev = _i2c_devices;
+    while (i2c_dev) {
+        if (i2c_dev->addr == addr) {
+            return true;
+        }
+        i2c_dev = i2c_dev->next;
+    }
+    return false;
 }
 
 static void _led_flash_cont(void* user_data) {

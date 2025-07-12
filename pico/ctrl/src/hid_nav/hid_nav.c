@@ -246,7 +246,7 @@ static void _show_psa(proc_status_accum_t* psa, int corenum) {
 // Public Functions
 // ############################################################################
 //
-void hid_update_sensbank(sensbank_chg_t sb) {
+void hid_update_sensbank(sensbank_cah_t sb) {
     // SensBank has 8 sensor bits. Display each as an open box if sensor off
     // or filled box if sensor on. Display as orange is the sensor has changed,
     // display it as blue if it hasn't changed.
