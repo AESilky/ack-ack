@@ -28,12 +28,12 @@ extern "C" {
 extern sensbank_cah_t sensbank_get(void);
 
 /**
- * @brief Perform sensor housekeeping.
+ * @brief Perform sensor housekeeping update.
  *
  * This should be called by the main core processing. This module does
- * not register a Housekeeping message handler.
+ * not register a Periodic/Housekeeping message handler.
  */
-extern void sensbank_housekeeping();
+extern void sensbank_update();
 
 /**
  * @brief Starts reading the Sensor Bank.

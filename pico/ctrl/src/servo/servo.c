@@ -28,16 +28,10 @@
 #include "board.h"
 #include "cmt/cmt.h"
 #include "system_defs.h"
+#include "util/util.h"
 
 #include <math.h>
 #include <string.h>
-
-//Macro function  get lower 8 bits of A
-#define GET_LOW_BYTE(A) (uint8_t)((A))
-//Macro function  get higher 8 bits of A
-#define GET_HIGH_BYTE(A) (uint8_t)((A) >> 8)
-//Macro Function  put A as higher 8 bits   B as lower 8 bits   which amalgamated into 16 bits integer
-#define BYTES_TO_WORD(A, B) ((((uint16_t)(A)) << 8) | (uint8_t)(B))
 
 #define BS_BAUDRATE         115200
 #define BS_RXD_TIMEOUT_MS   20  // Timeout if no data received in 20ms (typ=600µs)
@@ -80,8 +74,8 @@
 #define BSS_CHKSUM_OFF 3  // 3 more than the data length
 
 const double servo_degs_per_unit = 0.24;
-const double servo_rads_per_unit = ((servo_degs_per_unit * M_PI) / 180.0);
-const double servo_rads_to_posv_fctr = ((180.0 / M_PI) * SERVO_DEG_PER_UNIT);
+const double servo_rads_per_unit = radians(servo_degs_per_unit);
+const double servo_rads_to_posv_fctr = (RAD_TO_DEG * SERVO_DEG_PER_UNIT);
 
 
 // ############################################################################
@@ -166,7 +160,7 @@ static uint8_t _gen_checksum(uint8_t buf[]) {
     for (i = 2; i < buf[3] + 2; i++) {
         sum += buf[i];
     }
-    i = GET_LOW_BYTE(sum);
+    i = lowByte(sum);
     i = ~i;
 
     return i;
@@ -445,10 +439,10 @@ bool _servo_move_wait(uint8_t id, uint16_t position, uint16_t time) {
     buf[2] = id;
     buf[3] = 7;
     buf[4] = BS_MOVE_TIME_WAIT_WRITE;
-    buf[5] = GET_LOW_BYTE(position);
-    buf[6] = GET_HIGH_BYTE(position);
-    buf[7] = GET_LOW_BYTE(time);
-    buf[8] = GET_HIGH_BYTE(time);
+    buf[5] = lowByte(position);
+    buf[6] = highByte(position);
+    buf[7] = lowByte(time);
+    buf[8] = highByte(time);
     buf[9] = _gen_checksum(buf);
     return (_send_action_cmd(buf));
 }
@@ -557,10 +551,10 @@ bool servo_move(uint8_t id, int16_t position, uint16_t time) {
     buf[2] = id;
     buf[3] = 7;
     buf[4] = BS_MOVE_TIME_WRITE;
-    buf[5] = GET_LOW_BYTE(position);
-    buf[6] = GET_HIGH_BYTE(position);
-    buf[7] = GET_LOW_BYTE(time);
-    buf[8] = GET_HIGH_BYTE(time);
+    buf[5] = lowByte(position);
+    buf[6] = highByte(position);
+    buf[7] = lowByte(time);
+    buf[8] = highByte(time);
     buf[9] = _gen_checksum(buf);
     return (_send_action_cmd(buf));
 }
@@ -606,7 +600,7 @@ int16_t servo_position(servo_t* servo) {
     if (servo->_rxstatus.buf[BSPKT_CMD] != BS_POS_READ) {
         return (-1);
     }
-    return ((int16_t)BYTES_TO_WORD(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
+    return (wordFromBytes(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
 }
 
 bool servo_position_read(servo_t* servo) {
@@ -642,8 +636,8 @@ bool servo_run_group(uint8_t id[], int16_t speed[], int count) {
     return (_send_action_cmd(buf));
     for (int i = 0; i < count; i++) {
         buf[2] = id[i];
-        buf[7] = GET_LOW_BYTE((uint16_t)speed[i]);
-        buf[8] = GET_HIGH_BYTE((uint16_t)speed[i]);
+        buf[7] = lowByte((uint16_t)speed[i]);
+        buf[8] = highByte((uint16_t)speed[i]);
         buf[9] = _gen_checksum(buf);
         if (!_send_action_cmd(buf)) {
             return false;
@@ -669,10 +663,10 @@ bool servo_set_limits(uint8_t id, uint16_t min, uint16_t max) {
     buf[2] = id;
     buf[3] = 7;
     buf[4] = BS_ANGLE_LIMIT_WRITE;
-    buf[5] = GET_LOW_BYTE(min);
-    buf[6] = GET_HIGH_BYTE(min);
-    buf[7] = GET_LOW_BYTE(max);
-    buf[8] = GET_HIGH_BYTE(max);
+    buf[5] = lowByte(min);
+    buf[6] = highByte(min);
+    buf[7] = lowByte(max);
+    buf[8] = highByte(max);
     buf[9] = _gen_checksum(buf);
     return (_send_action_cmd(buf));
 }
@@ -685,8 +679,8 @@ bool servo_set_mode(uint8_t id, servo_mode_t mode, int16_t speed) {
     buf[4] = BS_SERVO_OR_MOTOR_MODE_WRITE;
     buf[5] = mode;
     buf[6] = 0;
-    buf[7] = GET_LOW_BYTE((uint16_t)speed);
-    buf[8] = GET_HIGH_BYTE((uint16_t)speed);
+    buf[7] = lowByte((uint16_t)speed);
+    buf[8] = highByte((uint16_t)speed);
     buf[9] = _gen_checksum(buf);
     return (_send_action_cmd(buf));
 }
@@ -721,7 +715,7 @@ int16_t servo_vin(servo_t* servo) {
     if (servo->_rxstatus.buf[BSPKT_CMD] != BS_VIN_READ) {
         return (-1);
     }
-    return ((int16_t)BYTES_TO_WORD(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
+    return (wordFromBytes(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
 }
 
 bool servo_vin_read(servo_t* servo) {

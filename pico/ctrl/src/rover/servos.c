@@ -38,6 +38,7 @@
 #include "cmt/cmt.h"
 #include "rover/rover_info.h"
 #include "servo/servo.h"
+#include "util/util.h"  // For 'constrain' and other macros
 
 #include "pico/stdlib.h"
 
@@ -51,6 +52,7 @@
 #define DIRECTIONAL_SERVO_POS_CENTER 500    // The Bus Servos control is 0 to 1000
 #define DIRECTIONAL_SERVO_POS_MAX 875       // +90° = 500 (center) + (90 / 0.24)
 #define DIRECTIONAL_SERVO_POS_MIN 125       // -90° = 500 (center) - (90 / 0.24)
+#define DIRECTIONAL_SERVO_MOVE_TIME 48      // Time to position the servo
 
 #define LOGICAL_YAW_SERVO_POS_MAX 700       // -48.1° This generates 90° on the right side
 #define LOGICAL_YAW_SERVO_POS_MIN 300       // +48.1° This generates 90° on the left side
@@ -73,50 +75,15 @@ typedef enum DRIVE_SERVOS_ID_ {
 } drv_servo_id_t;
 #define DRIVE_SERVO_CNT 6
 
-// /**
-//  * @brief Control structure for a directional (position controlled) servo.
-//  */
-// typedef struct DIRECTIONAL_SERVO_CTRL_ {
-//     servo_t servo;
-//     dir_servo_id_t loc;
-//     uint16_t max_pos;
-//     uint16_t min_pos;
-//     uint16_t pos;
-//     uint16_t req_pos;
-// } dir_servo_ctrl_t;
-
-// /**
-//  * @brief Control structure for a drive (speed controlled) servo.
-//  */
-// typedef struct DRIVE_SERVO_CTRL_ {
-//     servo_t servo;
-//     drv_servo_id_t loc;
-//     int16_t speed;
-// } drv_servo_ctrl_t;
-
 
 // ############################################################################
 // Data
 // ############################################################################
 //
-// static dir_servo_ctrl_t _dir_servo_ctrls[4];
-// static drv_servo_ctrl_t _drv_servo_ctrls[6];
-// Directional Servos
-// static servo_t _srvdir_lf = { .id = SRVO_ID_DIR_LF };
-// static servo_t _srvdir_rf = { .id = SRVO_ID_DIR_RF };
-// static servo_t _srvdir_lr = { .id = SRVO_ID_DIR_LR };
-// static servo_t _srvdir_rr = { .id = SRVO_ID_DIR_RR };
 /** Array of Directional servo IDs for use in the multi-servo calls */
 static uint8_t _dir_servo_ids[] = { SRVO_ID_DIR_LF, SRVO_ID_DIR_RF, SRVO_ID_DIR_LR, SRVO_ID_DIR_RR };
 static uint16_t _dir_positions[DIRECTIONAL_SERVO_CNT];
 //
-// Drive Servos
-// static servo_t _srvdrv_lf = { .id = SRVO_ID_DRV_LF };
-// static servo_t _srvdrv_rf = { .id = SRVO_ID_DRV_RF };
-// static servo_t _srvdrv_lr = { .id = SRVO_ID_DRV_LR };
-// static servo_t _srvdrv_rr = { .id = SRVO_ID_DRV_RR };
-// static servo_t _srvdrv_lm = { .id = SRVO_ID_DRV_LM };
-// static servo_t _srvdrv_rm = { .id = SRVO_ID_DRV_RM };
 /** Array of Drive servos for use in the multi-servo calls */
 static uint8_t _drv_servo_ids[] = { SRVO_ID_DRV_LF, SRVO_ID_DRV_RF, SRVO_ID_DRV_LR, SRVO_ID_DRV_RR, SRVO_ID_DRV_LM, SRVO_ID_DRV_RM };
 static int16_t _drv_speeds[DRIVE_SERVO_CNT];
@@ -374,7 +341,7 @@ pair_uint16_t servos_yaw_limits() {
 
 void servos_yaw_set(uint16_t yaw, int16_t velo) {
     _rip = false;
-    _yaw = ((yaw < LOGICAL_YAW_SERVO_POS_MIN) ? LOGICAL_YAW_SERVO_POS_MIN : ((yaw > LOGICAL_YAW_SERVO_POS_MAX) ? LOGICAL_YAW_SERVO_POS_MAX : yaw));
+    _yaw = constrain(yaw, LOGICAL_YAW_SERVO_POS_MIN, LOGICAL_YAW_SERVO_POS_MAX);
     int y = DIRECTIONAL_SERVO_POS_CENTER - _yaw;
     float sgn = ((y < 0) ? -1.0f : 1.0f);
     float theta = fabsf(y * servo_rads_per_unit);
@@ -432,7 +399,7 @@ void servos_yaw_set(uint16_t yaw, int16_t velo) {
     _dir_positions[SRVDIR_RF] = rf;
     _dir_positions[SRVDIR_LR] = lr;
     _dir_positions[SRVDIR_RR] = rr;
-    servo_move_group(_dir_servo_ids, _dir_positions, 48, DIRECTIONAL_SERVO_CNT);
+    servo_move_group(_dir_servo_ids, _dir_positions, DIRECTIONAL_SERVO_MOVE_TIME, DIRECTIONAL_SERVO_CNT);
     servo_run_group(_drv_servo_ids, _drv_speeds, DRIVE_SERVO_CNT);
 }
 

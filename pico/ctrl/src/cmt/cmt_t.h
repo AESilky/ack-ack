@@ -40,11 +40,11 @@ typedef enum MSG_ID_ {
     MSG_DCS_STARTED,
     MSG_DEBUG_CHANGED,
     MSG_HID_STARTED,
-    MSG_HOUSEKEEPING_RT,    // Housekeeping Repeating - Every 16ms (62.5Hz)
     MSG_HWRT_STARTED,
     MSG_INPUT_SW_DEBOUNCE,
     MSG_INPUT_SW_PRESS,
     MSG_INPUT_SW_RELEASE,
+    MSG_PERIODIC_RT,        // Periodic Repeating Time - Every 16ms (62.5Hz)
     MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed
     MSG_RC_RECEIVED,        // A Radio Control message has been received and processed (ready for use)
     MSG_SENSBANK_CHG,

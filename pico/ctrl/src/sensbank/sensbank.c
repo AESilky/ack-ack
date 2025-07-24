@@ -23,7 +23,9 @@
 // Value Definitions
 // ############################################################################
 //
+#define ADC_PERIODIC_UPDATE  21     // Read and advance the ADC about 3x/sec
 #define SENSBANK_ALL_OPEN    0xFF
+
 
 // ############################################################################
 // Function Declarations
@@ -35,6 +37,7 @@
 // Data
 // ############################################################################
 //
+static uint16_t _periodic_update;
 static bool _adc_present;
 /** Contains the bit values read by the PIO */
 static volatile sensbank_cah_t _sensdata;
@@ -138,9 +141,10 @@ sensbank_cah_t sensbank_get(void) {
     return _sensdata;
 }
 
-void sensbank_housekeeping() {
-    if (_adc_present) {
-        adc1015_housekeeping();
+void sensbank_update() {
+    _periodic_update++;
+    if (_adc_present && (_periodic_update % ADC_PERIODIC_UPDATE == 0)) {
+        adc1015_update();
     }
 }
 
@@ -164,7 +168,7 @@ void sensbank_start(void) {
         _adc_present = true;
     }
     if (_adc_present) {
-        adc1015_module_init(I2C_EXTERN, adc_addr, 21); // Init the ADC and set the rate to 3 per second
+        adc1015_module_init(I2C_EXTERN, adc_addr); // Init the ADC
         adc1015_start();
     }
 }

@@ -135,7 +135,7 @@ static void _input_sw_irq_handler(uint32_t events) {
 // ====================================================================
 
 static void _hwrt_module_init() {
-    cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_hwrt_housekeeping);
+    cmt_msg_hdlr_add(MSG_PERIODIC_RT, _handle_hwrt_housekeeping);
     cmt_msg_hdlr_add(MSG_HWRT_TEST, _handle_hwrt_test);
     cmt_msg_hdlr_add(MSG_DCS_STARTED, _handle_dcs_started);
 

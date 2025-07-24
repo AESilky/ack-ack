@@ -33,7 +33,7 @@ extern "C" {
  * This module doesn't register a message handler. Rather, it relies on this method
  * being called regularly.
  */
-extern void adc1015_housekeeping();
+extern void adc1015_update();
 
 /**
  * @brief Check if the ADC1015 is running (collecting samples)
@@ -42,15 +42,6 @@ extern void adc1015_housekeeping();
  * @return false Device is idle/sleeping
  */
 extern bool adc1015_is_running();
-
-/**
- * @brief Set the rate at which samples are read and the input advanced. This is the
- *      number of `housekeeping` calls that will be processed before a sample is
- *      read from the ADS1015 device and the mux/selector moved to the next input.
- *
- * @param r Number of `housekeeping` calls to take to read a sample
- */
-extern void adc1015_sample_rate(int r);
 
 /**
  * @brief Stop sampling and allow the ADS1015 to go into sleep (power save) mode.
@@ -90,11 +81,9 @@ extern int16_t adc1015_value(uint8_t input);
  * @see adc1015_start()
  *
  * @param i2c i2c_inst_t Instance to use (i2c0 or i2c1)
- * @param init_i2c True to also initialize the I2C instance for use
  * @param addr The I2C address of the device (0x48 or 0x49)
- * @param rate The sample rate to use (@see `adc1015_sample_rate`)
  */
-extern void adc1015_module_init(i2c_inst_t *i2c, int addr, int rate);
+extern void adc1015_module_init(i2c_inst_t *i2c, int addr);
 
 #ifdef __cplusplus
     }

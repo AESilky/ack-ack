@@ -19,6 +19,7 @@
 #include "board.h"
 #include "cmt/cmt.h"
 #include "rcrx/rcrx.h"
+#include "util/util.h"  // For 'constrain' and other macros
 
 #include <math.h>
 
@@ -204,12 +205,12 @@ static void _rc_rd_yawthrt() {
     int16_t yraw = chst->ch_data[_yawch].v;
     int16_t traw = chst->ch_data[_thrtch].v;
     //
-    // Adjust raw values
+    // Constrain/Adjust raw values
     int16_t yadj = yraw + 10000; // Move value up to 0~20000 (from -10000~0~10000)
-    yadj = ((yadj < 0) ? 0 : ((yadj > 20000) ? 20000 : yadj));
+    yadj = constrain(yadj, 0, 20000);
     traw += 10000; // Move value up to 0~20000 (from -10000~0~10000)
     float tp = ((traw <= 0) ? 0.0f : ((traw > 20000) ? 100.0f : ((float)traw / 198.0f))); // Bump the 100% value a bit
-    yraw = ((yraw < -10000) ? -10000 : ((yraw > 10000) ? 10000 : yraw));
+    yraw = constrain(yraw, -10000, 10000);
     //
     // Calculate the yaw servo value
     float yc = (float)yadj * _yawadj;

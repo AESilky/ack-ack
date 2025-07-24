@@ -64,7 +64,7 @@ static void _cmt_handle_sleep(cmt_msg_t* msg);
  * Handles the PWM 'wrap' recurring interrupt. This adjusts the time left in scheduled messages
  * (including our 'sleep') and posts a message to the appropriate core when time hits 0.
  *
- * This also posts a MSG_HOUSEKEEPING_RT message every 16ms (62.5Hz) that allows modules
+ * This also posts a MSG_PERIODIC_RT message every 16ms (62.5Hz) that allows modules
  * to perform regular operations without having to set up scheduled messages or timers
  * of their own.
  *
@@ -92,8 +92,8 @@ static void _on_recurring_interrupt(void) {
     _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
     if (_housekeep_rt == 0) {
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_HOUSEKEEPING_RT);
-        postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
+        cmt_msg_init(&msg, MSG_PERIODIC_RT);
+        postBothMsgDiscardable(&msg);  // Periodic RT is discardable
     }
     // Clear the interrupt flag that brought us here so it can occur again.
     pwm_clear_irq(CMT_PWM_RECINT_SLICE);

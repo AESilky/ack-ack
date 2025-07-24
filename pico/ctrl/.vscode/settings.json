@@ -16,6 +16,7 @@
         "dirscs",
         "drvscs",
         "DSMX",
+        "EEPROM",
         "enbl",
         "enrx",
         "expio",

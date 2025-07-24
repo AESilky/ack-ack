@@ -118,7 +118,6 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
             }
         }
     }
-
     // Do cleanup, status updates, heartbeat, etc.
     rover_housekeeping();
 }
@@ -194,7 +193,7 @@ static void _dcs_started() {
         board_panic("!!! `_dcs_started` - Called more than once. !!!");
     }
 
-    cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping);
+    cmt_msg_hdlr_add(MSG_PERIODIC_RT, _handle_dcs_housekeeping);
     cmt_msg_hdlr_add(MSG_DCS_TEST, _handle_dcs_test);
     cmt_msg_hdlr_add(MSG_DIRECT_CTRL_CHG, _handle_direct_ctrl_chg);
     cmt_msg_hdlr_add(MSG_FORWARD_ROTATE_REVERSE_CHG, _handle_frr_chg);

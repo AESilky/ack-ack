@@ -177,6 +177,7 @@ void spi_none_select() {
     _device_select(SPI_NONE_SELECT);
 }
 
+#if (BOARD_ADDR == 1)
 
 void spi_touch_begin(void) {
     _begin(SPI_TOUCH_SELECT);
@@ -209,6 +210,7 @@ int spi_touch_write8_buf(const uint8_t* buf, size_t len) {
     return r;
 }
 
+#endif // BOARD_ADDR == 1
 
 void spi_ops_module_init() {
     _device_select(SPI_NONE_SELECT);

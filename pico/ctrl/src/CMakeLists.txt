@@ -35,6 +35,7 @@ pico_sdk_init()
 add_subdirectory(curswitch)
 add_subdirectory(dcs)
 add_subdirectory(display)
+add_subdirectory(eeprom)
 add_subdirectory(gfx)
 add_subdirectory(hid_nav)
 add_subdirectory(hwrt)
@@ -116,6 +117,7 @@ target_link_libraries(hwctrl_0
 )
 target_link_libraries(hwctrl_0
   dcs
+  eeprom
   hwrt0
   rcrx
   rover

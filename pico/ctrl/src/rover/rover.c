@@ -58,7 +58,7 @@
 //
 
 void rover_housekeeping(void) {
-    sensbank_housekeeping();
+    sensbank_update();
     servos_housekeeping();
 }
 

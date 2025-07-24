@@ -137,6 +137,7 @@ extern int spi_expio_write8_buf(const uint8_t* buf, size_t len);
  */
 extern void spi_none_select();
 
+#if (BOARD_ADDR == 1)
 
 /**
  * @brief Take control of the SPI bus for use by the Touch Panel.
@@ -180,6 +181,7 @@ extern int spi_touch_write8(uint8_t data);
 
 extern int spi_touch_write8_buf(const uint8_t* buf, size_t len);
 
+#endif // BOARD_ADDR == 1
 
 /**
  * @brief Initialize the SPI Operations module.
