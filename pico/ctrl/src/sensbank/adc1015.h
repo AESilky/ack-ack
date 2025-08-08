@@ -72,6 +72,19 @@ extern void adc1015_start();
 extern int16_t adc1015_value(uint8_t input);
 
 /**
+ * @brief Convert a ADC value to the voltage of the input.
+ *
+ * It is possible for the value to indicate a negative voltage due to the measurement
+ * process. This method limits the low voltage to 0, as that is most likely what is
+ * expected given the circuit used.
+ *
+ * @param value A measurement result value
+ * @return float The value at the ADC input
+ */
+extern float adc1015_volts(int16_t value);
+
+
+/**
  * @brief Initialize the module and the ADS1015. Optionally, initialize the I2C instance.
  *
  * This initializes the module and optionally the I2C instance, and set the sample rate.

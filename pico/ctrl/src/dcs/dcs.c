@@ -73,6 +73,12 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     _dcs_hk_cnt++;
     if (_dcs_hk_cnt % DCS_STATUS_PERIOD == 0) {
         debug_printf("DCS: %d\n", _dcs_hk_cnt);
+        // Get the Power and Light (ADC) values and print them:
+        float b1v = rover_batt1_voltage();
+        float b2v = rover_batt2_voltage();
+        float apma = rover_aux_pwr_ma();
+        float light = rover_light_lvl();
+        info_printf("\nRover state: B1: %6.3fV  B2: %6.3fV  AuxPwr: %5.3fmA  Light: %5.3f\n", b1v, b2v, apma, light);
     }
     if ((_dcs_hk_cnt % DCS_HOST_STATUS_PERIOD) == 0) {
         // Send our status to the host.

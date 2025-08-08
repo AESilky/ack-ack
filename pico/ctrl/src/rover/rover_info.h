@@ -22,26 +22,26 @@ extern "C" {
 // Servo IDs
 //
 /** Servo ID Drive Right-Front */
-#define SRVO_ID_DRV_RF 14
+#define SRVO_ID_DRV_RF 11
 /** Servo ID Drive Right-Middle */
-#define SRVO_ID_DRV_RM 12
+#define SRVO_ID_DRV_RM 13
 /** Servo ID Drive Right-Rear */
-#define SRVO_ID_DRV_RR 10
+#define SRVO_ID_DRV_RR 15
 /** Servo ID Drive Left-Front */
-#define SRVO_ID_DRV_LF 15
+#define SRVO_ID_DRV_LF 10
 /** Servo ID Drive Left-Middle */
-#define SRVO_ID_DRV_LM 13
+#define SRVO_ID_DRV_LM 12
 /** Servo ID Drive Left-Rear */
-#define SRVO_ID_DRV_LR 11
+#define SRVO_ID_DRV_LR 14
 //
 /** Servo ID Direction (turn) Right-Front */
-#define SRVO_ID_DIR_RF 4
+#define SRVO_ID_DIR_RF 3
 /** Servo ID Direction (turn) Right-Rear */
-#define SRVO_ID_DIR_RR 2
+#define SRVO_ID_DIR_RR 5
 /** Servo ID Direction (turn) Left-Front */
-#define SRVO_ID_DIR_LF 5
+#define SRVO_ID_DIR_LF 2
 /** Servo ID Direction (turn) Left-Rear */
-#define SRVO_ID_DIR_LR 3
+#define SRVO_ID_DIR_LR 4
 
 /**
  * @brief Distance from rover center-point to a corner drive wheel (center-point).

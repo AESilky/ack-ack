@@ -160,7 +160,7 @@ void sensbank_start(void) {
     irq_set_enabled(PIO_SENSBANK_IRQ, true);
     pio_sm_set_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM, true);
     // If the ADC is connected, start reading the ADC
-    uint8_t adc_addr = 0x48; // The ADC is at address 0x48 or 0x49
+    uint8_t adc_addr = SB_ADC_ADDR1; // The ADC is at address 0x48 or 0x49
     if (i2c_device_present(adc_addr)) {
         _adc_present = true;
     }

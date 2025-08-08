@@ -74,6 +74,7 @@ add_subdirectory(lib)
 #
 set(CMN_LIBS
   cmt
+  eeprom
   expio
   sensbank
   util

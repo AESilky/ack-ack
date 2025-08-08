@@ -36,6 +36,7 @@
 
 #include "board.h"
 #include "cmt/cmt.h"
+#include "rover/rover.h"
 #include "rover/rover_info.h"
 #include "servo/servo.h"
 #include "util/util.h"  // For 'constrain' and other macros
@@ -86,6 +87,9 @@ static uint16_t _dir_positions[DIRECTIONAL_SERVO_CNT];
 //
 /** Array of Drive servos for use in the multi-servo calls */
 static uint8_t _drv_servo_ids[] = { SRVO_ID_DRV_LF, SRVO_ID_DRV_RF, SRVO_ID_DRV_LR, SRVO_ID_DRV_RR, SRVO_ID_DRV_LM, SRVO_ID_DRV_RM };
+/** Array of flags indicating if the servo is mounted in reverse (and therefore needs to run the 'other way') */
+static bool _drv_is_reverse[DRIVE_SERVO_CNT] = { false, true, false, true, false, true };
+/** Array of the calculated/specified drive speeds for each of the drive servos */
 static int16_t _drv_speeds[DRIVE_SERVO_CNT];
 
 /** @brief Flag indicating that the rover wheels are positioned for Rotate-In-Place */
@@ -171,12 +175,12 @@ static void _calc_drive_speeds(int16_t velo) {
     int16_t rcds = (int16_t)(srvospd * _spdfctr_cr);
     int16_t lsds = (int16_t)(srvospd * _spdfctr_sl);
     int16_t rsds = (int16_t)(srvospd * _spdfctr_sr);
-    _drv_speeds[SRVDRV_LF] = lsds;
-    _drv_speeds[SRVDRV_RF] = rsds;
-    _drv_speeds[SRVDRV_LR] = lsds;
-    _drv_speeds[SRVDRV_RR] = rsds;
-    _drv_speeds[SRVDRV_LM] = lcds;
-    _drv_speeds[SRVDRV_RM] = rcds;
+    _drv_speeds[SRVDRV_LF] = lsds * (_drv_is_reverse[SRVDRV_LF] ? -1 : 1);
+    _drv_speeds[SRVDRV_RF] = rsds * (_drv_is_reverse[SRVDRV_RF] ? -1 : 1);
+    _drv_speeds[SRVDRV_LR] = lsds * (_drv_is_reverse[SRVDRV_LR] ? -1 : 1);
+    _drv_speeds[SRVDRV_RR] = rsds * (_drv_is_reverse[SRVDRV_RR] ? -1 : 1);
+    _drv_speeds[SRVDRV_LM] = lcds * (_drv_is_reverse[SRVDRV_LM] ? -1 : 1);
+    _drv_speeds[SRVDRV_RM] = rcds * (_drv_is_reverse[SRVDRV_RM] ? -1 : 1);
 }
 
 /**
@@ -245,7 +249,7 @@ static bool _position_lr(uint16_t pos, uint16_t time) {
  * @return false The operation couldn't be performed (will keep trying)
  */
 static bool _position_rf(uint16_t pos, uint16_t time) {
-    if (servo_move(SRVO_ID_DIR_LF, pos, time)) {
+    if (servo_move(SRVO_ID_DIR_RF, pos, time)) {
         return true;
     }
     // Command couldn't be sent, post ourself a message to try again.
@@ -271,7 +275,7 @@ static bool _position_rf(uint16_t pos, uint16_t time) {
  * @return false The operation couldn't be performed (will keep trying)
  */
 static bool _position_rr(uint16_t pos, uint16_t time) {
-    if (servo_move(SRVO_ID_DIR_LR, pos, time)) {
+    if (servo_move(SRVO_ID_DIR_RR, pos, time)) {
         return true;
     }
     // Command couldn't be sent, post ourself a message to try again.
@@ -307,16 +311,22 @@ void servos_rip_speed(int16_t rsp) {
     // Top servo speed is 1000 (or -1000), so divide rsp by 10 to get a value
     // to use for the fastest wheels.
     if (_rip) {
-        int16_t srvospd = rsp / 10;
+        int16_t srvospd = (rsp / 10);
+        // Check for and eliminate creep
+        if (-8 < srvospd && srvospd < 8) {
+            srvospd = 0;
+        }
         int16_t srvospd_c = (int16_t)roundf((float)srvospd * _rip_spdfctr_c);
         // For rsp > 0 (clockwise): Right Side is Reverse, Left Side is Forward.
         // For rsp < 0 (anti-clockwise): Right Side is Forward, Left Side is Reverse.
+        //  However, the right servers are mounted in the reverse direction, so the
+        //  speed value can be used as-is and the wheels will rotate correctly.
         _drv_speeds[SRVDRV_LF] = srvospd;
-        _drv_speeds[SRVDRV_RF] = 0 - srvospd;
+        _drv_speeds[SRVDRV_RF] = srvospd;
         _drv_speeds[SRVDRV_LR] = srvospd;
-        _drv_speeds[SRVDRV_RR] = 0 - srvospd;
+        _drv_speeds[SRVDRV_RR] = srvospd;
         _drv_speeds[SRVDRV_LM] = srvospd_c;
-        _drv_speeds[SRVDRV_RM] = 0 - srvospd_c;
+        _drv_speeds[SRVDRV_RM] = srvospd_c;
         servo_run_group(_drv_servo_ids, _drv_speeds, DRIVE_SERVO_CNT);
     }
 }
@@ -430,21 +440,29 @@ void servos_housekeeping(void) {
 }
 
 void servos_start(void) {
+    rover_aux_pwr_on(true);
     servo_module_start();
     // Set all of the servos and then power them up.
     // For the directional (positional) servos, set their mode and limits.
     for (int i = 0; i < DIRECTIONAL_SERVO_CNT; i++) {
         uint8_t id = _dir_servo_ids[i];
-        servo_set_mode(id, BS_POSITION_MODE, 0);  // Mode to 'Position' with a speed of 0
+        servo_set_mode(id, BS_POSITION_MODE, 0);  // Mode to 'Position' (speed isn't used)
         servo_set_limits(id, DIRECTIONAL_SERVO_POS_MIN, DIRECTIONAL_SERVO_POS_MAX);
     }
-    // Move them to neutral positions slowly, so as to not cause undue force or movement.
     // Initialize all of the drive servos to DRIVE mode at 0 speed.
+    for (int i = 0; i < DRIVE_SERVO_CNT; i++) {
+        uint8_t id = _drv_servo_ids[i];
+        servo_set_mode(id, BS_MOTOR_MODE, 0);  // Mode to 'Position' with a speed of 0
+    }
+    // Move them to neutral positions slowly, so as to not cause undue force or movement.
     servos_zero_position(2000);
     // Power on all of the servos
     servo_load(SERVO_ALL_ID);
 }
 
+void servos_stop(void) {
+    rover_aux_pwr_on(false);
+}
 
 
 void servos_module_init(void) {
@@ -456,9 +474,13 @@ void servos_module_init(void) {
     _initialized = true;
 
     _velo_last = 0;
-    servos_zero_position(-1);
+    _rip_lfrr_pos = DIRECTIONAL_SERVO_POS_CENTER + roundf(rover_rip_angl() / servo_rads_per_unit);
+    _rip_rflr_pos = DIRECTIONAL_SERVO_POS_CENTER - roundf(rover_rip_angl() / servo_rads_per_unit);
     // Calculate the center/middle wheel speed factor for rotate-in-place
     _rip_spdfctr_c = rover_cp_t() / rover_cp_cnr_d(); // half the track divided by center to corner.
+
+    // Set the servos to Zero positions, but don't actually move the servos.
+    servos_zero_position(-1);
 
     servo_module_init();
 }

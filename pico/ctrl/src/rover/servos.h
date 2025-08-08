@@ -156,11 +156,21 @@ extern void servos_housekeeping(void);
  * @brief Starts the various servos on the rover.
  * @ingroup servo
  *
- * This should be called after the messaging system is up and running.
- * This reads the position, sets the position, and powers up all of the
- * servos on the rover.
+ * This turns on the Aux Power (it might already be on) and powers up all of the
+ * servos on the rover, then reads the position, sets the position,
  */
 extern void servos_start(void);
+
+/**
+ * @brief Stops the various servos on the rover.
+ * @ingroup servo
+ *
+ * ZZZ - Temp: This turns off the Aux Power. In the future the Aux Power might
+ * remain on, as the sensors also use it.
+ *
+ * Stop and turn off all of the servos.
+ */
+extern void servos_stop(void);
 
 /**
  * @brief Initialize the Serial Bus Servos (group) control module.

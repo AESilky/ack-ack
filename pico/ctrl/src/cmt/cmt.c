@@ -37,6 +37,7 @@ static proc_status_accum_t _psa[2];         // One Proc Status Accumulator for e
 static proc_status_accum_t _psa_sec[2];     // Proc Status Accumulator per second for each core
 
 static uint8_t _housekeep_rt;  // Incremented each ms. Generates a Housekeeping msg every 16ms (62.5Hz)
+static bool _housekeep_msg_pending;  // Indicates that a Housekeeping msg has been posted and is pending
 
 /** @brief The message handler(s) list. One entry for each (possible) message ID. Contains pointer to first handler link-list entry. */
 cmt_msg_hdlr_ll_ent_t* cmt_msg_hdlrs[MSG_ID_CNT];
@@ -52,6 +53,7 @@ cmt_schmsgdata_ll_ent_t* cmt_smd_ll;
 // ######################################################################################
 
 static void _cmt_handle_sleep(cmt_msg_t* msg);
+static void _housekeep_msg_hdlr(cmt_msg_t* msg);
 
 
 // ######################################################################################
@@ -90,15 +92,27 @@ static void _on_recurring_interrupt(void) {
         }
     }
     _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
-    if (_housekeep_rt == 0) {
+    if (_housekeep_rt == 0 && !_housekeep_msg_pending) {
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_PERIODIC_RT);
-        postBothMsgDiscardable(&msg);  // Periodic RT is discardable
+        cmt_msg_init2(&msg, MSG_PERIODIC_RT, _housekeep_msg_hdlr);
+        post_to_core0(&msg);  // Periodic RT is discardable
+        _housekeep_msg_pending = true;
+        post_to_core1_nowait(&msg);
     }
     // Clear the interrupt flag that brought us here so it can occur again.
     pwm_clear_irq(CMT_PWM_RECINT_SLICE);
 }
 
+
+// ######################################################################################
+// Message Handlers                                                                   ###
+// ######################################################################################
+
+static void _housekeep_msg_hdlr(cmt_msg_t* msg) {
+    // The Housekeeping message posted is being processed from the head of the queue,
+    // clear the pending flag so another message will be posted.
+    _housekeep_msg_pending = false;
+}
 
 // ######################################################################################
 // Local Methods                                                                      ###
@@ -205,24 +219,6 @@ void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
         }
         ent = ent->next;
     }
-}
-
-void cmt_msg_init(cmt_msg_t* msg, msg_id_t id) {
-    msg->id = id;
-    msg->hdlr = NULL_MSG_HDLR;
-    msg->n = 0;
-    msg->t = 0;
-}
-
-void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr) {
-    msg->id = id;
-    msg->hdlr = hdlr;
-    msg->n = 0;
-    msg->t = 0;
-}
-
-void cmt_msg_rm_set_hdlr(cmt_msg_t* msg) {
-    msg->hdlr = NULL;
 }
 
 void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
@@ -397,9 +393,9 @@ void message_loop(msg_handler_fn fstart) {
                 msg.hdlr(&msg);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
             }
-            else {
+            if (!msg.abort) {
                 cmt_msg_hdlr_ll_ent_t* handler_entry = cmt_msg_hdlrs[msg.id];
-                while (handler_entry) {
+                while (!msg.abort && handler_entry) {
                     if (handler_entry->corenum == corenum || handler_entry->corenum == MSG_HDLR_CORE_BOTH) {
                         // NOTE: Turning the LED on/off isn't core-safe (one could turn it on and the
                         // other turn it off), but it does help indicate that the message loops are
@@ -412,7 +408,7 @@ void message_loop(msg_handler_fn fstart) {
                     handler_entry = handler_entry->next;
                 }
             }
-            // No more handlers found for this message.
+            // No more handlers found for this message or abort was set.
             uint64_t now = now_us();
             uint64_t t_this_msg = now - t_start;
             psa->t_active += t_this_msg;

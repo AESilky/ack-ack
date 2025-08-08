@@ -19,11 +19,24 @@
 #include "board.h"
 #include "cmt/cmt.h"
 #include "rcrx/rcrx.h"
+#include "rover/servos.h"
 #include "util/util.h"  // For 'constrain' and other macros
 
 #include <math.h>
 
 #define RC_SW_STEADY_MS 550
+
+// ====================================================================
+// Method Declarations
+// ====================================================================
+
+static void _dc_msg_proc(cmt_msg_t* msg);
+static void _frr_msg_proc(cmt_msg_t* msg);
+
+
+// ====================================================================
+// Data
+// ====================================================================
 
 // Direct Control state
 static bool _dc;
@@ -72,7 +85,7 @@ static void _post_dc_chg() {
     if (!_dc_mp) {
         _dc_mp = true;
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_DIRECT_CTRL_CHG);
+        cmt_msg_init2(&msg, MSG_DIRECT_CTRL_CHG, _dc_msg_proc);
         msg.data.bv = _dc;
         postDCSMsg(&msg);
     }
@@ -106,6 +119,13 @@ static void _rc_rd_dc_state() {
         // If the state changed and the radio is in 'failsafe' post the
         // change message immediately.
         _dc_new = dc_now;
+        if (!dc_now) {
+            // If direct control is now off - stop the rover (ZZZ - This may change in the future)
+            servos_stop();
+        }
+        else {
+            servos_start();
+        }
         scheduled_msg_cancel2(MSG_EXEC, _dc_chg_delay); // Cancel any pending delay
         if (fs) {
             _dc = _dc_new;
@@ -126,7 +146,7 @@ static void _post_frr_chg() {
     if (!_frr_mp) {
         _frr_mp = true;
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_FORWARD_ROTATE_REVERSE_CHG);
+        cmt_msg_init2(&msg, MSG_FORWARD_ROTATE_REVERSE_CHG, _frr_msg_proc);
         msg.data.value16 = (int16_t)_frr;
         postDCSMsg(&msg);
     }
@@ -358,9 +378,6 @@ int16_t dcs_rc_yaw_raw() {
 void dcs_rc_start() {
     cmt_msg_hdlr_add(MSG_RC_RECEIVED, _handle_rcrx_update);
     cmt_msg_hdlr_add(MSG_RC_FAILSAFE_CHG, _handle_rcrx_failsafe_chg);
-    // Add handlers for our own messages to clear the pending flags
-    cmt_msg_hdlr_add(MSG_DIRECT_CTRL_CHG, _dc_msg_proc);
-    cmt_msg_hdlr_add(MSG_FORWARD_ROTATE_REVERSE_CHG, _frr_msg_proc);
 }
 
 void dcs_rc_module_init() {

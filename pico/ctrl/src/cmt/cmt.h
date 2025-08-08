@@ -27,15 +27,6 @@ typedef struct cmt_sm_counts_ {
     uint16_t core1;
 } cmt_sm_counts_t;
 
-// Define functional names for the 'Core' message queue functions (Camel-case to help flag as aliases).
-#define postHWRTMsg( pmsg )                     post_to_core0( pmsg )
-#define postHWRTMsgDiscardable( pmsg )          post_to_core0_nowait( pmsg )
-#define postDCSMsg( pmsg )                      post_to_core1( pmsg )
-#define postDCSMsgDiscardable( pmsg )           post_to_core1_nowait( pmsg )
-#define postHIDMsg( pmsg )                      post_to_core1( pmsg )
-#define postHIDMsgDiscardable( pmsg )           post_to_core1_nowait( pmsg )
-#define postBothMsgDiscardable( pmsg )          post_to_cores_nowait( pmsg )
-
 typedef struct _PROC_STATUS_ACCUM_ {
     volatile uint64_t ts_psa;                       // Timestamp of last PS Accumulator/sec update
     volatile uint64_t t_active;
@@ -44,41 +35,6 @@ typedef struct _PROC_STATUS_ACCUM_ {
     volatile msg_id_t msg_longest;
     volatile uint64_t t_msg_longest;
 } proc_status_accum_t;
-
-/**
- * @brief Initialize a CMT Message with Normal Priority so that it is ready to be posted.
- * @ingroup cmt
- *
- * This initializes the message with the ID and Normal Priority. It also NULLs out
- * the Handler Function pointer (correct for typical messages).
- *
- * @param msg Pointer to the Message to initialize
- * @param id Message ID
- */
-extern void cmt_msg_init(cmt_msg_t* msg, msg_id_t id);
-
-/**
- * @brief Initialize a CMT Message with a handler so that it is ready to be posted.
- * @ingroup cmt
- *
- * This initializes the message with the ID and a Handler Function pointer at normal priority.
- *
- * @param msg Pointer to the Message to initialize
- * @param id Message ID
- * @param hdlr Message handler function that will be used, rather than looking one up
- */
-extern void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr);
-
-/**
- * @brief Remove the (forced) message handler set on a message.
- *
- * This should be used when re-posting a message that has been handled by a
- * specific (forced) message handler (set in `init`) so that the handler will be
- * looked up by the message processor.
- *
- * @param msg The message to remove the handler from
- */
-extern void cmt_msg_rm_set_hdlr(cmt_msg_t* msg);
 
 /**
  * @brief Add (register) a handler for a message.

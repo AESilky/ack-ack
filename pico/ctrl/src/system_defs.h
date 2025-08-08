@@ -123,7 +123,7 @@ extern "C" {
 #define PIO_SENSBANK_IRQ_IDX     0              // PIO IRQ index for the sensbank
 
 // I2C is brought out to connectors to allow external devices like Spektrum XBUS, ADC Devices, etc.
-#define I2C_EXTERN              i2c0
+#define I2C_EXTERN              i2c1
 #define I2C_EXTERN_SDA           6              // DP-9  Serial Data
 #define I2C_EXTERN_SCL           7              // DP-10 Serial Clock
 #define I2C_EXTERN_CLK_SPEED     (200 * 1000)   // 200kHz (relaxed 'Fast-Mode', FM is 400kHz)
@@ -133,7 +133,12 @@ extern "C" {
 // See PIO section for PIO defines...
 #define RC_RXTEL_GPIO            9              // DP-12
 
-// Rotary Encoder Input
+// Sensor/Servo Power Control (Board0)
+#define AUX_PWR_CTRL            15              // DP-20
+#define SENSVO_PWR_OFF           0              // Disable is LOW
+#define SENSVO_PWR_ON            1              // Enable is HIGH
+
+// Rotary Encoder Input (Board1)
 // This is a A/B quadrature encoder that can be decoded using a PIO (must be sequential)
 #define ROTARY_A_GPIO           14              // DP-19
 #define ROTARY_B_GPIO           15              // DP-20
@@ -172,6 +177,15 @@ extern "C" {
 //
 #define SWITCH_LONGPRESS_MS 800     // 0.8 seconds (800ms) is considered a 'long press'
 #define SWITCH_REPEAT_MS 250        // If a switch is long-pressed, repeat it every 1/4 second.
+
+// The EEPROM is an I2C device on the Sensor board (which may or may not be present)
+#define EEPROM_ADDR1    0x50
+#define EEPROM_ADDR2    0x51
+
+// The Sensor board (which may or may not be present) has an ADC as an I2C device
+#define SB_ADC_ADDR1    0x48
+#define SB_ADC_ADDR2    0x49
+
 
 #ifdef __cplusplus
 }

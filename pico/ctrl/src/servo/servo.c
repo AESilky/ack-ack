@@ -633,7 +633,6 @@ bool servo_run_group(uint8_t id[], int16_t speed[], int count) {
     buf[4] = BS_SERVO_OR_MOTOR_MODE_WRITE;
     buf[5] = BS_MOTOR_MODE;
     buf[6] = 0;
-    return (_send_action_cmd(buf));
     for (int i = 0; i < count; i++) {
         buf[2] = id[i];
         buf[7] = lowByte((uint16_t)speed[i]);
@@ -730,6 +729,12 @@ bool servo_vin_read(servo_t* servo) {
     return (_send_rd_status_cmd(servo, buf));
 }
 
+void servo_module_start() {
+    _uart_drain();
+}
+
+
+
 void servo_module_init() {
     static bool _initialized = false;
 
@@ -763,8 +768,3 @@ void servo_module_init() {
     // Now enable the UART to send interrupts - RX only
     uart_set_irq_enables(SERVO_CTRL_UART, true, false);
 }
-
-void servo_module_start() {
-    _uart_drain();
-}
-

@@ -62,21 +62,13 @@ int main()
     if (board_init() != 0) {
         board_panic("Board init failed.");
     }
-    // Force setting Debug Mode based on Board Address (override User Switch)
+    // Force setting Debug Mode based on Board Address jumper (override User Switch)
     if (board_addr() == 0) {
         debug_mode_enable(false);
     }
     else {
         debug_mode_enable(true);
     }
-
-    // int8_t sb = -128;
-    // uint8_t  ub = -128;
-    // for (int i = 0; i < 256; i++) {
-    //     printf("signed byte: %d (%02X)  unsigned byte: %u (%02X)\n", sb, sb, ub, ub);
-    //     sb++;
-    //     ub++;
-    // }
 
     printf("%sACK-ACK Board %c%s\n", TERMX_START_RED_STR, board, TERMX_DEFAULT_COLOR_STR);
     led_on_off(say_hi);

@@ -97,6 +97,8 @@ static bool _running;
 static uint16_t _input;
 static int16_t _values[4];
 
+#define I2C_TIMEOUT 10000
+
 // ###############################################################################
 // ##                                                                           ##
 // ## Local Methods                                                             ##
@@ -108,7 +110,7 @@ static void _init_device() {
     buf[0] = REG_CONFIG;
     buf[1] = DEVICE_CFG_STOPPED_MSB;
     buf[2] = DEVICE_CFG_STOPPED_LSB;
-    i2c_write_blocking(_i2c, _addr, buf, 3, false);
+    i2c_write_timeout_per_char_us(_i2c, _addr, buf, 3, false, I2C_TIMEOUT);
 }
 
 static void _run_continuous(uint16_t input) {
@@ -117,7 +119,7 @@ static void _run_continuous(uint16_t input) {
     buf[0] = REG_CONFIG;
     buf[1] = DEVICE_CFG_RUNNING_MSB | aisel;
     buf[2] = DEVICE_CFG_RUNNING_LSB;
-    i2c_write_blocking(_i2c, _addr, buf, 3, false);
+    i2c_write_timeout_per_char_us(_i2c, _addr, buf, 3, false, I2C_TIMEOUT);
 }
 
 // ###############################################################################
@@ -129,9 +131,12 @@ static void _run_continuous(uint16_t input) {
 void adc1015_update() {
     if (_running) {
         uint8_t buf[3];
+        // Point to Conversion register
+        buf[0] = REG_CONVERSION;
+        i2c_write_timeout_us(_i2c, _addr, buf, 1, false, I2C_TIMEOUT);
         // Read the current value
-        i2c_read_blocking(_i2c, _addr, buf, 2, false);
-        _values[_input] = ((buf[0] << 8) | buf[1]);
+        i2c_read_timeout_us(_i2c, _addr, buf, 2, false, I2C_TIMEOUT);
+        _values[_input] = ((int16_t)((buf[0] << 8) | buf[1])) / 16; // Value is 12 bits
         // Move to the next input
         _input = ((_input + 1) & 0x00000003);
         _run_continuous(_input);
@@ -155,6 +160,12 @@ void adc1015_start() {
 
 int16_t adc1015_value(uint8_t input) {
     return _values[(input & 0x03)]; // Assure that the index is 0-3
+}
+
+float adc1015_volts(int16_t value) {
+    float v = (float)value * 0.002; // 2mV is the LSB when gain is set to 4.096V limit
+    v = ((v < 0) ? 0 : v);
+    return v;
 }
 
 

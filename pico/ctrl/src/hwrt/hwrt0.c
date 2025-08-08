@@ -15,6 +15,7 @@
 
 #include "cmt/cmt.h"
 #include "dcs/dcs.h"
+#include "eeprom/eeprom.h"
 #include "rcrx/rcrx.h"
 #include "util/util.h"
 
@@ -63,6 +64,22 @@ static void _handle_dcs_started(cmt_msg_t* msg) {
 static void _handle_hwrt_housekeeping(cmt_msg_t* msg) {
     static int cnt = 0;
 
+    // ZZZ - Test the EEPROM
+    uint8_t buf[33];
+    if (cnt >= 600) {
+        if ((cnt >= 700) && (cnt < 716)) {
+            // Write something to the EEPROM
+            buf[0] = (cnt & 0xFF);
+            eeprom_data_set(2, (10 + (cnt - 700)), buf, 1);
+        }
+        else if ((cnt > 1200) && (cnt % 300 == 0)) {
+            // Read the EEPROM
+            eeprom_data_get(1, 0, buf, 32);
+            buf[32] = 0xFF;
+            eeprom_data_get(2, 0, buf, 32);
+            buf[32] = 0x00;
+        }
+    }
     cnt++;
 }
 
@@ -73,14 +90,6 @@ static void _handle_hwrt_test(cmt_msg_t* msg) {
     cmt_msg_t msg_time = { MSG_HWRT_TEST };
     uint64_t period = 60;
 
-    // if (debug_mode_enabled()) {
-    //     uint64_t now = now_us();
-
-    //     uint64_t last_time = msg->data.ts_us;
-    //     int64_t error = ((now - last_time) - (period * 1000 * 1000));
-    //     float error_per_ms = ((error * 1.0) / (period * 1000.0));
-    //     info_printf("\n%5.5d - Scheduled msg delay error us/ms:%5.2f\n", times, error_per_ms);
-    // }
     msg_time.data.ts_us = now_us(); // Get the 'next' -> 'last_time' fresh
     schedule_msg_in_ms((period * 1000), &msg_time);
     times++;
