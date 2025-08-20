@@ -166,9 +166,9 @@ void rx_srxl2_mh_rx_msg_rcvd(cmt_msg_t* msg) {
     //
 
     // We need to abort the channel
-    dma_channel_abort(_rxcmn_dma_pio_rd);
+    dma_channel_abort(rxcmn_dma_pio_rd);
     // clear any spurious IRQ (if there was one)
-    dma_irqn_acknowledge_channel(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd);
+    dma_irqn_acknowledge_channel(IRQn_RCRX_DMA_FROM_PIO, rxcmn_dma_pio_rd);
     // Get the CRC value from the DMA for the dup/diff message indication
     uint32_t crc = dma_sniffer_get_data_accumulator();
 
@@ -201,14 +201,14 @@ static uint16_t _chval_raw_convert(uint16_t rval) {
 static void _enable_rx() {
     ledA_on(false);
     // Set up the message and handler to use for receiving RX messages
-    _rxcmn_mh_data_rdy = rxcmn_mh_rx_msg_proc;      // Message handler to process RC RX message.
-    _rxcmn_data_rdy_msg = MSG_RC_RX_RAW_MSG_RDY;        // Message for RC RX message received
-    _rxcmn_protocol_spec_proc = rx_srxl2_protocol_spec_proc;
-    _rxcmn_en_next_rx = _rx_srxl2_enable_next_msg;   // Set up both PIO-SMs and interrupts
-    _rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
+    rxcmn_mh_data_rdy = rxcmn_mh_rx_msg_proc;      // Message handler to process RC RX message.
+    rxcmn_data_rdy_msg = MSG_RC_RX_RAW_MSG_RDY;        // Message for RC RX message received
+    rxcmn_protocol_spec_proc = rx_srxl2_protocol_spec_proc;
+    rxcmn_en_next_rx = _rx_srxl2_enable_next_msg;   // Set up both PIO-SMs and interrupts
+    rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
 
     // Clear the Current and Previous message buffer CRCs
-    _rc_bufs.msg_bufs.crc32_last = 0u;
+    rc_bufs.msg_bufs.crc32_last = 0u;
 
     // Set up the interrupt for the PIO State Machines
     irq_set_exclusive_handler(PIO_RCRX_SYSIRQ_MSG, rx_srxl2_irq_pio_msgcmplt_handler);
@@ -217,32 +217,32 @@ static void _enable_rx() {
 
     irq_set_exclusive_handler(PIO_RCRX_SYSIRQ_ERR, rxcmn_irq_pio_rx_err_handler); // Set the IRQ handler
     irq_set_enabled(PIO_RCRX_SYSIRQ_ERR, false); // Disable the IRQ for now
-    pio_set_irqn_source_enabled(_rxcmn_pio_smrx_pocfg.pio, PIO_RCRX_IRQ_ERR_IDX, PIO_INTR_SM0_LSB, true); // Interrupt on IRQ-Bit0 set
+    pio_set_irqn_source_enabled(rxcmn_pio_smrx_pocfg.pio, PIO_RCRX_IRQ_ERR_IDX, PIO_INTR_SM0_LSB, true); // Interrupt on IRQ-Bit0 set
 
     //
-    uint piosmpc = piosm_pc(_rxcmn_pio_smrx_pocfg);
+    uint piosmpc = piosm_pc(rxcmn_pio_smrx_pocfg);
     printf("PIO-RX-SM  PC: %d\n", piosmpc);
     piosmpc = piosm_pc(_rx_srxl2_piosm_msg_cfg);
     printf("PIO-MSG-SM PC: %d\n", piosmpc);
 
     //
     // Init the PIO RD DMA to read from the Message PIO-SM when there is data ready
-    _rxcmn_dma_pio_rd_cfg = dma_channel_get_default_config(_rxcmn_dma_pio_rd); //Get configurations for the RC channel
-    channel_config_set_transfer_data_size(&_rxcmn_dma_pio_rd_cfg, DMA_SIZE_8); //Set RC PIO channel data transfer size to 8 bits
-    channel_config_set_read_increment(&_rxcmn_dma_pio_rd_cfg, false); // Read increment to false (read from PIO)
-    channel_config_set_write_increment(&_rxcmn_dma_pio_rd_cfg, true); // Write increment to true (advance through buffer)
-    channel_config_set_dreq(&_rxcmn_dma_pio_rd_cfg, PIO_RCRX_DREQ); //Set the transfer request signal to the MSG PIO-SM rx-fifo not empty.
+    rxcmn_dma_pio_rd_cfg = dma_channel_get_default_config(rxcmn_dma_pio_rd); //Get configurations for the RC channel
+    channel_config_set_transfer_data_size(&rxcmn_dma_pio_rd_cfg, DMA_SIZE_8); //Set RC PIO channel data transfer size to 8 bits
+    channel_config_set_read_increment(&rxcmn_dma_pio_rd_cfg, false); // Read increment to false (read from PIO)
+    channel_config_set_write_increment(&rxcmn_dma_pio_rd_cfg, true); // Write increment to true (advance through buffer)
+    channel_config_set_dreq(&rxcmn_dma_pio_rd_cfg, PIO_RCRX_DREQ); //Set the transfer request signal to the MSG PIO-SM rx-fifo not empty.
     // (bit-reverse) CRC32 sniff set-up
-    channel_config_set_sniff_enable(&_rxcmn_dma_pio_rd_cfg, true);
+    channel_config_set_sniff_enable(&rxcmn_dma_pio_rd_cfg, true);
     dma_sniffer_set_data_accumulator(CRC32_INIT);
     dma_sniffer_set_output_reverse_enabled(true);
     // Enable CRC generation of the data to check for new messages
-    dma_sniffer_enable(_rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
+    dma_sniffer_enable(rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
     //
     // Configure PIO RD DMA channel to read from the RXFIFO MSB and write to the Message Enqueue buffer.
-    dma_channel_configure(_rxcmn_dma_pio_rd, &_rxcmn_dma_pio_rd_cfg,
-        _rc_bufs.msg_bufs.msg_enqueue,  // Destination
-        (uint8_t*)&_rxcmn_pio_smrx_pocfg.pio->rxf[PIO_RC_SM_RX] + 3,  // PIO-SM RX FIFO to read from (+3 to read the MSB)
+    dma_channel_configure(rxcmn_dma_pio_rd, &rxcmn_dma_pio_rd_cfg,
+        rc_bufs.msg_bufs.msg_enqueue,  // Destination
+        (uint8_t*)&rxcmn_pio_smrx_pocfg.pio->rxf[PIO_RC_SM_RX] + 3,  // PIO-SM RX FIFO to read from (+3 to read the MSB)
         SRXL2_MAX_MSG_LEN + 1,          // SRXL2 maximum message length +1 (to assure the DMA doesn't end on its own)
                                         //  Message PIO pgm will interrupt us when done
                                         //  (this keeps processing the same even on max-len msg)
@@ -258,8 +258,8 @@ static void _enable_rx() {
     //
     // Configure PIO to PIO DMA channel to read from the RXFIFO of the RX PIO-SM and write to the TXFIFO of the MSG PIO-SM.
     dma_channel_configure(_dma_pio_to_pio, &_dma_pio_to_pio_cfg,
-        (uint8_t*)&_rxcmn_pio_smrx_pocfg.pio->txf[PIO_RC_SM_RX],     // PIO-SM MSG TXFIFO to write to
-        (uint8_t*)&_rxcmn_pio_smrx_pocfg.pio->rxf[PIO_RC_SM_SRXL2_SI] + 3, // PIO-SM RX RXFIFO to read from (+3 to read the MSB)
+        (uint8_t*)&rxcmn_pio_smrx_pocfg.pio->txf[PIO_RC_SM_RX],     // PIO-SM MSG TXFIFO to write to
+        (uint8_t*)&rxcmn_pio_smrx_pocfg.pio->rxf[PIO_RC_SM_SRXL2_SI] + 3, // PIO-SM RX RXFIFO to read from (+3 to read the MSB)
         R2350_DMA_ENDLESS_XFERCOUNT,    // Endless transfer (RP2350 only)
         false);                         // Don't start yet
 
@@ -271,58 +271,58 @@ static void _enable_rx() {
     //
     // Get ready to receive messages
     _frames_lost = 0;
-    _rcrx_lerr_tms = 0;
-    _rcrx_msg_cnt = 0;
-    _rcrx_msg_while_busy_cnt = 0;
-    _rcrx_msg_same_data_cnt = 0;
+    rcrx_lerr_tms = 0;
+    rcrx_msg_cnt = 0;
+    rcrx_msg_while_busy_cnt = 0;
+    rcrx_msg_same_data_cnt = 0;
 
     // To help with debugging, fill the receive buffers with known values
     if (debug_mode_enabled()) {
-        memset((void*)_rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
+        memset((void*)rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
     }
     //
     // Restart the MSG PIO-SM so that it is waiting for the beginning of a message
     piosm_reset(_rx_srxl2_piosm_msg_cfg);
     // Restart the PIO-SM so that it is waiting for the RX idle period.
-    piosm_reset(_rxcmn_pio_smrx_pocfg);
+    piosm_reset(rxcmn_pio_smrx_pocfg);
     //
     // Now start the DMAs and PIO-SMs
-    dma_channel_start(_rxcmn_dma_pio_rd);
+    dma_channel_start(rxcmn_dma_pio_rd);
     dma_channel_start(_dma_pio_to_pio);
     pio_sm_set_enabled(_rx_srxl2_piosm_msg_cfg.pio, _rx_srxl2_piosm_msg_cfg.sm, true);
-    pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, true);
+    pio_sm_set_enabled(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm, true);
     // When a full message has been received the MSG PIO will interrupt and post a message.
-    // Use a sleep to periodically print the PIO-SM-PC
-    cmt_sleep_ms(3000, rxcmn_list_pio_dma_state, (void*)1);
+    // Use a run-after to periodically print the PIO-SM-PC
+    cmt_run_after_ms(3000, rxcmn_list_pio_dma_state, (void*)1);
     return;
 }
 
 static void _rx_srxl2_enable_next_msg() {
     //
     // Reset the PIO-SM's so they are waiting for the idle period and beginning of message.
-    pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, false);
+    pio_sm_set_enabled(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm, false);
     pio_sm_set_enabled(_rx_srxl2_piosm_msg_cfg.pio, _rx_srxl2_piosm_msg_cfg.sm, false);
-    piosm_reset(_rxcmn_pio_smrx_pocfg);
+    piosm_reset(rxcmn_pio_smrx_pocfg);
     piosm_reset(_rx_srxl2_piosm_msg_cfg);
 
     // For debugging, fill the buffer with a known value
     if (debug_mode_enabled()) {
-        memset((void*)_rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
+        memset((void*)rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
     }
     //
     // (bit-reverse) CRC32 sniff set-up
-    channel_config_set_sniff_enable(&_rxcmn_dma_pio_rd_cfg, false);
+    channel_config_set_sniff_enable(&rxcmn_dma_pio_rd_cfg, false);
     dma_sniffer_set_data_accumulator(CRC32_INIT);
-    channel_config_set_sniff_enable(&_rxcmn_dma_pio_rd_cfg, true);
+    channel_config_set_sniff_enable(&rxcmn_dma_pio_rd_cfg, true);
     dma_sniffer_set_output_reverse_enabled(true);
     // Enable CRC generation of the data to check for new messages
-    dma_sniffer_enable(_rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
+    dma_sniffer_enable(rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
     //
     // Now start the DMA and PIO-SM
-    _rxcmn_msg_processing = false;
-    dma_channel_set_write_addr(_rxcmn_dma_pio_rd, _rc_bufs.msg_bufs.msg_enqueue, true);
+    rxcmn_msg_processing = false;
+    dma_channel_set_write_addr(rxcmn_dma_pio_rd, rc_bufs.msg_bufs.msg_enqueue, true);
     pio_sm_set_enabled(_rx_srxl2_piosm_msg_cfg.pio, _rx_srxl2_piosm_msg_cfg.sm, true);
-    pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, true);
+    pio_sm_set_enabled(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm, true);
 }
 
 static void _rx_srxl2_pio_msg_deinit(pio_sm_pocfg sm_pocfg) {
@@ -395,16 +395,16 @@ static pio_sm_pocfg _rx_srxl2_pio_uart_init(PIO pio, uint sm, uint pin, uint bau
 static uint16_t rx_srxl2_protocol_spec_proc() {
     // Show that we are processing
     ledB_on(true);
-    //long same_data_cnt = _rcrx_msg_same_data_cnt;
-    _rcrx_msg_same_data_cnt = 0;
+    //long same_data_cnt = rcrx_msg_same_data_cnt;
+    rcrx_msg_same_data_cnt = 0;
 
     // Parse the received data into the _channel_state
-    uint8_t* db = (uint8_t*)&_rc_bufs.msg_bufs.msg_enqueue;
+    uint8_t* db = (uint8_t*)&rc_bufs.msg_bufs.msg_enqueue;
     uint8_t len = db[SRXL2_MSG_LEN_IDX];
     _srxlParsePacket(db, len);
 
     ledB_on(false);
-    _rxcmn_en_next_rx();
+    rxcmn_en_next_rx();
 
     return (0);
 }
@@ -593,16 +593,16 @@ void rx_srxl2_start() {
 
 void rx_srxl2_module_deinit() {
     // Stop and de-initialize the PIO-SMs
-    _rx_srxl2_pio_uart_deinit(_rxcmn_pio_smrx_pocfg);
-    _rx_srxl2_pio_msg_deinit(_rxcmn_pio_smrx_pocfg);
+    _rx_srxl2_pio_uart_deinit(rxcmn_pio_smrx_pocfg);
+    _rx_srxl2_pio_msg_deinit(rxcmn_pio_smrx_pocfg);
     // Remove the IRQ handlers
     irq_remove_handler(SYSIRQ_RCRX_DMA_FROM_PIO, rxcmn_irq_dma_from_pio);
     // Give the DMA Channels back.
-    dma_channel_unclaim(_rxcmn_dma_pio_rd);
-    _rxcmn_dma_pio_rd = -1;
+    dma_channel_unclaim(rxcmn_dma_pio_rd);
+    rxcmn_dma_pio_rd = -1;
     dma_channel_unclaim(_dma_pio_to_pio);
     _dma_pio_to_pio = -1;
-    _rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
+    rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
 
     _initialized = false;
 }
@@ -614,20 +614,20 @@ void rx_srxl2_module_init(uint baud, rcrx_state_t* channel_state) {
     _channel_state = channel_state;
     rxcmn_module_init(channel_state);
 
-    _rxcmn_mh_data_rdy = NULL_MSG_HDLR;     // No message handler to start.
-    _rxcmn_data_rdy_msg = MSG_HWRT_NOOP;    // No message to start with.
-    _rxcmn_protocol_spec_proc = NULL;       // No message handler to start.
+    rxcmn_mh_data_rdy = NULL_MSG_HDLR;     // No message handler to start.
+    rxcmn_data_rdy_msg = MSG_HWRT_NOOP;    // No message to start with.
+    rxcmn_protocol_spec_proc = NULL;       // No message handler to start.
 
     // Get a DMA channel that will take data from the PIO-SM RXFIFO,
-    _rxcmn_dma_pio_rd = dma_claim_unused_channel(true);
+    rxcmn_dma_pio_rd = dma_claim_unused_channel(true);
     // Get a DMA channel that will pull from PIO-SM RX RXFIFO and push it to PIO-SM MSG TXFIFO,
     _dma_pio_to_pio = dma_claim_unused_channel(true);
     // Configure the processor to run DMA from PIO routine when DMA IRQ1 is
     // asserted and DMA buffer transfer routine when DMA IRQ0 is asserted.
     irq_set_exclusive_handler(SYSIRQ_RCRX_DMA_FROM_PIO, rxcmn_irq_dma_from_pio);
 
-    _rxcmn_pio_smrx_pocfg = _rx_srxl2_pio_uart_init(PIO_RC_BLOCK, PIO_RC_SM_SRXL2_SI, RC_RXTEL_GPIO, baud);
-    if (_rxcmn_pio_smrx_pocfg.offset < 0) {
+    rxcmn_pio_smrx_pocfg = _rx_srxl2_pio_uart_init(PIO_RC_BLOCK, PIO_RC_SM_SRXL2_SI, RC_RXTEL_GPIO, baud);
+    if (rxcmn_pio_smrx_pocfg.offset < 0) {
         board_panic("RX SRXL2 could not load PIO-SM UART program!!!");
     }
     _rx_srxl2_piosm_msg_cfg = _rx_srxl2_pio_msg_init(PIO_RC_BLOCK, PIO_RC_SM_RX);

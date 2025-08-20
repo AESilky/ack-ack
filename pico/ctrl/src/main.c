@@ -62,12 +62,12 @@ int main()
     if (board_init() != 0) {
         board_panic("Board init failed.");
     }
-    // Force setting Debug Mode based on Board Address jumper (override User Switch)
-    if (board_addr() == 0) {
-        debug_mode_enable(false);
+    // Force setting Debug Mode based on Board jumper (override User Switch)
+    if (board_jumper() == 0) {
+        debug_mode_enable(true);
     }
     else {
-        debug_mode_enable(true);
+        debug_mode_enable(false);
     }
 
     printf("%sACK-ACK Board %c%s\n", TERMX_START_RED_STR, board, TERMX_DEFAULT_COLOR_STR);

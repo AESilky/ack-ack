@@ -9,6 +9,7 @@ target_sources(sensbank INTERFACE
 )
 
 target_link_libraries(sensbank INTERFACE
+    pio_uart
     hardware_i2c
     hardware_pio
     pico_stdlib

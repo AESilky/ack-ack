@@ -239,11 +239,11 @@ eeprom_op_status_t eeprom_data_set(uint8_t page, uint8_t start, uint8_t* buf, si
             }
         }
         // The page is (now) the buffered page, merge this data in.
-        memcpy(&_addr_data.data + start, buf, size);
+        memcpy((_addr_data.data + start), buf, size);
         _wr_needed = true;
         if (!_wr_msg_queued) {
             cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_EXEC, _schd_write_mh);
+            cmt_exec_init(&msg, _schd_write_mh);
             schedule_msg_in_ms(_wr_time_ms, &msg);
             _wr_msg_queued = true;
         }

@@ -142,7 +142,7 @@ static void _clear_servo_in_proc() {
     _servo_in_proc = SERVO_NONE;
     if (_waiting_on_busy_fn) {
         cmt_msg_t msg;
-        cmt_msg_init2(&msg, MSG_EXEC, _waiting_on_busy_fn);
+        cmt_exec_init(&msg, _waiting_on_busy_fn);
         _waiting_on_busy_fn = NULL_MSG_HDLR; // Clear out before posting
         if (_waiting_on_busy_core == 1) {
             post_to_core1(&msg);

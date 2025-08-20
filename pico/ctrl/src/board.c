@@ -177,7 +177,7 @@ int board_init() {
 
     // Initialize the SPI Ops module before any SPI operations
     spi_ops_module_init();
-    // Initialize the Expansion I/O chip so the other devices will work (including `board_addr` used below)
+    // Initialize the Expansion I/O chip so the other devices will work (including `board_jumper` used below)
     expio_module_init();
 
 #if HAS_RP2040_RTC
@@ -209,26 +209,31 @@ int board_init() {
     // Do board specific initialization based on ADDR 0 or 1
     //
 #if (BOARD_ADDR == 0)
-        // Sensor and Servo Power Control
-        //  Power Distribution board has an enable for 12V, 7.5V, and 5.0V outputs
-        gpio_set_function(AUX_PWR_CTRL, GPIO_FUNC_SIO);
-        gpio_set_dir(AUX_PWR_CTRL, GPIO_OUT);
-        gpio_set_drive_strength(AUX_PWR_CTRL, GPIO_DRIVE_STRENGTH_2MA);
-        //    Initial output state
-        gpio_put(AUX_PWR_CTRL, SENSVO_PWR_OFF);              // Start with Power Disabled
-        // UART Functions.
-        //  UART 0 is used for communication with the host (setup, commands, status)
-        //  UART 1 is used for controlling the Bus-Servos
-        //    Bus-Servo TX Enable
-        gpio_set_function(SERVO_CTRL_TX_EN_GPIO, GPIO_FUNC_SIO);
-        gpio_set_dir(SERVO_CTRL_TX_EN_GPIO, GPIO_OUT);
-        gpio_set_drive_strength(SERVO_CTRL_TX_EN_GPIO, GPIO_DRIVE_STRENGTH_2MA);
-        //    Initial output state
-        gpio_put(SERVO_CTRL_TX_EN_GPIO, SERVO_CTRL_TX_DIS);     // Bus-Servo TX Disabled
-        //    User Switch
-        gpio_set_function(SW_MAIN_USER_GPIO, GPIO_FUNC_SIO);
-        gpio_set_dir(SW_MAIN_USER_GPIO, GPIO_IN);
-        gpio_set_pulls(SW_MAIN_USER_GPIO, false, false);
+    // STOP input switch
+    gpio_set_function(STOP_INPUT_SW, GPIO_FUNC_SIO);
+    gpio_set_dir(STOP_INPUT_SW, GPIO_IN);
+    gpio_set_pulls(SW_MAIN_USER_GPIO, true, false);
+    // Sensor and Servo Power Control
+    //  Power Distribution board has an enable for 12V, 7.5V, and 5.0V outputs
+    gpio_set_function(AUX_PWR_CTRL, GPIO_FUNC_SIO);
+    gpio_put(AUX_PWR_CTRL, SENSVO_PWR_OFF);         // Start with Power Disabled
+    gpio_set_dir(AUX_PWR_CTRL, GPIO_OUT);
+    gpio_set_drive_strength(AUX_PWR_CTRL, GPIO_DRIVE_STRENGTH_2MA);
+    //    Initial output state
+    gpio_put(AUX_PWR_CTRL, SENSVO_PWR_OFF);         // Start with Power Disabled
+    // UART Functions.
+    //  UART 0 is used for communication with the host (setup, commands, status)
+    //  UART 1 is used for controlling the Bus-Servos
+    //    Bus-Servo TX Enable
+    gpio_set_function(SERVO_CTRL_TX_EN_GPIO, GPIO_FUNC_SIO);
+    gpio_set_dir(SERVO_CTRL_TX_EN_GPIO, GPIO_OUT);
+    gpio_set_drive_strength(SERVO_CTRL_TX_EN_GPIO, GPIO_DRIVE_STRENGTH_2MA);
+    //    Initial output state
+    gpio_put(SERVO_CTRL_TX_EN_GPIO, SERVO_CTRL_TX_DIS);     // Bus-Servo TX Disabled
+    //    User Switch
+    gpio_set_function(SW_MAIN_USER_GPIO, GPIO_FUNC_SIO);
+    gpio_set_dir(SW_MAIN_USER_GPIO, GPIO_IN);
+    gpio_set_pulls(SW_MAIN_USER_GPIO, false, false);
 #endif
     // This could be an else, but it's only done once and this allows for more than 0 & 1.
 #if (BOARD_ADDR == 1)
@@ -264,12 +269,6 @@ int board_init() {
 #endif
 
 
-    // Check the user input switch to see if it's pressed during startup.
-    //  If yes, set 'debug_mode_enabled'
-    if (user_switch_pressed()) {
-        debug_mode_enable(true);
-    }
-
     // Scan the I2C bus to see what devices (device at an address) are present
     _i2c_scan(I2C_EXTERN);
 
@@ -287,8 +286,8 @@ int board_init() {
     return(retval);
 }
 
-uint8_t board_addr(void) {
-    return eio_board_addr();
+uint8_t board_jumper(void) {
+    return eio_board_jumper();
 }
 
 void boot_to_bootsel() {
@@ -320,7 +319,7 @@ void led_flash(int ms) {
         _led_flash_cont(NULL);
     }
     else {
-        cmt_sleep_ms(ms, _led_flash_cont, NULL);
+        cmt_run_after_ms(ms, _led_flash_cont, NULL);
     }
 }
 
@@ -343,7 +342,7 @@ void led_on_off(const int32_t *pattern) {
             sleep_ms(off_time);
         }
         else {
-            cmt_sleep_ms(off_time, _led_on_off_cont, (void*)pattern);
+            cmt_run_after_ms(off_time, _led_on_off_cont, (void*)pattern);
         }
     }
 }

@@ -28,6 +28,25 @@ typedef struct SENSBANK_CAH_ {
     uint8_t prev_bits;
 } sensbank_cah_t;
 
+/**
+ * @brief Distance (cm) to obstacle for Sonar0, Sonar1, and LiDAR.
+ * 
+ * @param sonar0 Distance in centimeters from Sonar0 (rear)
+ * @param sonar0_ts Timestamp of the last valid distance read
+ * @param sonar1 Distance in centimeters from Sonar1 (front)
+ * @param sonar1_ts Timestamp of the last valid distance read
+ * @param lidar Distance in centimeters from LiDAR (front)
+ * @param lidar_ts Timestamp of the last valid distance read
+ */
+typedef struct SENSBANK_DIST_VALS_ {
+    uint16_t sonar0;
+    uint32_t sonar0_ts;
+    uint16_t sonar1;
+    uint32_t sonar1_ts;
+    uint16_t lidar;
+    uint32_t lidar_ts;
+} sensbank_dist_t;
+
 #ifdef __cplusplus
     }
 #endif

@@ -8,7 +8,9 @@
  *
 */
 #include "multicore.h"
-#include "hwrt/hwrt.h"   // For `core1_main`
+#include "cmt/cmt.h"
+#include "hwrt/hwrt.h"  // For `core1_main`
+#include "util/util.h"  // For 'lowByte'
 
 #include "board.h"
 #include "debug_support.h"
@@ -75,7 +77,18 @@ void post_to_core0(const cmt_msg_t* msg) {
     if (!posted) {
         _c0_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
-            board_panic("Req C0 msg could not post");
+            // We are going to halt (board panic), so print the message that is
+            // currently being processed by Core1.
+            save_and_disable_interrupts();
+            uint8_t id = lowByte(cmt_curlast_msg(1));
+            uint8_t pid = lowByte(m.id);
+            // Read and print all of the messages in the C1 queue.
+            cmt_msg_t cmsg;
+            while (queue_try_remove(&_core0_queue, &cmsg)) {
+                printf("\n %02X", (unsigned int)cmsg.id);
+            }
+            printf("\nReq Core0 msg '%02X' could not post. Current/Last C0 msg: %02X\n", (unsigned int)pid, (unsigned int)id);
+            board_panic("!!! HALTING !!!");
         }
     }
 }
@@ -100,7 +113,18 @@ void post_to_core1(const cmt_msg_t* msg) {
     if (!posted) {
         _c1_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
-            board_panic("Req C1 msg could not post");
+            // We are going to halt (board panic), so print the message that is
+            // currently being processed by Core1.
+            save_and_disable_interrupts();
+            uint8_t id = lowByte(cmt_curlast_msg(1));
+            uint8_t pid = lowByte(m.id);
+            // Read and print all of the messages in the C1 queue.
+            cmt_msg_t cmsg;
+            while (queue_try_remove(&_core1_queue, &cmsg)) {
+                printf("\n %02X", (unsigned int)cmsg.id);
+            }
+            printf("\nReq Core1 msg '%02X' could not post. Current/Last C1 msg: %02X\n", (unsigned int)pid, (unsigned int)id);
+            board_panic("!!! HALTING !!!");
         }
     }
 }

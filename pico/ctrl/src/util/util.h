@@ -15,6 +15,11 @@ extern "C" {
 #include <stdint.h>
 #include "pico/types.h"
 
+#ifdef UNUSED
+#undef UNUSED
+#endif
+#define UNUSED(x) (void)(x)
+
 #define PI              3.1415926535897932384626433832795
 #define HALF_PI         1.5707963267948966192313216916398
 #define TWO_PI          6.283185307179586476925286766559
@@ -35,11 +40,14 @@ extern "C" {
 #define radians(deg)            ((deg)*DEG_TO_RAD)
 #define degrees(rad)            ((rad)*RAD_TO_DEG)
 #define sq(x)                   ((x)*(x))
+//
+#define cmFromIn(in)            ((in)*(2.54))
+#define inFromCm(cm)            ((cm)/(2.54))
 
 #define lowByte(w)              ((uint8_t) ((w) & 0xff))
 #define highByte(w)             ((uint8_t) ((w) >> 8))
-/* Macro Function: A as higher 8 bits, B as lower 8 bits, as 16 bits integer */
-#define wordFromBytes(a, b) ((uint16_t)((((uint16_t)(a)) << 8) | (uint8_t)(b)))
+/* Macro Function: H as higher 8 bits, L as lower 8 bits, as 16 bits integer */
+#define wordFromBytes(h, l) ((uint16_t)((((uint16_t)(h)) << 8) | (uint8_t)(l)))
 
 #define bitRead(value, bit)     (((value) >> (bit)) & 0x01)
 #define bitSet(value, bit)      ((value) |= (1UL << (bit)))

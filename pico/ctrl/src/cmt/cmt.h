@@ -37,6 +37,14 @@ typedef struct _PROC_STATUS_ACCUM_ {
 } proc_status_accum_t;
 
 /**
+ * @brief The Current/Last message processed for a core.
+ *
+ * @param core The core [0|1]
+ * @return msg_id_t The ID of the message
+ */
+msg_id_t cmt_curlast_msg(int core);
+
+/**
  * @brief Add (register) a handler for a message.
  *
  * This adds (registers) a handler to be called when a message is being processed. The
@@ -91,6 +99,16 @@ extern void cmt_msg_hdlr_rm(msg_id_t id, msg_handler_fn hdlr);
 extern void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum);
 
 /**
+ * @brief Verify that all of the message handler entries are valid.
+ * @ingroup cmt
+ *
+ * Primarily for DEBUGGING
+ * This checks that all of the message handler entries are either NULL or are from within
+ * the 'mhllent_pool'. It executes a board_panic if it finds an invalid entry.
+ */
+extern void cmt_msg_hdlrs_verify();
+
+/**
  * @brief Indicates if the Core-0 message loop has been started.
  * @ingroup cmt
  *
@@ -126,14 +144,17 @@ extern bool cmt_message_loops_running();
 extern void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum);
 
 /**
- * @brief Sleep for milliseconds and call a function.
+ * @brief Run a method after a period of milliseconds.
  * @ingroup cmt
+ *
+ * The method is called in a message handler context. This is easier to use than a
+ * scheduled message, but cannot be cancelled (which scheduled message allows).
  *
  * @param ms The time in milliseconds from now.
  * @param sleep_fn The function to call when the time expires.
  * @param user_data A pointer to user data that the 'sleep_fn' will be called with.
  */
-extern void cmt_sleep_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data);
+extern void cmt_run_after_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data);
 
 /**
  * @brief Schedule a message to post to Core-0 in the future.
@@ -208,6 +229,20 @@ extern int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr)
  * @return True if there is a scheduled message for the ID.
  */
 extern bool scheduled_msg_exists(msg_id_t sched_msg_id);
+
+/**
+ * @brief Indicate if a scheduled message exists for a message ID and specified handler.
+ * @ingroup cmt
+ *
+ * Typically, this is used to keep from adding a scheduled message if one already exists.
+ * This is typically used to check for a 'MSG_EXEC' that has a handler function specified,
+ * as there could be multiple 'MSG_EXEC' messages scheduled.
+ *
+ * @param sched_msg_id The ID of the message that was scheduled.
+ * @param hdlr The handler function that was specified for the scheduled message.
+ * @return True if there is a scheduled message for the ID.
+ */
+extern bool scheduled_msg_exists2(msg_id_t sched_msg_id, msg_handler_fn hdlr);
 
 /**
  * @brief The number of scheduled messages waiting.

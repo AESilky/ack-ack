@@ -62,11 +62,12 @@ static void _handle_dcs_started(cmt_msg_t* msg) {
  * @param msg Nothing important in the message.
  */
 static void _handle_hwrt_housekeeping(cmt_msg_t* msg) {
-    static int cnt = 0;
+    static uint cnt = 0;
 
     // ZZZ - Test the EEPROM
     uint8_t buf[33];
     if (cnt >= 600) {
+//    if (cnt < 0) {
         if ((cnt >= 700) && (cnt < 716)) {
             // Write something to the EEPROM
             buf[0] = (cnt & 0xFF);

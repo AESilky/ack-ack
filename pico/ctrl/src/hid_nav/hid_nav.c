@@ -108,7 +108,7 @@ static void _input_sw_irq_handler(uint32_t events) {
 //
 static void _disp_proc_status(void* data) {
     // Output status every 7 seconds
-    cmt_sleep_ms(7000, _disp_proc_status, NULL);
+    cmt_run_after_ms(7000, _disp_proc_status, NULL);
     // Output the current state
     for (int i = 0; i < 2; i++) {
         proc_status_accum_t psa;
@@ -320,5 +320,5 @@ void start_hid_nav(void) {
     neopix_start();
     //
     // Output status every 7 seconds
-    //cmt_sleep_ms(7000, _disp_proc_status, NULL);
+    //cmt_run_after_ms(7000, _disp_proc_status, NULL);
 }

@@ -1,4 +1,4 @@
-# Library: pio_uart (obj only)
+# Library: rcrx (obj only)
 add_library(rcrx INTERFACE)
 
 pico_generate_pio_header(rcrx ${CMAKE_CURRENT_LIST_DIR}/rx_sbus.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)

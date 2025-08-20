@@ -34,17 +34,17 @@ typedef enum MSG_ID_ {
     // Common messages 0x00 - 0x5F (used by both HWRT and DCS/HID)
     MSG_NOOP = 0x00,
     MSG_LOOP_STARTED,
+    MSG_HWRT_STARTED,
+    MSG_DCS_STARTED,
+    MSG_HID_STARTED,
+    MSG_PERIODIC_RT,        // Periodic Repeating Time - Every 16ms (62.5Hz)
+    MSG_CMT_SLEEP,
     MSG_EXEC,               // General purpose message that can be used when specifying a handler.
     MSG_CONFIG_CHANGED,
-    MSG_CMT_SLEEP,
-    MSG_DCS_STARTED,
     MSG_DEBUG_CHANGED,
-    MSG_HID_STARTED,
-    MSG_HWRT_STARTED,
-    MSG_INPUT_SW_DEBOUNCE,
     MSG_INPUT_SW_PRESS,
+    MSG_INPUT_SW_DEBOUNCE,
     MSG_INPUT_SW_RELEASE,
-    MSG_PERIODIC_RT,        // Periodic Repeating Time - Every 16ms (62.5Hz)
     MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed
     MSG_RC_RECEIVED,        // A Radio Control message has been received and processed (ready for use)
     MSG_SENSBANK_CHG,
@@ -56,7 +56,7 @@ typedef enum MSG_ID_ {
     // Hardware-Runtime (HWRT) messages 0x60 - 0xBF
     MSG_HWRT_NOOP = 0x60,
     MSG_HWRT_TEST,
-    MSG_MAIN_USER_SWITCH_PRESS,
+    MSG_ALERT_SW_PRESS, // The 'ALERT' (Red) Switch was pressed
     MSG_RC_DETECTING,   // Radio Control BAUD & Protocol being detected
     MSG_RC_DETECT_DA,   // Radio Control Detect - Data Available
     MSG_RC_DETECTED,    // Radio Control BAUD & Protocol detected
@@ -75,9 +75,10 @@ typedef enum MSG_ID_ {
     MSG_HID_NOOP = 0xC0,
     MSG_DCS_TEST,
     MSG_DIRECT_CTRL_CHG,
-    MSG_DISPLAY_MESSAGE,
     MSG_FORWARD_ROTATE_REVERSE_CHG,
     MSG_ROTARY_CHG,
+    MSG_ROTARY_SW_PRESS,
+    MSG_DISPLAY_MESSAGE,
 } msg_id_t;
 #define MSG_ID_CNT (0x100)
 
@@ -150,6 +151,22 @@ typedef struct CMT_MSG_ {
     uint32_t n;
     uint32_t t;
 } cmt_msg_t;
+
+static inline void cmt_msg_init_ctrl(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr, bool abort);
+
+/**
+ * @brief Initialize a CMT Message for 'EXEC'ing a specified handler (only).
+ * @ingroup cmt
+ *
+ * This is a shortcut of using a cmt_init_... method specifying MSG_EXEC as the message with
+ * a specific handler and setting the 'abort' flag true to only run the specified handler.
+ *
+ * @param msg Pointer to the Message to initialize
+ * @param hdlr Message handler function that will be used first
+ */
+static inline void cmt_exec_init(cmt_msg_t* msg, msg_handler_fn exec_hdlr) {
+    cmt_msg_init_ctrl(msg, MSG_EXEC, exec_hdlr, true);
+}
 
 /**
  * @brief Initialize a CMT Message with Normal Priority so that it is ready to be posted.

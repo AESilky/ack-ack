@@ -22,7 +22,7 @@ static void _gpio_event_string(char* buf, uint32_t events);
 void re_pbsw_irq_handler(uint32_t gpio, uint32_t events) {
     if (events & GPIO_IRQ_EDGE_FALL) {
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_MAIN_USER_SWITCH_PRESS);
+        cmt_msg_init(&msg, MSG_ROTARY_SW_PRESS);
         postHWRTMsg(&msg);
     }
     if (events & GPIO_IRQ_EDGE_RISE) {

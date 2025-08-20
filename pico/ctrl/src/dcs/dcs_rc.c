@@ -39,8 +39,8 @@ static void _frr_msg_proc(cmt_msg_t* msg);
 // ====================================================================
 
 // Direct Control state
-static bool _dc;
-static bool _dc_new;            // For debouncing
+static volatile bool _dc;
+static volatile bool _dc_new;   // For debouncing
 static volatile bool _dc_mp;    // Direct Control MSG Pending
 // Direct Control Channel
 static uint8_t _dcch;
@@ -106,7 +106,7 @@ static void _dc_chg_delay(cmt_msg_t* msg) {
  * @brief Read the 'Direct Control' state value from the RC Channel Buffer.
  *
  * If the RC Buffer indicates that it is in 'Fail-Safe' turn 'Direct Control'
- * off.
+ * off immediately.
  */
 static void _rc_rd_dc_state() {
     const rcrx_state_t* chst = rcrx_get_ch_state();
@@ -119,15 +119,10 @@ static void _rc_rd_dc_state() {
         // If the state changed and the radio is in 'failsafe' post the
         // change message immediately.
         _dc_new = dc_now;
-        if (!dc_now) {
-            // If direct control is now off - stop the rover (ZZZ - This may change in the future)
-            servos_stop();
-        }
-        else {
-            servos_start();
-        }
         scheduled_msg_cancel2(MSG_EXEC, _dc_chg_delay); // Cancel any pending delay
         if (fs) {
+            // If failsafe - stop the rover (ZZZ - This may change in the future)
+            servos_stop();
             _dc = _dc_new;
             _post_dc_chg();
         }
@@ -135,7 +130,7 @@ static void _rc_rd_dc_state() {
             // We want to wait for the value to be consistent for the
             // 'settle' time.
             cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_EXEC, _dc_chg_delay);
+            cmt_exec_init(&msg, _dc_chg_delay);
             msg.data.bv = dc_now;
             schedule_msg_in_ms(RC_SW_STEADY_MS, &msg);
         }
@@ -192,7 +187,7 @@ static void _rc_rd_frr_control() {
             // We want to wait for the value to be consistent for the
             // 'settle' time.
             cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_EXEC, _frr_chg_delay);
+            cmt_exec_init(&msg, _frr_chg_delay);
             msg.data.value16 = frr_now;
             schedule_msg_in_ms(RC_SW_STEADY_MS, &msg);
         }

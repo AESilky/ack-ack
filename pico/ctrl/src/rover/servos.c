@@ -204,7 +204,7 @@ static bool _position_lf(uint16_t pos, uint16_t time) {
     cmt_msg_t msg;
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
-    cmt_msg_init2(&msg, MSG_EXEC, _position_lf_mh);
+    cmt_exec_init(&msg, _position_lf_mh);
     postHWRTMsg(&msg);
     return false;
 }
@@ -230,7 +230,7 @@ static bool _position_lr(uint16_t pos, uint16_t time) {
     cmt_msg_t msg;
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
-    cmt_msg_init2(&msg, MSG_EXEC, _position_lr_mh);
+    cmt_exec_init(&msg, _position_lr_mh);
     postHWRTMsg(&msg);
     return false;
 }
@@ -256,7 +256,7 @@ static bool _position_rf(uint16_t pos, uint16_t time) {
     cmt_msg_t msg;
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
-    cmt_msg_init2(&msg, MSG_EXEC, _position_rf_mh);
+    cmt_exec_init(&msg, _position_rf_mh);
     postHWRTMsg(&msg);
     return false;
 }
@@ -282,7 +282,7 @@ static bool _position_rr(uint16_t pos, uint16_t time) {
     cmt_msg_t msg;
     msg.data.servo_params.pos = pos;
     msg.data.servo_params.time = time;
-    cmt_msg_init2(&msg, MSG_EXEC, _position_rr_mh);
+    cmt_exec_init(&msg, _position_rr_mh);
     postHWRTMsg(&msg);
     return false;
 }
