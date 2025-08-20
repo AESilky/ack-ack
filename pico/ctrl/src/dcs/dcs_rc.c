@@ -19,14 +19,28 @@
 #include "board.h"
 #include "cmt/cmt.h"
 #include "rcrx/rcrx.h"
+#include "rover/servos.h"
+#include "util/util.h"  // For 'constrain' and other macros
 
 #include <math.h>
 
 #define RC_SW_STEADY_MS 550
 
+// ====================================================================
+// Method Declarations
+// ====================================================================
+
+static void _dc_msg_proc(cmt_msg_t* msg);
+static void _frr_msg_proc(cmt_msg_t* msg);
+
+
+// ====================================================================
+// Data
+// ====================================================================
+
 // Direct Control state
-static bool _dc;
-static bool _dc_new;            // For debouncing
+static volatile bool _dc;
+static volatile bool _dc_new;   // For debouncing
 static volatile bool _dc_mp;    // Direct Control MSG Pending
 // Direct Control Channel
 static uint8_t _dcch;
@@ -71,7 +85,7 @@ static void _post_dc_chg() {
     if (!_dc_mp) {
         _dc_mp = true;
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_DIRECT_CTRL_CHG);
+        cmt_msg_init2(&msg, MSG_DIRECT_CTRL_CHG, _dc_msg_proc);
         msg.data.bv = _dc;
         postDCSMsg(&msg);
     }
@@ -92,7 +106,7 @@ static void _dc_chg_delay(cmt_msg_t* msg) {
  * @brief Read the 'Direct Control' state value from the RC Channel Buffer.
  *
  * If the RC Buffer indicates that it is in 'Fail-Safe' turn 'Direct Control'
- * off.
+ * off immediately.
  */
 static void _rc_rd_dc_state() {
     const rcrx_state_t* chst = rcrx_get_ch_state();
@@ -107,6 +121,8 @@ static void _rc_rd_dc_state() {
         _dc_new = dc_now;
         scheduled_msg_cancel2(MSG_EXEC, _dc_chg_delay); // Cancel any pending delay
         if (fs) {
+            // If failsafe - stop the rover (ZZZ - This may change in the future)
+            servos_stop();
             _dc = _dc_new;
             _post_dc_chg();
         }
@@ -114,7 +130,7 @@ static void _rc_rd_dc_state() {
             // We want to wait for the value to be consistent for the
             // 'settle' time.
             cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_EXEC, _dc_chg_delay);
+            cmt_exec_init(&msg, _dc_chg_delay);
             msg.data.bv = dc_now;
             schedule_msg_in_ms(RC_SW_STEADY_MS, &msg);
         }
@@ -125,7 +141,7 @@ static void _post_frr_chg() {
     if (!_frr_mp) {
         _frr_mp = true;
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_FORWARD_ROTATE_REVERSE_CHG);
+        cmt_msg_init2(&msg, MSG_FORWARD_ROTATE_REVERSE_CHG, _frr_msg_proc);
         msg.data.value16 = (int16_t)_frr;
         postDCSMsg(&msg);
     }
@@ -171,7 +187,7 @@ static void _rc_rd_frr_control() {
             // We want to wait for the value to be consistent for the
             // 'settle' time.
             cmt_msg_t msg;
-            cmt_msg_init2(&msg, MSG_EXEC, _frr_chg_delay);
+            cmt_exec_init(&msg, _frr_chg_delay);
             msg.data.value16 = frr_now;
             schedule_msg_in_ms(RC_SW_STEADY_MS, &msg);
         }
@@ -204,12 +220,12 @@ static void _rc_rd_yawthrt() {
     int16_t yraw = chst->ch_data[_yawch].v;
     int16_t traw = chst->ch_data[_thrtch].v;
     //
-    // Adjust raw values
+    // Constrain/Adjust raw values
     int16_t yadj = yraw + 10000; // Move value up to 0~20000 (from -10000~0~10000)
-    yadj = ((yadj < 0) ? 0 : ((yadj > 20000) ? 20000 : yadj));
+    yadj = constrain(yadj, 0, 20000);
     traw += 10000; // Move value up to 0~20000 (from -10000~0~10000)
     float tp = ((traw <= 0) ? 0.0f : ((traw > 20000) ? 100.0f : ((float)traw / 198.0f))); // Bump the 100% value a bit
-    yraw = ((yraw < -10000) ? -10000 : ((yraw > 10000) ? 10000 : yraw));
+    yraw = constrain(yraw, -10000, 10000);
     //
     // Calculate the yaw servo value
     float yc = (float)yadj * _yawadj;
@@ -357,9 +373,6 @@ int16_t dcs_rc_yaw_raw() {
 void dcs_rc_start() {
     cmt_msg_hdlr_add(MSG_RC_RECEIVED, _handle_rcrx_update);
     cmt_msg_hdlr_add(MSG_RC_FAILSAFE_CHG, _handle_rcrx_failsafe_chg);
-    // Add handlers for our own messages to clear the pending flags
-    cmt_msg_hdlr_add(MSG_DIRECT_CTRL_CHG, _dc_msg_proc);
-    cmt_msg_hdlr_add(MSG_FORWARD_ROTATE_REVERSE_CHG, _frr_msg_proc);
 }
 
 void dcs_rc_module_init() {

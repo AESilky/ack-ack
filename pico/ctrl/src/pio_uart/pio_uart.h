@@ -16,10 +16,20 @@
 extern "C" {
 #endif
 
+#include "pio_sm.h"
+
 #include "hardware/pio.h"
 
 #include <stdbool.h>
 #include <stdint.h>
+
+/**
+ * @brief Set the baud rate for the UART.
+ *
+ * @param smpocfg The State Machine, PIO, SM CFG
+ * @param baud The BAUD rate to set
+ */
+extern void pio_uart_baud_set(pio_sm_pocfg* smpocfg, uint baud);
 
 /**
  * @brief Initialize a PIO StateMachine to be used as a Serial UART Receiver.
@@ -28,11 +38,10 @@ extern "C" {
  *
  * @param pio The PIO to use
  * @param sm The StateMachine of the PIO
- * @param offset The program offset to use
  * @param pin The GPIO pin to receive data on
  * @param baud The BAUD rate to receive data at
  */
-extern void pio_uart_rx_init(PIO pio, uint sm, uint offset, uint pin, uint baud);
+extern pio_sm_pocfg pio_uart_rx_init(PIO pio, uint sm, uint pin, uint baud);
 
 #ifdef __cplusplus
     }  // extern "C"

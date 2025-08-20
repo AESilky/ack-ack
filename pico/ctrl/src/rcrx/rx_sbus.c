@@ -64,7 +64,7 @@ static void _debug_print_bufraw(const volatile uint8_t* buf);
 
 uint16_t rx_sbus_protocol_processor() {
     // Check that it appears to be valid (has the correct header and footer byte values)
-    volatile uint8_t* buf = _rc_bufs.msg_bufs.msg_enqueue;
+    volatile uint8_t* buf = rc_bufs.msg_bufs.msg_enqueue;
     uint16_t changes = 0;
     if (buf[SBUS_HEADER_IDX] != SBUS_HEADER_VALUE || buf[SBUS_FOOTER_IDX] != SBUS_FOOTER_VALUE) {
         rxcmn_update_error_count();
@@ -73,7 +73,7 @@ uint16_t rx_sbus_protocol_processor() {
     else {
         // Show that we are processing
         ledB_on(true);
-        _rcrx_msg_same_data_cnt = 0;
+        rcrx_msg_same_data_cnt = 0;
 
         // Process the channel data from the received message.
         int ch_index = 0;
@@ -259,7 +259,7 @@ uint16_t rx_sbus_protocol_processor() {
 
         ledB_on(false);
     }
-    _rxcmn_en_next_rx();
+    rxcmn_en_next_rx();
 
     return (changes);
 }
@@ -318,48 +318,48 @@ static void _debug_print_bufraw(const volatile uint8_t* buf) {
 static void _enable_rx() {
     ledA_on(false);
     // Set up the message and handler to use for receiving RX messages
-    _rxcmn_mh_data_rdy = rxcmn_mh_rx_msg_proc;      // Message handler to process RC RX message.
-    _rxcmn_data_rdy_msg = MSG_RC_RX_RAW_MSG_RDY;        // Message for RC RX message received
-    _rxcmn_protocol_spec_proc = rx_sbus_protocol_processor;
-    _rxcmn_en_next_rx = rxcmn_enable_next_msg;      // The 'common' processing does everything we need
-    _rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
+    rxcmn_mh_data_rdy = rxcmn_mh_rx_msg_proc;      // Message handler to process RC RX message.
+    rxcmn_data_rdy_msg = MSG_RC_RX_RAW_MSG_RDY;        // Message for RC RX message received
+    rxcmn_protocol_spec_proc = rx_sbus_protocol_processor;
+    rxcmn_en_next_rx = rxcmn_enable_next_msg;      // The 'common' processing does everything we need
+    rxcmn_proto_spec_rx_err_hndlr = NULL_MSG_HDLR;
 
     // Clear the message buffer CRC
-    _rc_bufs.msg_bufs.crc32_last = 0u;
+    rc_bufs.msg_bufs.crc32_last = 0u;
 
     // Set up the interrupt for the PIO State Machine
     irq_set_exclusive_handler(PIO_RCRX_SYSIRQ_ERR, rxcmn_irq_pio_rx_err_handler); // Set the IRQ handler
     irq_set_enabled(PIO_RCRX_SYSIRQ_ERR, false); // Disable the IRQ for now
-    pio_set_irqn_source_enabled(_rxcmn_pio_smrx_pocfg.pio, PIO_RCRX_IRQ_ERR_IDX, PIO_INTR_SM0_LSB, true); // Interrupt on IRQ-Bit0 set
+    pio_set_irqn_source_enabled(rxcmn_pio_smrx_pocfg.pio, PIO_RCRX_IRQ_ERR_IDX, PIO_INTR_SM0_LSB, true); // Interrupt on IRQ-Bit0 set
 
     //
-    uint piosmpc = piosm_pc(_rxcmn_pio_smrx_pocfg);
+    uint piosmpc = piosm_pc(rxcmn_pio_smrx_pocfg);
     printf("PIO-SM-PC: %d\n", piosmpc);
 
     //
     // Init the PIO RD DMA to read from the PIO when there is data ready
-    _rxcmn_dma_pio_rd_cfg = dma_channel_get_default_config(_rxcmn_dma_pio_rd); //Get configurations for the RC channel
-    channel_config_set_transfer_data_size(&_rxcmn_dma_pio_rd_cfg, DMA_SIZE_8); //Set RC PIO channel data transfer size to 8 bits
-    channel_config_set_read_increment(&_rxcmn_dma_pio_rd_cfg, false); // Read increment to false (read from PIO)
-    channel_config_set_write_increment(&_rxcmn_dma_pio_rd_cfg, true); // Write increment to true (advance through buffer)
-    channel_config_set_dreq(&_rxcmn_dma_pio_rd_cfg, PIO_RCRX_DREQ); //Set the transfer request signal to the PIO-SM rx-fifo not empty.
+    rxcmn_dma_pio_rd_cfg = dma_channel_get_default_config(rxcmn_dma_pio_rd); //Get configurations for the RC channel
+    channel_config_set_transfer_data_size(&rxcmn_dma_pio_rd_cfg, DMA_SIZE_8); //Set RC PIO channel data transfer size to 8 bits
+    channel_config_set_read_increment(&rxcmn_dma_pio_rd_cfg, false); // Read increment to false (read from PIO)
+    channel_config_set_write_increment(&rxcmn_dma_pio_rd_cfg, true); // Write increment to true (advance through buffer)
+    channel_config_set_dreq(&rxcmn_dma_pio_rd_cfg, PIO_RCRX_DREQ); //Set the transfer request signal to the PIO-SM rx-fifo not empty.
     // (bit-reverse) CRC32 sniff set-up
-    channel_config_set_sniff_enable(&_rxcmn_dma_pio_rd_cfg, true);
+    channel_config_set_sniff_enable(&rxcmn_dma_pio_rd_cfg, true);
     dma_sniffer_set_data_accumulator(CRC32_INIT);
     dma_sniffer_set_output_reverse_enabled(true);
     // Enable CRC generation of the data to check for new messages
-    dma_sniffer_enable(_rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
+    dma_sniffer_enable(rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
 
     //
     // Configure PIO RD DMA channel to read from the RXFIFO MSB and write to the Message Enqueue buffer.
-    dma_channel_configure(_rxcmn_dma_pio_rd, &_rxcmn_dma_pio_rd_cfg,
-        _rc_bufs.msg_bufs.msg_enqueue,  // Destination
-        (uint8_t*)&_rxcmn_pio_smrx_pocfg.pio->rxf[PIO_RC_SM_RX] + 3,  // PIO-SM RX FIFO to read from (+3 to read the MSB)
+    dma_channel_configure(rxcmn_dma_pio_rd, &rxcmn_dma_pio_rd_cfg,
+        rc_bufs.msg_bufs.msg_enqueue,  // Destination
+        (uint8_t*)&rxcmn_pio_smrx_pocfg.pio->rxf[PIO_RC_SM_RX] + 3,  // PIO-SM RX FIFO to read from (+3 to read the MSB)
         SBUS_MSG_LEN,                   // SBUS is fixed length.
         false);                         // Don't start yet
     //
     // Tell the DMA to raise its IRQ when the channel finishes a block
-    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd, true);
+    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, rxcmn_dma_pio_rd, true);
 
     // Enable the system interrupts
     irq_set_enabled(SYSIRQ_RCRX_DMA_FROM_PIO, true);
@@ -367,25 +367,25 @@ static void _enable_rx() {
     //
     // Get ready to receive messages
     _frames_lost = 0;
-    _rcrx_lerr_tms = 0;
-    _rcrx_msg_cnt = 0;
-    _rcrx_msg_while_busy_cnt = 0;
-    _rcrx_msg_same_data_cnt = 0;
+    rcrx_lerr_tms = 0;
+    rcrx_msg_cnt = 0;
+    rcrx_msg_while_busy_cnt = 0;
+    rcrx_msg_same_data_cnt = 0;
 
     // To help with debugging, fill the receive buffers with known values
     if (debug_mode_enabled()) {
-        memset((void*)_rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
+        memset((void*)rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
     }
     //
     // Restart the PIO-SM so that it is waiting for the idle period.
-    piosm_reset(_rxcmn_pio_smrx_pocfg);
+    piosm_reset(rxcmn_pio_smrx_pocfg);
     //
     // Now start the DMA and PIO-SM
-    dma_channel_start(_rxcmn_dma_pio_rd);
-    pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, PIO_RC_SM_RX, true);
+    dma_channel_start(rxcmn_dma_pio_rd);
+    pio_sm_set_enabled(rxcmn_pio_smrx_pocfg.pio, PIO_RC_SM_RX, true);
     // When a full message has been received the DMA will interrupt and post a message.
-    // Use a sleep to periodically print the PIO-SM-PC
-    cmt_sleep_ms(3000, rxcmn_list_pio_dma_state, (void*)1);
+    // Use a run-after to periodically print the PIO-SM-PC
+    cmt_run_after_ms(3000, rxcmn_list_pio_dma_state, (void*)1);
     return;
 }
 
@@ -446,12 +446,12 @@ void rx_sbus_start() {
 
 void rx_sbus_module_deinit() {
     // Stop and de-initialize the PIO-SM
-    _rx_sbus_pio_deinit(_rxcmn_pio_smrx_pocfg);
+    _rx_sbus_pio_deinit(rxcmn_pio_smrx_pocfg);
     // Remove the IRQ handlers
     irq_remove_handler(SYSIRQ_RCRX_DMA_FROM_PIO, rxcmn_irq_dma_from_pio);
     // Give the DMA Channels back.
-    dma_channel_unclaim(_rxcmn_dma_pio_rd);
-    _rxcmn_dma_pio_rd = -1;
+    dma_channel_unclaim(rxcmn_dma_pio_rd);
+    rxcmn_dma_pio_rd = -1;
 
     _initialized = false;
 }
@@ -463,18 +463,18 @@ void rx_sbus_module_init(uint baud, rcrx_state_t* channel_state) {
     _channel_state = channel_state;
     rxcmn_module_init(channel_state);
 
-    _rxcmn_mh_data_rdy = NULL_MSG_HDLR;     // No message handler to start.
-    _rxcmn_data_rdy_msg = MSG_HWRT_NOOP;    // No message to start with.
-    _rxcmn_protocol_spec_proc = NULL;       // No message handler to start.
+    rxcmn_mh_data_rdy = NULL_MSG_HDLR;     // No message handler to start.
+    rxcmn_data_rdy_msg = MSG_HWRT_NOOP;    // No message to start with.
+    rxcmn_protocol_spec_proc = NULL;       // No message handler to start.
 
     // Get a DMA channel that will take data from the PIO-SM RXFIFO,
-    _rxcmn_dma_pio_rd = dma_claim_unused_channel(true);
+    rxcmn_dma_pio_rd = dma_claim_unused_channel(true);
     // Configure the processor to run DMA from PIO routine when DMA IRQ1 is
     // asserted and DMA buffer transfer routine when DMA IRQ0 is asserted.
     irq_set_exclusive_handler(SYSIRQ_RCRX_DMA_FROM_PIO, rxcmn_irq_dma_from_pio);
 
-    _rxcmn_pio_smrx_pocfg = _rx_sbus_pio_init(PIO_RC_BLOCK, PIO_RC_SM_RX, RC_RXTEL_GPIO, baud);
-    if (_rxcmn_pio_smrx_pocfg.offset < 0) {
+    rxcmn_pio_smrx_pocfg = _rx_sbus_pio_init(PIO_RC_BLOCK, PIO_RC_SM_RX, RC_RXTEL_GPIO, baud);
+    if (rxcmn_pio_smrx_pocfg.offset < 0) {
         board_panic("RX SBUS could not load PIO-SM program!!!");
     }
 

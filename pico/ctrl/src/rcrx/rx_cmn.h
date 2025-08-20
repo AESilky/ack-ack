@@ -22,7 +22,7 @@ extern "C" {
  * @brief Function prototype for the enable_next_rx.
  */
 typedef void (*enrx_fn)(void);
-extern enrx_fn _rxcmn_en_next_rx;
+extern enrx_fn rxcmn_en_next_rx;
 
 /**
  * @brief Function prototype for protocol specific handling of RC RX frame/message received.
@@ -31,11 +31,11 @@ extern enrx_fn _rxcmn_en_next_rx;
  */
 typedef uint16_t (*rcrx_msg_rcvd_fn)();
 
-extern msg_handler_fn _rxcmn_proto_spec_rx_err_hndlr;
-extern msg_handler_fn _rxcmn_mh_data_rdy;  // Current message handler for RX Data Available
-extern rcrx_msg_rcvd_fn _rxcmn_protocol_spec_proc;  // Current handler for protocol specific processing
-extern msg_id_t _rxcmn_data_rdy_msg;
-extern volatile bool _rxcmn_msg_processing;
+extern msg_handler_fn rxcmn_proto_spec_rx_err_hndlr;
+extern msg_handler_fn rxcmn_mh_data_rdy;  // Current message handler for RX Data Available
+extern rcrx_msg_rcvd_fn rxcmn_protocol_spec_proc;  // Current handler for protocol specific processing
+extern msg_id_t rxcmn_data_rdy_msg;
+extern volatile bool rxcmn_msg_processing;
 
 // Memory Buffers for receiving and maintaining channel/control data
 //   We use this ordering of the RC_RX buffers to allow doing a
@@ -52,20 +52,20 @@ typedef union RCRX_BUFFERS_ {
     volatile uint32_t detect_buf[RC_DETECT_BUF_SIZE];
     rc_msg_bufs_t msg_bufs;
 } rc_bufs_t;
-extern rc_bufs_t _rc_bufs; // Global for debugging
+extern rc_bufs_t rc_bufs; // Global for debugging
 
-extern uint32_t _rcrx_lerr_tms;  // Time of the last error.
+extern uint32_t rcrx_lerr_tms;  // Time of the last error.
 
 // Message Counts
-extern uint32_t _rcrx_msg_cnt;
-extern uint32_t _rcrx_msg_while_busy_cnt;
-extern uint32_t _rcrx_msg_same_data_cnt;
+extern uint32_t rcrx_msg_cnt;
+extern uint32_t rcrx_msg_while_busy_cnt;
+extern uint32_t rcrx_msg_same_data_cnt;
 
 // RX PIO-SM and DMA Configurations
-extern int _rxcmn_dma_pio_rd;                     // DMA channel used to pull data from the PIO-SM
-extern dma_channel_config _rxcmn_dma_pio_rd_cfg;  // Keep the config so the channel is easy to re-run
-extern pio_sm_pocfg _rxcmn_pio_smrx_pocfg;        // Configuration for the PIO RX State Machine (the one receiving from the RX)
-extern dma_channel_config _rxcmn_dma_bc_cfg;      // Keep the config so the channel is easy to re-run
+extern int rxcmn_dma_pio_rd;                     // DMA channel used to pull data from the PIO-SM
+extern dma_channel_config rxcmn_dma_pio_rd_cfg;  // Keep the config so the channel is easy to re-run
+extern pio_sm_pocfg rxcmn_pio_smrx_pocfg;        // Configuration for the PIO RX State Machine (the one receiving from the RX)
+extern dma_channel_config rxcmn_dma_bc_cfg;      // Keep the config so the channel is easy to re-run
 
 // DMA CRC Seed value for checking received messages
 #define CRC32_INIT      ((uint32_t)-1l)

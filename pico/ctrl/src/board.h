@@ -36,12 +36,12 @@ extern "C" {
 extern int board_init(void);
 
 /**
- * @brief Get the board address (0=Main, 1=Secondary)
+ * @brief Get the board jumper (0=1-2, 1=2-3)
  * @ingroup board
  *
- * @return uint8_t 0=Main 1=Secondary
+ * @return uint8_t Jumper value
  */
-extern uint8_t board_addr(void);
+extern uint8_t board_jumper(void);
 
 /**
  * @brief Reboot the board into the 'BOOTSEL' state.

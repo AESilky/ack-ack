@@ -41,6 +41,7 @@
 #include "cmt/cmt.h"
 #include "debug_support.h"
 #include "display/display.h"
+#include "eeprom/eeprom.h"
 #include "expio/expio.h"
 #include "rcrx/rcrx.h"
 #include "spi_ops.h"
@@ -57,7 +58,7 @@ i2c_dev_ll_t* _i2c_devices;
 
 // Internal function declarations
 
-void _i2c_scan() {
+void _i2c_scan(i2c_inst_t* i2c) {
     for (int addr = 0; addr < (1 << 7); ++addr) {
         // Perform a 1-byte dummy read from the probe address. If a slave
         // acknowledges this address, the function returns the number of bytes
@@ -72,7 +73,7 @@ void _i2c_scan() {
         if ((addr & 0x78) == 0 || (addr & 0x78) == 0x78) {
             continue;
         }
-        ret = i2c_read_timeout_us(i2c_default, addr, &rxdata, 1, false, 1500);
+        ret = i2c_read_timeout_us(i2c, addr, &rxdata, 1, false, 500);
         if (ret >= 0) {
             // Allocate a device marker and save the address
             i2c_dev_ll_t *dev = (i2c_dev_ll_t*)malloc(sizeof(i2c_dev_ll_t));
@@ -140,8 +141,8 @@ int board_init() {
     gpio_set_function(I2C_EXTERN_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_EXTERN_SDA);
     gpio_pull_up(I2C_EXTERN_SCL);
-    gpio_set_drive_strength(I2C_EXTERN_SDA, GPIO_DRIVE_STRENGTH_4MA);
-    gpio_set_drive_strength(I2C_EXTERN_SCL, GPIO_DRIVE_STRENGTH_4MA);
+    gpio_set_drive_strength(I2C_EXTERN_SDA, GPIO_DRIVE_STRENGTH_8MA);
+    gpio_set_drive_strength(I2C_EXTERN_SCL, GPIO_DRIVE_STRENGTH_8MA);
     gpio_set_slew_rate(I2C_EXTERN_SDA, GPIO_SLEW_RATE_SLOW);
     gpio_set_slew_rate(I2C_EXTERN_SCL, GPIO_SLEW_RATE_SLOW);
     gpio_set_input_hysteresis_enabled(I2C_EXTERN_SDA, true);
@@ -176,7 +177,7 @@ int board_init() {
 
     // Initialize the SPI Ops module before any SPI operations
     spi_ops_module_init();
-    // Initialize the Expansion I/O chip so the other devices will work (including `board_addr` used below)
+    // Initialize the Expansion I/O chip so the other devices will work (including `board_jumper` used below)
     expio_module_init();
 
 #if HAS_RP2040_RTC
@@ -208,19 +209,31 @@ int board_init() {
     // Do board specific initialization based on ADDR 0 or 1
     //
 #if (BOARD_ADDR == 0)
-        // UART Functions.
-        //  UART 0 is used for communication with the host (setup, commands, status)
-        //  UART 1 is used for controlling the Bus-Servos
-        //    Bus-Servo TX Enable
-        gpio_set_function(SERVO_CTRL_TX_EN_GPIO, GPIO_FUNC_SIO);
-        gpio_set_dir(SERVO_CTRL_TX_EN_GPIO, GPIO_OUT);
-        gpio_set_drive_strength(SERVO_CTRL_TX_EN_GPIO, GPIO_DRIVE_STRENGTH_2MA);
-        //    Initial output state
-        gpio_put(SERVO_CTRL_TX_EN_GPIO, SERVO_CTRL_TX_DIS);     // Bus-Servo TX Disabled
-        //    User Switch
-        gpio_set_function(SW_MAIN_USER_GPIO, GPIO_FUNC_SIO);
-        gpio_set_dir(SW_MAIN_USER_GPIO, GPIO_IN);
-        gpio_set_pulls(SW_MAIN_USER_GPIO, false, false);
+    // STOP input switch
+    gpio_set_function(STOP_INPUT_SW, GPIO_FUNC_SIO);
+    gpio_set_dir(STOP_INPUT_SW, GPIO_IN);
+    gpio_set_pulls(SW_MAIN_USER_GPIO, true, false);
+    // Sensor and Servo Power Control
+    //  Power Distribution board has an enable for 12V, 7.5V, and 5.0V outputs
+    gpio_set_function(AUX_PWR_CTRL, GPIO_FUNC_SIO);
+    gpio_put(AUX_PWR_CTRL, SENSVO_PWR_OFF);         // Start with Power Disabled
+    gpio_set_dir(AUX_PWR_CTRL, GPIO_OUT);
+    gpio_set_drive_strength(AUX_PWR_CTRL, GPIO_DRIVE_STRENGTH_2MA);
+    //    Initial output state
+    gpio_put(AUX_PWR_CTRL, SENSVO_PWR_OFF);         // Start with Power Disabled
+    // UART Functions.
+    //  UART 0 is used for communication with the host (setup, commands, status)
+    //  UART 1 is used for controlling the Bus-Servos
+    //    Bus-Servo TX Enable
+    gpio_set_function(SERVO_CTRL_TX_EN_GPIO, GPIO_FUNC_SIO);
+    gpio_set_dir(SERVO_CTRL_TX_EN_GPIO, GPIO_OUT);
+    gpio_set_drive_strength(SERVO_CTRL_TX_EN_GPIO, GPIO_DRIVE_STRENGTH_2MA);
+    //    Initial output state
+    gpio_put(SERVO_CTRL_TX_EN_GPIO, SERVO_CTRL_TX_DIS);     // Bus-Servo TX Disabled
+    //    User Switch
+    gpio_set_function(SW_MAIN_USER_GPIO, GPIO_FUNC_SIO);
+    gpio_set_dir(SW_MAIN_USER_GPIO, GPIO_IN);
+    gpio_set_pulls(SW_MAIN_USER_GPIO, false, false);
 #endif
     // This could be an else, but it's only done once and this allows for more than 0 & 1.
 #if (BOARD_ADDR == 1)
@@ -256,22 +269,25 @@ int board_init() {
 #endif
 
 
-    // Check the user input switch to see if it's pressed during startup.
-    //  If yes, set 'debug_mode_enabled'
-    if (user_switch_pressed()) {
-        debug_mode_enable(true);
+    // Scan the I2C bus to see what devices (device at an address) are present
+    _i2c_scan(I2C_EXTERN);
+
+    // If the EEPROM is present, initialize the module.
+    if (i2c_device_present(EEPROM_ADDR1)) {
+        eeprom_module_init(I2C_EXTERN, EEPROM_ADDR1, EEPROM_IMMEDIATE);
+    }
+    else if (i2c_device_present(EEPROM_ADDR2)) {
+        eeprom_module_init(I2C_EXTERN, EEPROM_ADDR2, EEPROM_BUFFERED);
     }
 
-    // Scan the I2C bus to see what devices (device at an address) are present
-    _i2c_scan();
 
     // The PWM is used for a recurring interrupt in CMT. It will initialize it.
 
     return(retval);
 }
 
-uint8_t board_addr(void) {
-    return eio_board_addr();
+uint8_t board_jumper(void) {
+    return eio_board_jumper();
 }
 
 void boot_to_bootsel() {
@@ -303,7 +319,7 @@ void led_flash(int ms) {
         _led_flash_cont(NULL);
     }
     else {
-        cmt_sleep_ms(ms, _led_flash_cont, NULL);
+        cmt_run_after_ms(ms, _led_flash_cont, NULL);
     }
 }
 
@@ -326,7 +342,7 @@ void led_on_off(const int32_t *pattern) {
             sleep_ms(off_time);
         }
         else {
-            cmt_sleep_ms(off_time, _led_on_off_cont, (void*)pattern);
+            cmt_run_after_ms(off_time, _led_on_off_cont, (void*)pattern);
         }
     }
 }

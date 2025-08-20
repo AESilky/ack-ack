@@ -84,7 +84,7 @@ static void _handle_hwrt_test(cmt_msg_t* msg) {
 // ====================================================================
 
 static void _hwrt_module_init() {
-    cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_hwrt_housekeeping);
+    cmt_msg_hdlr_add(MSG_PERIODIC_RT, _handle_hwrt_housekeeping);
     cmt_msg_hdlr_add(MSG_HWRT_TEST, _handle_hwrt_test);
     cmt_msg_hdlr_add(MSG_HID_STARTED, _handle_hid_started);
 

@@ -35,10 +35,12 @@ pico_sdk_init()
 add_subdirectory(curswitch)
 add_subdirectory(dcs)
 add_subdirectory(display)
+add_subdirectory(eeprom)
 add_subdirectory(gfx)
 add_subdirectory(hid_nav)
 add_subdirectory(hwrt)
 add_subdirectory(neopix)
+add_subdirectory(pio_uart)
 add_subdirectory(rcrx)
 add_subdirectory(rotary_encoder)
 add_subdirectory(rover)
@@ -73,6 +75,7 @@ add_subdirectory(lib)
 #
 set(CMN_LIBS
   cmt
+  eeprom
   expio
   sensbank
   util
@@ -116,6 +119,7 @@ target_link_libraries(hwctrl_0
 )
 target_link_libraries(hwctrl_0
   dcs
+  eeprom
   hwrt0
   rcrx
   rover

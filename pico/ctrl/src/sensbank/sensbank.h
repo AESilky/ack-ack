@@ -20,6 +20,42 @@ extern "C" {
 #include <stdint.h>
 
 /**
+ * @brief Enable/disable scanning of the sensors. When disabled, S0 is
+ * selected (the sensor board doesn't use S0).
+ *
+ * @param enable True to enable, false to disable
+ */
+extern void sensbank_enable(bool enable);
+
+/**
+ * @brief The acceptable delta between distance reads to be considered valid.
+ * @ingroup sensbank
+ *
+ * When reading the Sonar and LiDAR it is possible to get false reads. This
+ * delta is considered acceptable between two consecutive reads to be a
+ * valid distance read.
+ *
+ * @see sensbank_dist_delta_accept_set(delta) to set the value.
+ *
+ * @return uint16_t The current acceptable delta in centimeters
+ */
+extern uint16_t sensbank_dist_delta_accept();
+
+/**
+ * @brief Set the acceptable delta between distance reads.
+ *
+ * @param delta The acceptable delta in centimeters
+ */
+extern void sensbank_dist_delta_accept_set(uint16_t delta);
+
+/**
+ * @brief Get the latest distance to obstacle values.
+ *
+ * @return sensbank_dist_t
+ */
+extern sensbank_dist_t sensbank_dist_get(void);
+
+/**
  * @brief Get the latest and previous bit values read from the sensor bank.
  * @ingroup sensbank
  *
@@ -28,12 +64,12 @@ extern "C" {
 extern sensbank_cah_t sensbank_get(void);
 
 /**
- * @brief Perform sensor housekeeping.
+ * @brief Perform sensor housekeeping update.
  *
  * This should be called by the main core processing. This module does
- * not register a Housekeeping message handler.
+ * not register a Periodic/Housekeeping message handler.
  */
-extern void sensbank_housekeeping();
+extern void sensbank_update(void);
 
 /**
  * @brief Starts reading the Sensor Bank.

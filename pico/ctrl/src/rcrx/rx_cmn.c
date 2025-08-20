@@ -11,42 +11,42 @@
 #include "stdint.h"
 
 #include <stdio.h>     // For `printf`
-#include <string.h>         // For `memset`
+#include <string.h>    // For `memset`
 
 static bool _initialized = false;
 
 
 /** @brief Protocol specific RX error handler. Called at end of common handling. */
-msg_handler_fn _rxcmn_proto_spec_rx_err_hndlr;
+msg_handler_fn rxcmn_proto_spec_rx_err_hndlr;
 /** @brief Message handler for RX data available. */
-msg_handler_fn _rxcmn_mh_data_rdy;
+msg_handler_fn rxcmn_mh_data_rdy;
 /** @brief   Message handler for processing protocol message */
-rcrx_msg_rcvd_fn _rxcmn_protocol_spec_proc;
+rcrx_msg_rcvd_fn rxcmn_protocol_spec_proc;
 /** @brief The Message ID to post when RX data is ready. */
-msg_id_t _rxcmn_data_rdy_msg;
+msg_id_t rxcmn_data_rdy_msg;
 /** @brief Flag indicating that an RX message is being processed. */
-volatile bool _rxcmn_msg_processing;
+volatile bool rxcmn_msg_processing;
 /** @brief Function to be called to enable receiving the next RX stream. */
-enrx_fn _rxcmn_en_next_rx;
+enrx_fn rxcmn_en_next_rx;
 
 // RC RX Buffers
-rc_bufs_t _rc_bufs;     // Global for debugging
+rc_bufs_t rc_bufs;     // Global for debugging
 
 // RC Channel State
 static rcrx_state_t* _channel_state;
 
 // RCRX Error Tracking
-uint32_t _rcrx_lerr_tms;  // Time of the last error.
+uint32_t rcrx_lerr_tms;  // Time of the last error.
 
 // Message Counts
-uint32_t _rcrx_msg_cnt;
-uint32_t _rcrx_msg_while_busy_cnt;
-uint32_t _rcrx_msg_same_data_cnt;
+uint32_t rcrx_msg_cnt;
+uint32_t rcrx_msg_while_busy_cnt;
+uint32_t rcrx_msg_same_data_cnt;
 
 // RX PIO-SM and DMA Configurations
-int _rxcmn_dma_pio_rd;                     // DMA channel used to pull data from the PIO-SM
-dma_channel_config _rxcmn_dma_pio_rd_cfg;  // Keep the config so the channel is easy to re-run
-pio_sm_pocfg _rxcmn_pio_smrx_pocfg;        // Configuration for the PIO RX State Machine
+int rxcmn_dma_pio_rd;                     // DMA channel used to pull data from the PIO-SM
+dma_channel_config rxcmn_dma_pio_rd_cfg;  // Keep the config so the channel is easy to re-run
+pio_sm_pocfg rxcmn_pio_smrx_pocfg;        // Configuration for the PIO RX State Machine
 
 static volatile bool _rc_rdy_mp;           // RC received, processed, and ready message is pending
 
@@ -62,17 +62,17 @@ static volatile bool _rc_rdy_mp;           // RC received, processed, and ready 
 
 void __isr rxcmn_irq_dma_from_pio() {
     // Disable the SM
-    pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, false);
+    pio_sm_set_enabled(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm, false);
     // Get the CRC value from the DMA incase it is being calculated/used
     uint32_t crc = dma_sniffer_get_data_accumulator();
     // Clear the interrupt request.
-    dma_irqn_acknowledge_channel(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd);
+    dma_irqn_acknowledge_channel(IRQn_RCRX_DMA_FROM_PIO, rxcmn_dma_pio_rd);
 
     // If a handler is set, post our message indicating that RC RX data is available
-    if (_rxcmn_mh_data_rdy) {
+    if (rxcmn_mh_data_rdy) {
         cmt_msg_t msg;
         msg.data.value32u = crc; // Include the CRC in the message
-        cmt_msg_init2(&msg, _rxcmn_data_rdy_msg, _rxcmn_mh_data_rdy);
+        cmt_msg_init2(&msg, rxcmn_data_rdy_msg, rxcmn_mh_data_rdy);
         postHWRTMsg(&msg);
     }
 }
@@ -86,12 +86,12 @@ void __isr rxcmn_irq_dma_from_pio() {
  */
 void __isr rxcmn_irq_pio_rx_err_handler() {
     cmt_msg_t msg;
-    io_rw_32 pio_irqbits = _rxcmn_pio_smrx_pocfg.pio->irq;
+    io_rw_32 pio_irqbits = rxcmn_pio_smrx_pocfg.pio->irq;
     //
     // Stop the PIO-SM before clearing the IRQ
     //
-    pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, false);
-    _rxcmn_pio_smrx_pocfg.pio->irq = 0xFF; // Writing '1' clears the IRQ Flag bit
+    pio_sm_set_enabled(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm, false);
+    rxcmn_pio_smrx_pocfg.pio->irq = 0xFF; // Writing '1' clears the IRQ Flag bit
     //
     // Initialize and post the message
     //
@@ -122,38 +122,38 @@ void rxcmn_mh_pio_rx_error(cmt_msg_t* msg) {
     //
     // disable the system and DMA channel IRQ
     irq_set_enabled(SYSIRQ_RCRX_DMA_FROM_PIO, false);
-    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd, false);
+    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, rxcmn_dma_pio_rd, false);
 
     io_rw_32 pio_irqbits = (io_rw_32)msg->data.value32u;
     // See where in the received message the error occurred
-    io_rw_32 dma_wr_addr = dma_channel_hw_addr(_rxcmn_dma_pio_rd)->write_addr;
+    io_rw_32 dma_wr_addr = dma_channel_hw_addr(rxcmn_dma_pio_rd)->write_addr;
 
     rxcmn_count_pio_rx_error(pio_irqbits, dma_wr_addr);
 
     // Abort the channel
-    dma_channel_abort(_rxcmn_dma_pio_rd);
+    dma_channel_abort(rxcmn_dma_pio_rd);
     // Read the Abort register until 0
     // (this isn't done in the SDK, but the datasheet says it is needed)
     while (dma_hw->abort) tight_loop_contents();
     // clear any spurious IRQ (if there was one)
-    dma_irqn_acknowledge_channel(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd);
+    dma_irqn_acknowledge_channel(IRQn_RCRX_DMA_FROM_PIO, rxcmn_dma_pio_rd);
 
     // Call a protocol specific error routine, if one is set.
-    if (_rxcmn_proto_spec_rx_err_hndlr != NULL_MSG_HDLR) {
-        _rxcmn_proto_spec_rx_err_hndlr(msg);
+    if (rxcmn_proto_spec_rx_err_hndlr != NULL_MSG_HDLR) {
+        rxcmn_proto_spec_rx_err_hndlr(msg);
     }
 
     // The interrupt handler for the PIO error disabled the PIO-SM, but we
     // should clear out the RXFIFO.
-    pio_sm_clear_fifos(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm);
+    pio_sm_clear_fifos(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm);
 
     // Re-enable the interrupts that we disabled above.
-    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd, true);
+    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, rxcmn_dma_pio_rd, true);
     irq_set_enabled(SYSIRQ_RCRX_DMA_FROM_PIO, true);
 
     if (!_channel_state->local_rx_disabled) {
         // Set up for another message
-        _rxcmn_en_next_rx();
+        rxcmn_en_next_rx();
     }
 
     // Re-post the error message so other parts of the system know about it
@@ -163,31 +163,31 @@ void rxcmn_mh_pio_rx_error(cmt_msg_t* msg) {
 }
 
 void rxcmn_mh_rx_msg_proc(cmt_msg_t* msg) {
-    _rcrx_msg_cnt++; // Count the message
+    rcrx_msg_cnt++; // Count the message
     ledA_on(true);
-    _channel_state->msgs_processed = _rcrx_msg_cnt;
+    _channel_state->msgs_processed = rcrx_msg_cnt;
 
     // See if we are still working on the previous message
-    if (_rxcmn_msg_processing) {  // If the previous message is still processing, count that we were busy
-        _rcrx_msg_while_busy_cnt++;
+    if (rxcmn_msg_processing) {  // If the previous message is still processing, count that we were busy
+        rcrx_msg_while_busy_cnt++;
     }
     else {
-        _rxcmn_msg_processing = true;
+        rxcmn_msg_processing = true;
         // See if the accumulated message is different from the current one...
         uint32_t a_crc = msg->data.value32u;
-        if (a_crc == _rc_bufs.msg_bufs.crc32_last) {
-            _rcrx_msg_same_data_cnt++;
-            _rxcmn_en_next_rx();
+        if (a_crc == rc_bufs.msg_bufs.crc32_last) {
+            rcrx_msg_same_data_cnt++;
+            rxcmn_en_next_rx();
         }
         else {
             // The enqueued message is different from the last one.
             // Process the message
             //
-            _rc_bufs.msg_bufs.crc32_last = a_crc;
+            rc_bufs.msg_bufs.crc32_last = a_crc;
             //
-            if (_rxcmn_protocol_spec_proc) {
+            if (rxcmn_protocol_spec_proc) {
                 bool failsafe_was = _channel_state->failsafe;
-                uint16_t chgs = _rxcmn_protocol_spec_proc();
+                uint16_t chgs = rxcmn_protocol_spec_proc();
                 //
                 // If failsafe changed, post a message.
                 bool failsafe_now = _channel_state->failsafe;
@@ -203,9 +203,11 @@ void rxcmn_mh_rx_msg_proc(cmt_msg_t* msg) {
                 if (chgs != 0 && !_rc_rdy_mp) {
                     _rc_rdy_mp = true;
                     cmt_msg_t mchcng;
-                    cmt_msg_init(&mchcng, MSG_RC_RECEIVED);
+                    cmt_msg_init2(&mchcng, MSG_RC_RECEIVED, _rc_mp_proc);
                     mchcng.data.value16u = chgs;
-                    postBothMsgDiscardable(&mchcng);
+                    postHWRTMsg(&mchcng);
+                    cmt_msg_rm_set_hdlr(&mchcng);
+                    postDCSMsg(&mchcng);
                 }
             }
         }
@@ -234,7 +236,7 @@ void rxcmn_count_pio_rx_error(io_rw_32 pio_irqbits, io_rw_32 dma_wr_addr) {
         _channel_state->local_parity_err_cnt++;
     }
     // check that it is within the enqueue buffer
-    int indx = dma_wr_addr - (((io_rw_32)_rc_bufs.msg_bufs.msg_enqueue) + 1);
+    int indx = dma_wr_addr - (((io_rw_32)rc_bufs.msg_bufs.msg_enqueue) + 1);
     if (parity_err) {
         indx--; // Parity error pushes the expected parity as the last byte
     }
@@ -244,11 +246,11 @@ void rxcmn_count_pio_rx_error(io_rw_32 pio_irqbits, io_rw_32 dma_wr_addr) {
     if (indx <= RC_RX_BUF_SIZE) {
         printf(" Buf: ");
         for (int i = 0; i <= indx; i++) {
-            printf("%02hhX ", _rc_bufs.msg_bufs.msg_enqueue[i]);
+            printf("%02hhX ", rc_bufs.msg_bufs.msg_enqueue[i]);
         }
         printf("\n");
         if (parity_err) {
-            uint8_t pchk = _rc_bufs.msg_bufs.msg_enqueue[indx + 1];
+            uint8_t pchk = rc_bufs.msg_bufs.msg_enqueue[indx + 1];
             uint8_t pr = (pchk & 0xF0) >> 4;
             uint8_t pe = (pchk & 0x0F);
             printf(" Parity [Received:Expected]: %1hhX:%1hhX\n", pr, pe);
@@ -259,11 +261,11 @@ void rxcmn_count_pio_rx_error(io_rw_32 pio_irqbits, io_rw_32 dma_wr_addr) {
 
 void rxcmn_list_pio_dma_state(void* data) {
     bool retrigger = (data != NULL);
-    uint8_t pio_sm_pc = piosm_pc(_rxcmn_pio_smrx_pocfg);
-    io_rw_32 pio_irqbits = _rxcmn_pio_smrx_pocfg.pio->irq;
-    io_ro_32 pio_fstat = _rxcmn_pio_smrx_pocfg.pio->fstat;
-    bool pio_sm_enbl = piosm_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm);
-    dma_channel_hw_t* dma = dma_channel_hw_addr(_rxcmn_dma_pio_rd);
+    uint8_t pio_sm_pc = piosm_pc(rxcmn_pio_smrx_pocfg);
+    io_rw_32 pio_irqbits = rxcmn_pio_smrx_pocfg.pio->irq;
+    io_ro_32 pio_fstat = rxcmn_pio_smrx_pocfg.pio->fstat;
+    bool pio_sm_enbl = piosm_enabled(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm);
+    dma_channel_hw_t* dma = dma_channel_hw_addr(rxcmn_dma_pio_rd);
     io_rw_32 dma_wr_addr = dma->write_addr;
     uint32_t dma_xfer_cnt = dma->transfer_count;
     uint32_t dma_ctrl = dma->ctrl_trig;
@@ -271,7 +273,7 @@ void rxcmn_list_pio_dma_state(void* data) {
     printf("\nRC-RX PIO PC: %2hhu IRQ: %04X ST: %04X EN: %d  DMA  CTRL: %08lX ADDR: %08lX CNT: % 2hu\n  Rcvd: %lu  Dup: %lu  Errs: %lu ESR: %u\n",
         pio_sm_pc, pio_irqbits, pio_fstat, pio_sm_enbl,
         dma_ctrl, dma_wr_addr, (uint8_t)dma_xfer_cnt,
-        _rcrx_msg_cnt, _rcrx_msg_same_data_cnt, _channel_state->local_err_cnt_all, _channel_state->local_errs_in_period);
+        rcrx_msg_cnt, rcrx_msg_same_data_cnt, _channel_state->local_err_cnt_all, _channel_state->local_errs_in_period);
     // If the protocol is SRXL2, also get the info for the MSG PIO-SM
     if (rcrx_get_protocol() == RXP_SRXL2) {
         io_rw_32 dma_xfer_cnt = dma_channel_hw_addr(_dma_pio_to_pio)->transfer_count;
@@ -285,46 +287,46 @@ void rxcmn_list_pio_dma_state(void* data) {
 
     if (retrigger) {
         // trigger another report
-        cmt_sleep_ms(7000, rxcmn_list_pio_dma_state, (void*)true);
+        cmt_run_after_ms(7000, rxcmn_list_pio_dma_state, (void*)true);
     }
 }
 
 void rxcmn_enable_next_msg() {
-    _rxcmn_msg_processing = false;
+    rxcmn_msg_processing = false;
     //
     // Reset the PIO-SM so that it is waiting for the idle period.
-    piosm_reset(_rxcmn_pio_smrx_pocfg);
+    piosm_reset(rxcmn_pio_smrx_pocfg);
 
     // For debugging, fill the buffer with a known value
     if (debug_mode_enabled()) {
-        memset((void*)_rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
+        memset((void*)rc_bufs.msg_bufs.msg_enqueue, 0xFF, RC_RX_BUF_SIZE);
     }
     //
     // Re-Configure PIO RD DMA channel, don't start it yet.
-    dma_channel_set_config(_rxcmn_dma_pio_rd, &_rxcmn_dma_pio_rd_cfg, false);
+    dma_channel_set_config(rxcmn_dma_pio_rd, &rxcmn_dma_pio_rd_cfg, false);
     //
     // (bit-reverse) CRC32 sniff set-up
     dma_sniffer_set_data_accumulator(CRC32_INIT);
-    channel_config_set_sniff_enable(&_rxcmn_dma_pio_rd_cfg, true);
+    channel_config_set_sniff_enable(&rxcmn_dma_pio_rd_cfg, true);
     dma_sniffer_set_output_reverse_enabled(true);
     // Enable CRC generation of the data to check for new messages
-    dma_sniffer_enable(_rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
+    dma_sniffer_enable(rxcmn_dma_pio_rd, DMA_SNIFF_CTRL_CALC_VALUE_CRC32, true);
     //
     // Now start the DMA and PIO-SM
-    dma_channel_set_write_addr(_rxcmn_dma_pio_rd, _rc_bufs.msg_bufs.msg_enqueue, true);
-    pio_sm_set_enabled(_rxcmn_pio_smrx_pocfg.pio, _rxcmn_pio_smrx_pocfg.sm, true);
+    dma_channel_set_write_addr(rxcmn_dma_pio_rd, rc_bufs.msg_bufs.msg_enqueue, true);
+    pio_sm_set_enabled(rxcmn_pio_smrx_pocfg.pio, rxcmn_pio_smrx_pocfg.sm, true);
 }
 
 uint64_t rxcmn_get_rxmsg_cnt() {
-    return _rcrx_msg_cnt;
+    return rcrx_msg_cnt;
 }
 
 void rxcmn_update_error_count() {
     uint32_t now = now_ms();
-    if ((now - _rcrx_lerr_tms) > RCRX_ERROR_RESET_TIME) {
+    if ((now - rcrx_lerr_tms) > RCRX_ERROR_RESET_TIME) {
         _channel_state->local_errs_in_period = 0;   // Reset the errors in period count.
     }
-    _rcrx_lerr_tms = now;
+    rcrx_lerr_tms = now;
     _channel_state->local_err_cnt_all++;
     if (++_channel_state->local_errs_in_period > RCRX_ERROR_DISABLE_THRSH) {
         _channel_state->local_rx_disabled = true; // Too many errors in the period, disable.
@@ -338,5 +340,4 @@ void rxcmn_module_init(rcrx_state_t* channel_state) {
     _initialized = true;
 
     _channel_state = channel_state;
-    cmt_msg_hdlr_add(MSG_RC_RECEIVED, _rc_mp_proc);  // Handle our own message to clear pending flag
 }

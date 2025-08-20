@@ -25,16 +25,14 @@
 #include <stdint.h>
 
 /**
- * @brief Get the board address (from the Expansion I/O).
+ * @brief Get the position of the Board Jumper from the Expansion I/O).
  * @ingroup expio
  *
- * The board can act as the main control board (addr=0) or a secondary
- * control board (addr=1). The address is read from a jumper on IO-7 of
- * the Expansion I/O.
+ * The board jumper on IO-7 of the Expansion I/O can be 1-2 or 2-3.
  *
- * @return 0=Main, 1=Secondary
+ * @return 0=[1-2], 1=[2-3]
  */
-extern uint8_t eio_board_addr(void);
+extern uint8_t eio_board_jumper(void);
 
 /**
  * @brief Display Backlight Enable.

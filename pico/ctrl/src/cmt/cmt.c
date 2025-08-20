@@ -30,13 +30,17 @@
 
 typedef bool (*get_msg_nowait_fn)(cmt_msg_t* msg);
 
-static bool _msg_loop_0_running = false;
-static bool _msg_loop_1_running = false;
+static volatile bool _msg_loop_0_running = false;
+static volatile bool _msg_loop_1_running = false;
 
-static proc_status_accum_t _psa[2];         // One Proc Status Accumulator for each core
-static proc_status_accum_t _psa_sec[2];     // Proc Status Accumulator per second for each core
+static volatile proc_status_accum_t _psa[2];         // One Proc Status Accumulator for each core
+static volatile proc_status_accum_t _psa_sec[2];     // Proc Status Accumulator per second for each core
+static volatile msg_id_t _msg_curlast[2];            // The current/last message processed for each core
 
-static uint8_t _housekeep_rt;  // Incremented each ms. Generates a Housekeeping msg every 16ms (62.5Hz)
+static volatile uint8_t _housekeep_rt;          // Incremented each ms. (0-15) Generates a Housekeeping msg every 16ms (62.5Hz)
+static volatile uint32_t _hkcnt;                // Incremented each Housekeeping msg (done in Core0)
+static volatile bool _housekeep0_msg_pending;   // Indicates that a Housekeeping msg has been posted and is pending for Core0
+static volatile bool _housekeep1_msg_pending;   // Indicates that a Housekeeping msg has been posted and is pending for Core1
 
 /** @brief The message handler(s) list. One entry for each (possible) message ID. Contains pointer to first handler link-list entry. */
 cmt_msg_hdlr_ll_ent_t* cmt_msg_hdlrs[MSG_ID_CNT];
@@ -52,6 +56,8 @@ cmt_schmsgdata_ll_ent_t* cmt_smd_ll;
 // ######################################################################################
 
 static void _cmt_handle_sleep(cmt_msg_t* msg);
+static void _housekeep0_msg_hdlr(cmt_msg_t* msg);
+static void _housekeep1_msg_hdlr(cmt_msg_t* msg);
 
 
 // ######################################################################################
@@ -64,7 +70,7 @@ static void _cmt_handle_sleep(cmt_msg_t* msg);
  * Handles the PWM 'wrap' recurring interrupt. This adjusts the time left in scheduled messages
  * (including our 'sleep') and posts a message to the appropriate core when time hits 0.
  *
- * This also posts a MSG_HOUSEKEEPING_RT message every 16ms (62.5Hz) that allows modules
+ * This also posts a MSG_PERIODIC_RT message every 16ms (62.5Hz) that allows modules
  * to perform regular operations without having to set up scheduled messages or timers
  * of their own.
  *
@@ -91,14 +97,45 @@ static void _on_recurring_interrupt(void) {
     }
     _housekeep_rt = ((_housekeep_rt + 1) & 0x0F);
     if (_housekeep_rt == 0) {
+        // We are at 16ms
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_HOUSEKEEPING_RT);
-        postBothMsgDiscardable(&msg);  // Housekeeping RT is low-priority/discardable
+        if (!_housekeep0_msg_pending) {
+            _housekeep0_msg_pending = true;
+            cmt_msg_init2(&msg, MSG_PERIODIC_RT, _housekeep0_msg_hdlr);
+            post_to_core0(&msg);
+        }
+        if (!_housekeep1_msg_pending) {
+            _housekeep1_msg_pending = true;
+            cmt_msg_init2(&msg, MSG_PERIODIC_RT, _housekeep1_msg_hdlr);
+            post_to_core1(&msg);
+        }
     }
     // Clear the interrupt flag that brought us here so it can occur again.
     pwm_clear_irq(CMT_PWM_RECINT_SLICE);
 }
 
+
+// ######################################################################################
+// Message Handlers                                                                   ###
+// ######################################################################################
+
+static void _housekeep0_msg_hdlr(cmt_msg_t* msg) {
+    // The Housekeeping message posted is being processed from the head of the queue,
+    // clear the pending flag so another message will be posted.
+    _housekeep0_msg_pending = false;
+    // Bump our overall count and do things at certain increments.
+    _hkcnt++;
+}
+
+static void _housekeep1_msg_hdlr(cmt_msg_t* msg) {
+    // The Housekeeping message posted is being processed from the head of the queue,
+    // clear the pending flag so another message will be posted.
+    _housekeep1_msg_pending = false;
+    if (_hkcnt % 1875 == 0) {
+        // About every 30 seconds (1875 * 0.016 = 30) do a sanity check so we can identify problems.
+        cmt_msg_hdlrs_verify();
+    }
+}
 
 // ######################################################################################
 // Local Methods                                                                      ###
@@ -152,6 +189,11 @@ static void _cmt_handle_sleep(cmt_msg_t* msg) {
 // Public Methods                                                                     ###
 // ######################################################################################
 
+msg_id_t cmt_curlast_msg(int core) {
+    int c = core & 0x01; // Assure 0|1
+    return _msg_curlast[c];
+}
+
 bool cmt_message_loop_0_running() {
     return (_msg_loop_0_running);
 }
@@ -172,7 +214,7 @@ void cmt_msg_hdlr_add(msg_id_t id, msg_handler_fn hdlr) {
 void cmt_msg_hdlr_add_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
     cmt_msg_hdlr_ll_ent_t* ent = cmt_alloc_mhllent();
     ent->handler = hdlr;
-    ent->corenum = corenum;
+    ent->corenum = corenum & 0x00000001; // Force to 0/1
     // Link it into the handler entries
     cmt_msg_hdlr_ll_ent_t* head = cmt_msg_hdlrs[id];
     ent->next = head;
@@ -207,27 +249,23 @@ void cmt_msg_hdlr_rm_for_core(msg_id_t id, msg_handler_fn hdlr, uint corenum) {
     }
 }
 
-void cmt_msg_init(cmt_msg_t* msg, msg_id_t id) {
-    msg->id = id;
-    msg->hdlr = NULL_MSG_HDLR;
-    msg->n = 0;
-    msg->t = 0;
-}
-
-void cmt_msg_init2(cmt_msg_t* msg, msg_id_t id, msg_handler_fn hdlr) {
-    msg->id = id;
-    msg->hdlr = hdlr;
-    msg->n = 0;
-    msg->t = 0;
-}
-
-void cmt_msg_rm_set_hdlr(cmt_msg_t* msg) {
-    msg->hdlr = NULL;
+void cmt_msg_hdlrs_verify() {
+    // Verify the handlers list
+    //cmt_msg_hdlr_ll_ent_t* cmt_msg_hdlrs[MSG_ID_CNT];
+    static uint32_t _runcnt;
+    _runcnt++;
+    for (int i = 0; i < MSG_ID_CNT; i++) {
+        cmt_msg_hdlr_ll_ent_t* ent = cmt_msg_hdlrs[i];
+        while (ent != (cmt_msg_hdlr_ll_ent_t*)NULL) {
+            // There is an entry, make sure it is valid
+            ent = cmt_check_mhllent(ent, _runcnt, i);
+        }
+    }
 }
 
 void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
     if (corenum < 2) {
-        proc_status_accum_t* psa_sec = &_psa_sec[corenum];
+        volatile proc_status_accum_t* psa_sec = &_psa_sec[corenum];
         psas->retrieved = psa_sec->retrieved;
         psas->t_active = psa_sec->t_active;
         psas->msg_longest = psa_sec->msg_longest;
@@ -237,8 +275,8 @@ void cmt_proc_status_sec(proc_status_accum_t* psas, uint8_t corenum) {
     }
 }
 
-void cmt_sleep_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data) {
-    // For sleep, we schedule ourself a sleep message with the `sleep_fn`
+void cmt_run_after_ms(int32_t ms, cmt_sleep_fn sleep_fn, void* user_data) {
+    // For 'run after', we schedule ourself a sleep message with the `sleep_fn`
     // and `user_data` as the data.
     cmt_msg_t sleep_msg;
     cmt_msg_init2(&sleep_msg, MSG_CMT_SLEEP, _cmt_handle_sleep);
@@ -274,13 +312,18 @@ int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr) {
     while (*pnext != (cmt_schmsgdata_ll_ent_t*)NULL) {
         cmt_schmsgdata_ll_ent_t* entry = *pnext;
         cmt_sch_msg_data_t smd = entry->schmsg_data;
-        if (smd.corenum == corenum && smd.msg.id == sched_msg_id && smd.msg.hdlr == hdlr) {
+        cmt_msg_t msg = smd.msg;
+        if (smd.corenum == corenum && msg.id == sched_msg_id && msg.hdlr == hdlr) {
             // This is the one to cancel.
             retval = smd.remaining;
             // This amount of time needs to be added to the next
-            entry->next->schmsg_data.remaining += retval;
+            if (entry->next) {
+                entry->next->schmsg_data.remaining += retval;
+            }
             // Put the next in the pnext
             *pnext = entry->next;
+            // Return the entry to the pool
+            cmt_return_smdllent(entry);
             break;
         }
         pnext = &entry->next;
@@ -291,14 +334,20 @@ int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr) {
     return (retval);
 }
 
-extern bool scheduled_msg_exists(msg_id_t sched_msg_id) {
+bool scheduled_msg_exists(msg_id_t sched_msg_id) {
+    return scheduled_msg_exists2(sched_msg_id, (msg_handler_fn)NULL);
+}
+
+bool scheduled_msg_exists2(msg_id_t sched_msg_id, msg_handler_fn hdlr) {
     bool exists = false;
     uint8_t corenum = (uint8_t)get_core_num();
-    cmt_schmsgdata_ll_ent_t* entry = cmt_smd_ll;
     uint32_t flags = save_and_disable_interrupts();
     mutex_enter_blocking(&sm_mutex);
+    cmt_schmsgdata_ll_ent_t *entry = cmt_smd_ll;
     while (entry != (cmt_schmsgdata_ll_ent_t*)NULL) {
-        if (entry->schmsg_data.corenum == corenum && entry->schmsg_data.msg.id == sched_msg_id) {
+        cmt_sch_msg_data_t *smd = &(entry->schmsg_data);
+        cmt_msg_t *msg = &(smd->msg);
+        if (smd->corenum == corenum && msg->id == sched_msg_id && (hdlr == (msg_handler_fn)NULL || hdlr == msg->hdlr)) {
             exists = true;
             break;
         }
@@ -343,8 +392,8 @@ void message_loop(msg_handler_fn fstart) {
     uint8_t corenum = get_core_num();
     get_msg_nowait_fn get_msg_function = (corenum == 0 ? get_core0_msg_nowait : get_core1_msg_nowait);
     cmt_msg_t msg;
-    proc_status_accum_t *psa = &_psa[corenum];
-    proc_status_accum_t *psa_sec = &_psa_sec[corenum];
+    volatile proc_status_accum_t *psa = &_psa[corenum];
+    volatile proc_status_accum_t *psa_sec = &_psa_sec[corenum];
     psa->ts_psa = now_us();
 
     // Indicate that the message loop is running for the calling core.
@@ -390,29 +439,34 @@ void message_loop(msg_handler_fn fstart) {
 
         if (get_msg_function(&msg)) {
             psa->retrieved += 1; // A message was retrieved, count it
+            _msg_curlast[corenum] = msg.id;
+            // cmt_msg_hdlrs_verify(); // Check the handlers lookup table
             // Find the handler
             //  Does the message designate a handler?
             if (msg.hdlr != NULL_MSG_HDLR) {
                 gpio_put(PICO_DEFAULT_LED_PIN, 1); // Turn the Pico LED on while the handler runs
                 msg.hdlr(&msg);
                 gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
+                // cmt_msg_hdlrs_verify(); // Check the handlers lookup table
             }
-            else {
+            if (!msg.abort) {
                 cmt_msg_hdlr_ll_ent_t* handler_entry = cmt_msg_hdlrs[msg.id];
-                while (handler_entry) {
+                while (!msg.abort && handler_entry) {
                     if (handler_entry->corenum == corenum || handler_entry->corenum == MSG_HDLR_CORE_BOTH) {
                         // NOTE: Turning the LED on/off isn't core-safe (one could turn it on and the
                         // other turn it off), but it does help indicate that the message loops are
                         // processing messages (as long at the led is flickering, messages are being
                         // processed).
                         gpio_put(PICO_DEFAULT_LED_PIN, 1); // Turn the Pico LED on
+                        // cmt_msg_hdlrs_verify(); // Check the handlers lookup table
                         handler_entry->handler(&msg);
+                        // cmt_msg_hdlrs_verify(); // Check the handlers lookup table
                         gpio_put(PICO_DEFAULT_LED_PIN, 0); // Turn the Pico LED off
                     }
                     handler_entry = handler_entry->next;
                 }
             }
-            // No more handlers found for this message.
+            // No more handlers found for this message or abort was set.
             uint64_t now = now_us();
             uint64_t t_this_msg = now - t_start;
             psa->t_active += t_this_msg;
@@ -426,6 +480,10 @@ void message_loop(msg_handler_fn fstart) {
 }
 
 void cmt_module_init() {
+    // Clear out the message handler table
+    for (int i = 0; i < MSG_ID_CNT; i++) {
+        cmt_msg_hdlrs[i] = (cmt_msg_hdlr_ll_ent_t*)NULL;
+    }
     // PWM is used to generate a 100µs interrupt that is used for
     // scheduled messages, sleep, and the regular housekeeping message.
     // (the PWM outputs are not directed to GPIO pins)
@@ -458,4 +516,6 @@ void cmt_module_init() {
     // Enable the PWM and interrupts from it.
     irq_set_enabled(PWM_DEFAULT_IRQ_NUM(), true);
     pwm_set_enabled(CMT_PWM_RECINT_SLICE, true);
+
+    cmt_msg_hdlrs_verify(); // Check the handlers lookup table
 }

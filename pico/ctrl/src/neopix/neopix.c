@@ -31,7 +31,7 @@
 #include <stdlib.h>
 
 static bool _initialized = false;
-static int _rxcmn_dma_pio_rd;
+static int _np_dma_pio_rd;
 static int _dma_copy;
 
 static void _framebuf_to_disp();
@@ -85,12 +85,12 @@ static const uint32_t* _eye_pattern[] = { _eye_pat0, _eye_pat1, _eye_pat2, _eye_
  */
 static void _copy_to_framebuf(const uint32_t* src) {
     dma_channel_set_write_addr(_dma_copy, &_frame_buf, false);
-    dma_channel_set_read_addr(_rxcmn_dma_pio_rd, &_frame_buf, false);
+    dma_channel_set_read_addr(_np_dma_pio_rd, &_frame_buf, false);
     dma_channel_transfer_from_buffer_now(_dma_copy, src, NEOPIX_FRAME_BUF_ELEMENTS);
 }
 
 static void _framebuf_to_disp() {
-    dma_channel_transfer_from_buffer_now(_rxcmn_dma_pio_rd, &_frame_buf, NEOPIX_FRAME_BUF_ELEMENTS);
+    dma_channel_transfer_from_buffer_now(_np_dma_pio_rd, &_frame_buf, NEOPIX_FRAME_BUF_ELEMENTS);
 }
 
 
@@ -123,7 +123,7 @@ void _disp_eye_blink(void* data) {
         }
     }
     _copy_to_framebuf(_eye_pattern[eye_state->blink_state]);
-    cmt_sleep_ms(speed, _disp_eye_blink, data);
+    cmt_run_after_ms(speed, _disp_eye_blink, data);
 }
 void _disp_eye(void* data) {
     // Eye open
@@ -132,7 +132,7 @@ void _disp_eye(void* data) {
     eye_state_.blink_state = 0;
     _copy_to_framebuf(_eye_pat0);
     int open_time = 800 + (rand() % 7000);
-    cmt_sleep_ms(open_time, _disp_eye_blink, &eye_state_);
+    cmt_run_after_ms(open_time, _disp_eye_blink, &eye_state_);
 }
 
 
@@ -156,11 +156,11 @@ void neopix_module_init(void) {
     ws2812_program_init(PIO_NEOPIX_BLOCK, PIO_NEOPIX_SM, offset, NEOPIXEL_DRIVE, 800000, false);
     // Initialize the DMA that moves data from the frame buffers to the PIO,
     // and from a source buffer to the frame buffer.
-    _rxcmn_dma_pio_rd = dma_claim_unused_channel(true);
+    _np_dma_pio_rd = dma_claim_unused_channel(true);
     _dma_copy = dma_claim_unused_channel(true);
     //
     // Init the Frame Buffer DMA to write the frame buffer to the PIO
-    dma_channel_config c1 = dma_channel_get_default_config(_rxcmn_dma_pio_rd); //Get configurations for the frame-buffer channel
+    dma_channel_config c1 = dma_channel_get_default_config(_np_dma_pio_rd); //Get configurations for the frame-buffer channel
     channel_config_set_transfer_data_size(&c1, DMA_SIZE_32); //Set frame-buffer channel data transfer size to 8 bits
     channel_config_set_read_increment(&c1, true); // Frame-buffer channel read increment to true (advance through buffer)
     channel_config_set_write_increment(&c1, false); // Frame-buffer channel write increment to false (write to PIO)
@@ -172,10 +172,10 @@ void neopix_module_init(void) {
     channel_config_set_transfer_data_size(&c2, DMA_SIZE_32); //Set transfer size to 32 bits
     channel_config_set_read_increment(&c2, true); // Frame-buffer channel read increment to true (advance through source)
     channel_config_set_write_increment(&c2, true); // Frame-buffer channel write increment to true (advance through frame buffer)
-    channel_config_set_chain_to(&c2, _rxcmn_dma_pio_rd);  // Once the copy to the frame-buf is done, trigger the frame-buf DMA
+    channel_config_set_chain_to(&c2, _np_dma_pio_rd);  // Once the copy to the frame-buf is done, trigger the frame-buf DMA
     //
     // Configure frame-buffer channel to write to the PIO driving the panel
-    dma_channel_configure(_rxcmn_dma_pio_rd, &c1,
+    dma_channel_configure(_np_dma_pio_rd, &c1,
         &PIO_NEOPIX_BLOCK->txf[PIO_NEOPIX_SM],      // Destination
         _frame_buf,                                 // Memory buffer to read from
         NEOPIX_FRAME_BUF_ELEMENTS,                  // Number of pixels to transfer in one block

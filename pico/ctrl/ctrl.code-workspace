@@ -40,7 +40,13 @@
 			"servo_t.h": "c",
 			"stddef.h": "c",
 			"math.h": "c",
-			"malloc.h": "c"
+			"malloc.h": "c",
+			"stdbool.h": "c",
+			"i2c.h": "c",
+			"cmt_t.h": "c",
+			"pio_uart.h": "c",
+			"system_defs.h": "c",
+			"cmt_heap.h": "c"
 		},
 		"cSpell.words": [
 			"AGPI",
@@ -67,6 +73,6 @@
 			"txval",
 			"UART"
 		],
-		"cortex-debug.variableUseNaturalFormat": true
+		"cortex-debug.variableUseNaturalFormat": false
 	}
 }

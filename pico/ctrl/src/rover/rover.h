@@ -17,6 +17,51 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
+// ############################################################################
+// Public Functions
+// ############################################################################
+//
+
+/**
+ * @brief The current being used by the Auxilary (switched Sensor/Servo) Power.
+ *
+ * @return float The current being used in milli-amps (mA)
+ */
+extern float rover_aux_pwr_ma();
+
+/**
+ * @brief Turn the Auxilary (Sensor/Servo) Power ON/OFF
+ *
+ * @param on true for ON, false for OFF
+ */
+extern void rover_aux_pwr_on(bool on);
+
+/**
+ * @brief The measured voltage of Battery-1.
+ *
+ * @return float Battery voltage
+ */
+extern float rover_batt1_voltage();
+
+/**
+ * @brief The measured voltage of Battery-2.
+ *
+ * @return float Battery voltage
+ */
+extern float rover_batt2_voltage();
+
+/**
+ * @brief The measured light level.
+ *
+ * @return float Level in 'uinits'. Greater is more light.
+ */
+extern float rover_light_lvl();
+
+// ############################################################################
+// Initialization and Maintainence Functions
+// ############################################################################
+//
+
 /**
  * @brief Housekeeping for the Rover module.
  * @ingroup rover

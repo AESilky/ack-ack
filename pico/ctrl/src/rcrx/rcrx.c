@@ -75,7 +75,7 @@ static void _la_print_buf(volatile const uint32_t* buf, int samples);
 */
 void rcrx_mh_detect_baud_protocol(cmt_msg_t* msg) {
     // TEMP - Print the samples
-    _la_print_buf(_rc_bufs.detect_buf, RC_DETECT_BUF_SIZE);
+    _la_print_buf(rc_bufs.detect_buf, RC_DETECT_BUF_SIZE);
 
     // See if we have a single low bit (start) and a single high bit (stop)
     // Note: This isn't valid generically, but is for our situation, since
@@ -85,7 +85,7 @@ void rcrx_mh_detect_baud_protocol(cmt_msg_t* msg) {
     //       and would make the baudrate appear to be much slower.
     int zeros;  // This will be set with the number of consecutive zero bits in the sample
     int ones;   // This will be set with the number of consecutive one bits in the sample
-    if (_chk_sngl_0n1_bits(_rc_bufs.detect_buf, RC_DETECT_BUF_SIZE, &zeros, &ones)) {
+    if (_chk_sngl_0n1_bits(rc_bufs.detect_buf, RC_DETECT_BUF_SIZE, &zeros, &ones)) {
         // We have a single 0 and single 1 bit sample. This could be right.
         // Check the number of consecutive zeros and ones...
         //  SRXL2 will have many more ones than zeros
@@ -96,11 +96,11 @@ void rcrx_mh_detect_baud_protocol(cmt_msg_t* msg) {
             _rx_protocol = _rx_proto_types[_bp_check_indx];
             //
             // De-init the PIO-SM so that it is ready to accept the RX program.
-            pio_serial_rd_deinit(PIO_RC_BLOCK, PIO_RC_SM_RX, _rxcmn_pio_smrx_pocfg.offset, _uart_inverse[_bp_check_indx]);
+            pio_serial_rd_deinit(PIO_RC_BLOCK, PIO_RC_SM_RX, rxcmn_pio_smrx_pocfg.offset, _uart_inverse[_bp_check_indx]);
             //
             // Give the DMA Channel back so it can be used by the appropriate RX input module.
-            dma_channel_unclaim(_rxcmn_dma_pio_rd);
-            _rxcmn_dma_pio_rd = -1;
+            dma_channel_unclaim(rxcmn_dma_pio_rd);
+            rxcmn_dma_pio_rd = -1;
             //
             // Post a message indicating that the RC RX has been detected
             cmt_msg_t msg;
@@ -131,7 +131,7 @@ void rcrx_mh_detect_baud_protocol(cmt_msg_t* msg) {
 
     // Didn't find single 0 and 1 bits at that rate.
     // Try the next one
-    pio_serial_rd_deinit(PIO_RC_BLOCK, PIO_RC_SM_RX, _rxcmn_pio_smrx_pocfg.offset, _uart_inverse[_bp_check_indx]);
+    pio_serial_rd_deinit(PIO_RC_BLOCK, PIO_RC_SM_RX, rxcmn_pio_smrx_pocfg.offset, _uart_inverse[_bp_check_indx]);
     _bp_check_indx++;
     if (_bp_check_indx == BAUD_PROTOCOL_CHECKS_CNT) {
         printf("RC-RX all BAUD rates checked. Starting over.\n");
@@ -206,31 +206,31 @@ static void _get_baud_chk_sample() {
     // Init/Re-init the PIO-SM clk to the correct rate for the BAUD check.
     // (The PIO-SM should already be initialized correctly, except for possibly the BAUD.)
     uint baud = _baud_checks[_bp_check_indx];
-    _rxcmn_pio_smrx_pocfg = pio_serial_rd_init(PIO_RC_BLOCK, PIO_RC_SM_RX, RC_RXTEL_GPIO, baud, _uart_inverse[_bp_check_indx]);
+    rxcmn_pio_smrx_pocfg = pio_serial_rd_init(PIO_RC_BLOCK, PIO_RC_SM_RX, RC_RXTEL_GPIO, baud, _uart_inverse[_bp_check_indx]);
     //
-    uint piosmpc = piosm_pc(_rxcmn_pio_smrx_pocfg);
+    uint piosmpc = piosm_pc(rxcmn_pio_smrx_pocfg);
     printf("PIO-SM-PC: %d\n", piosmpc);
     //
     // Init the PIO RD DMA to read from the PIO when there is data ready
-    dma_channel_config c1 = dma_channel_get_default_config(_rxcmn_dma_pio_rd); //Get configurations for the RC channel
+    dma_channel_config c1 = dma_channel_get_default_config(rxcmn_dma_pio_rd); //Get configurations for the RC channel
     channel_config_set_transfer_data_size(&c1, DMA_SIZE_32); //Set RC PIO channel data transfer size to 32 bits
     channel_config_set_read_increment(&c1, false); // Read increment to false (read from PIO)
     channel_config_set_write_increment(&c1, true); // Write increment to true (advance through buffer)
     channel_config_set_dreq(&c1, PIO_RCRX_DREQ); //Set the transfer request signal to the PIO-SM rx-fifo not empty.
     //
     // Configure RC PIO channel to trigger DMA when data is available.
-    dma_channel_configure(_rxcmn_dma_pio_rd, &c1,
-        &_rc_bufs.detect_buf,                       // Destination
+    dma_channel_configure(rxcmn_dma_pio_rd, &c1,
+        &rc_bufs.detect_buf,                       // Destination
         &PIO_RC_BLOCK->rxf[PIO_RC_SM_RX],              // PIO-SM RX FIFO to read from
         RC_DETECT_BUF_SIZE,                         // Number of samples to transfer (one block)
         false);                                     // Don't start yet
     //
     // Tell the DMA to raise IRQ line 1 when the channel finishes a block
-    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, _rxcmn_dma_pio_rd, true);
+    dma_irqn_set_channel_enabled(IRQn_RCRX_DMA_FROM_PIO, rxcmn_dma_pio_rd, true);
     irq_set_enabled(SYSIRQ_RCRX_DMA_FROM_PIO, true);
     //
     // Now start the DMA and PIO-SM
-    dma_channel_start(_rxcmn_dma_pio_rd);
+    dma_channel_start(rxcmn_dma_pio_rd);
     pio_sm_set_enabled(PIO_RC_BLOCK, PIO_RC_SM_RX, true);
     // When 20 samples have been read the DMA will interrupt and post a message.
 }
@@ -260,7 +260,7 @@ static void _get_baud_protocol() {
     // Initialize the PIO-SM for detecting the BAUD and Protocol
     // and the DMA for pulling the data into the memory buffer.
     //
-    _rxcmn_dma_pio_rd = dma_claim_unused_channel(true);
+    rxcmn_dma_pio_rd = dma_claim_unused_channel(true);
     // Configure the processor to run irq_dma_from_pio() when DMA IRQ1 is
     // asserted.
     irq_set_exclusive_handler(SYSIRQ_RCRX_DMA_FROM_PIO, rxcmn_irq_dma_from_pio);
@@ -269,8 +269,8 @@ static void _get_baud_protocol() {
     _bp_check_indx = 0;
     //
     // Set up the message and handler to use for checking the BAUD and Protocol
-    _rxcmn_mh_data_rdy = rcrx_mh_detect_baud_protocol; // Message handler to try to detect baud.
-    _rxcmn_data_rdy_msg = MSG_RC_DETECT_DA; // Message for detecting
+    rxcmn_mh_data_rdy = rcrx_mh_detect_baud_protocol; // Message handler to try to detect baud.
+    rxcmn_data_rdy_msg = MSG_RC_DETECT_DA; // Message for detecting
     _get_baud_chk_sample();
 }
 
@@ -381,7 +381,7 @@ void rcrx_module_init() {
 
     _baud = 0;
     _rx_protocol = RXP_UNKNOWN;
-    _rxcmn_mh_data_rdy = NULL_MSG_HDLR;    // No message handler to start.
-    _rxcmn_data_rdy_msg = MSG_HWRT_NOOP;   // No message to start with.
+    rxcmn_mh_data_rdy = NULL_MSG_HDLR;    // No message handler to start.
+    rxcmn_data_rdy_msg = MSG_HWRT_NOOP;   // No message to start with.
 }
 

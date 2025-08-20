@@ -19,6 +19,7 @@
 #include "rcrx/rcrx.h"
 #include "rover/rover.h"
 #include "rover/servos.h"
+#include "sensbank/sensbank.h"
 #include "util/util.h"
 
 #include "lib/json-maker/json-maker.h"
@@ -73,6 +74,15 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
     _dcs_hk_cnt++;
     if (_dcs_hk_cnt % DCS_STATUS_PERIOD == 0) {
         debug_printf("DCS: %d\n", _dcs_hk_cnt);
+        // Get the Power and Light (ADC) values and print them:
+        float b1v = rover_batt1_voltage();
+        float b2v = rover_batt2_voltage();
+        float apma = rover_aux_pwr_ma();
+        float light = rover_light_lvl();
+        info_printf("\nRover state: B1: %6.3fV  B2: %6.3fV  AuxPwr: %5.3fmA  Light: %5.3f\n", b1v, b2v, apma, light);
+        sensbank_dist_t dist = sensbank_dist_get();
+        uint32_t ssv = (uint32_t)roundf((now_ms() - (max(dist.lidar_ts, max(dist.sonar0_ts, dist.sonar1_ts)))) / ONE_SECOND_MS);
+        info_printf(  "           Back: %-hucm  Front(S): %-hucm  Front(L): %-4hucm  Ago: %d\n", dist.sonar0, dist.sonar1, dist.lidar, ssv);
     }
     if ((_dcs_hk_cnt % DCS_HOST_STATUS_PERIOD) == 0) {
         // Send our status to the host.
@@ -118,7 +128,6 @@ static void _handle_dcs_housekeeping(cmt_msg_t* msg) {
             }
         }
     }
-
     // Do cleanup, status updates, heartbeat, etc.
     rover_housekeeping();
 }
@@ -149,6 +158,13 @@ static void _handle_direct_ctrl_chg(cmt_msg_t* msg) {
     bool dc_new = msg->data.bv;
 
     info_printf("\nDirect Control state: %s\n", (dc_new ? "ON" : "OFF"));
+
+    if (dc_new) {
+        servos_start();
+    }
+    else {
+        servos_stop();
+    }
 }
 
 static void _handle_frr_chg(cmt_msg_t* msg) {
@@ -176,6 +192,11 @@ static void _handle_hwrt_started(cmt_msg_t* msg) {
     _hwrt_started = true;
 }
 
+static void _handle_sensbank_change(cmt_msg_t* msg) {
+    // Handle changes in the sensor bank bits.
+    printf("SB Chg: %02X -> %02X\n", msg->data.sensbank_chg.prev_bits, msg->data.sensbank_chg.bits);
+}
+
 
 // ====================================================================
 // Local functions
@@ -194,10 +215,11 @@ static void _dcs_started() {
         board_panic("!!! `_dcs_started` - Called more than once. !!!");
     }
 
-    cmt_msg_hdlr_add(MSG_HOUSEKEEPING_RT, _handle_dcs_housekeeping);
+    cmt_msg_hdlr_add(MSG_PERIODIC_RT, _handle_dcs_housekeeping);
     cmt_msg_hdlr_add(MSG_DCS_TEST, _handle_dcs_test);
     cmt_msg_hdlr_add(MSG_DIRECT_CTRL_CHG, _handle_direct_ctrl_chg);
     cmt_msg_hdlr_add(MSG_FORWARD_ROTATE_REVERSE_CHG, _handle_frr_chg);
+    cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
     dcs_rc_start();
 
     //
