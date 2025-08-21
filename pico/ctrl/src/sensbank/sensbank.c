@@ -44,6 +44,7 @@
 #define SONAR_SMPLS_LEN     10      // Do two samples of 5 bytes to see if they are similar
 #define SONAR_SMPL_TO_MS    120     // Sensor samples every 50ms. This give a little buffer.
 
+
 // ############################################################################
 // Local Types
 // ############################################################################
@@ -64,13 +65,13 @@ typedef enum sens_rd_state_ {
 //
 
 static void _cancel_distance_rd(io_rw_32 pio_irqbits);
-static void _distance_data_rdy(cmt_msg_t* msg);
+static void _mh_distance_data_rdy(cmt_msg_t* msg);
 static void _distance_read_to(cmt_msg_t* msg);
 static void _out_sensor_addr();
 static int _process_rcvd_lidar_data();
 static int _process_rcvd_sonar_data();
 static void _sens_state_update();
-static void _uart_frame_error(cmt_msg_t* msg);
+static void _mh_uart_frame_error(cmt_msg_t* msg);
 
 
 // ############################################################################
@@ -140,7 +141,7 @@ void __isr sb_irq_dma_from_pio() {
     dma_irqn_acknowledge_channel(IRQn_SB_DMA_FROM_PIO, _dma_pio_rd);
 
     cmt_msg_t msg;
-    cmt_exec_init(&msg, _distance_data_rdy);
+    cmt_exec_init(&msg, _mh_distance_data_rdy);
     postDCSMsg(&msg);
 }
 
@@ -160,7 +161,7 @@ void __isr sb_irq_pio_rx_err_handler() {
     //
     // Initialize and post the message
     //
-    cmt_exec_init(&msg, _uart_frame_error);
+    cmt_exec_init(&msg, _mh_uart_frame_error);
     msg.data.value32u = pio_irqbits;
     postDCSMsg(&msg);
 }
@@ -171,8 +172,31 @@ void __isr sb_irq_pio_rx_err_handler() {
 // Message Handlers
 // ############################################################################
 //
+/**
+ * @brief Further process the SENSBANK_CHG message to post messages for the User Green and Yellow buttons.
+ *
+ * @param msg Data contains the sensor bits.
+ */
+static void _mh_sensbank_chg(cmt_msg_t *msg) {
+    // Post User Button GREEN/YELLOW Pressed/Released messages.
+    cmt_msg_t ubmsg;
+    sensbank_cah_t sensdata = msg->data.sensbank_chg; // We could read this directly, but we'll use the message.
+    uint8_t delta = sensdata.prev_bits ^ sensdata.bits;
+    if (delta & BTN_GREEN_SENSOR_BIT) {
+        // Green button changed
+        cmt_msg_init(&ubmsg, MSG_UB_GREEN_PR);
+        ubmsg.data.bv = ((sensdata.bits & BTN_GREEN_SENSOR_BIT) != 0); // True for PRESSED, False for RELEASED
+        postDCSMsg(&ubmsg);
+    }
+    if (delta & BTN_YELLOW_SENSOR_BIT) {
+        // Yellow button changed
+        cmt_msg_init(&ubmsg, MSG_UB_YELLOW_PR);
+        ubmsg.data.bv = ((sensdata.bits & BTN_YELLOW_SENSOR_BIT) != 0); // True for PRESSED, False for RELEASED
+        postDCSMsg(&ubmsg);
+    }
+}
 
-static void _distance_data_rdy(cmt_msg_t *msg) {
+static void _mh_distance_data_rdy(cmt_msg_t *msg) {
     // Cancel our timeout message.
     scheduled_msg_cancel2(MSG_EXEC, _distance_read_to);
     // Put the input pin back to normal.
@@ -213,7 +237,7 @@ static void _distance_data_rdy(cmt_msg_t *msg) {
     _sens_state_update();
 }
 
-static void _uart_frame_error(cmt_msg_t *msg) {
+static void _mh_uart_frame_error(cmt_msg_t *msg) {
     // The UART got a framing error. The irq handler disabled the SM.
     // Cancel the operation and move to the next state.
     io_rw_32 pio_irqbits = (io_rw_32)msg->data.value32u;
@@ -594,6 +618,9 @@ void sensbank_start(void) {
         adc1015_start();
     }
 
+    // Register handler for sensor change so we can process the User Buttons
+    cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _mh_sensbank_chg);
+
     _sensor_changed = true;
     _sensor = 0;
     _srs = SRS_BINARY_SENS;
@@ -632,95 +659,3 @@ void sensbank_module_init(void) {
     irq_set_exclusive_handler(PIO_SENSBANK_IRQ_ERR, sb_irq_pio_rx_err_handler); // Set the IRQ handler
     irq_set_enabled(PIO_SENSBANK_IRQ_ERR, false); // Disable the IRQ for now
 }
-
-/*
-static void pio_irq_func(void) {
-    // IRQ called when the pio fifo is not empty, i.e. there is a sensbank
-    // value available. This occurs ~80 per second (12-13ms).
-    while (!pio_sm_is_rx_fifo_empty(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM)) {
-        uint32_t dw = pio_sm_get(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM);
-        // We want the value to be the same twice, to debounce switch changes.
-        uint8_t d = dw & 0x000000FF;
-        _samplerd[_sampleindx++] = d;
-        if (_sampleindx != SAMPLES_NEEDED_) {
-            continue;
-        }
-        else {
-            _sampleindx = 0;
-            if (_samplerd[0] != _samplerd[1]) {
-                continue;
-            }
-        }
-        // There were two consecutive reads the same. Check the value.
-        _sensdata.prev_bits = _sensdata.bits;
-        if (d != _sensdata.bits) {
-            _sensdata.bits = d;
-            // Some bits have changed, post a message
-            cmt_msg_t msg;
-            cmt_msg_init(&msg, MSG_SENSBANK_CHG);
-            msg.data.sensbank_chg.prev_bits = _sensdata.prev_bits;
-            msg.data.sensbank_chg.bits = _sensdata.bits;
-            postHWRTMsg(&msg);
-            postDCSMsgDiscardable(&msg); // DCS is for status only
-        }
-    }
-}
-
-
-
-static void _sensbank_program_init(PIO pio, uint sm, uint offset, uint opin, uint ipin) {
-    // Set the 3 o-pin directions to output at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, opin, 3, true);
-    // Set the i-pin direction to input at the PIO
-    pio_sm_set_consecutive_pindirs(pio, sm, ipin, 1, false);
-    // Connect these GPIOs to this PIO block
-    pio_gpio_init(pio, opin);
-    pio_gpio_init(pio, opin + 1);
-    pio_gpio_init(pio, opin + 2);
-    pio_gpio_init(pio, ipin);
-
-    pio_sm_config c = sensbank_program_get_default_config(offset);
-    // Set the OUT base pin to the provided `opin` parameter. This is the A0 bit,
-    // and the next 2 numbered GPIO are A1 and A2.
-    sm_config_set_out_pins(&c, opin, 3);
-    // Set the IN base pin to the provided `ipin` parameter. This is the sensor input.
-    sm_config_set_in_pins(&c, ipin);
-    // Shift 8 bits left with AutoPush. Shifting left puts the bit read from address 7 in bit 7.
-    sm_config_set_in_shift(
-        &c,
-        false, // Shift-to-right = false (i.e. shift to left)
-        false, // Auto-push not enabled
-        8      // Auto-push threshold = 8
-    );
-    // Data is input only, so join the TX FIFO to the RX FIFO.
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
-
-    // Set the clock divider to sample the 8 inputs about 80 times a second.
-    // (each bit sample takes 4 clock cycles)
-    float div = clock_get_hz(clk_sys) / (80 * (4 * 8));
-    sm_config_set_clkdiv(&c, div);
-
-    // Load our configuration, but don't start it
-    pio_sm_init(pio, sm, offset, &c);
-    pio_sm_set_enabled(pio, sm, false);
-}
-
-    // Load the PIO program
-    int offset;
-    offset = pio_add_program(PIO_SENSBANK_BLOCK, &sensbank_program);
-    if (offset < 0) {
-        board_panic("sensbank_module_init - Unable to load PIO program");
-    }
-    // Enable interrupt
-    irq_set_exclusive_handler(PIO_SENSBANK_IRQ_ERR, pio_irq_func); // Set the IRQ handler
-    irq_set_enabled(PIO_SENSBANK_IRQ_ERR, false); // Disable the IRQ for now
-
-    _sensbank_program_init(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM, offset, SENSOR_SEL_A0, SENSOR_READ);
-
-
-    // Set pio to tell us when the FIFO is NOT empty
-    pio_set_irqn_source_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_IRQ_ERR_IDX, pio_get_rx_fifo_not_empty_interrupt_source(PIO_SENSBANK_SM), true);
-    // Enable the interrupt and start the PIO state machine
-    irq_set_enabled(PIO_SENSBANK_IRQ_ERR, true);
-    pio_sm_set_enabled(PIO_SENSBANK_BLOCK, PIO_SENSBANK_SM, true);
-*/

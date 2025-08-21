@@ -76,6 +76,10 @@ void rover_aux_pwr_on(bool on) {
     gpio_put(AUX_PWR_CTRL, (on ? SENSVO_PWR_ON : SENSVO_PWR_OFF));
 }
 
+bool rover_aux_pwr_is_on() {
+    return (gpio_get(AUX_PWR_CTRL) != 0);
+}
+
 float rover_batt1_voltage() {
     float v = adc1015_volts(adc1015_value(BATT1_ADC_INPUT)) * ADC_V_B1_V_CNV;
     return v;

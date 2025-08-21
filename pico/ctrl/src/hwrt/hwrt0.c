@@ -19,21 +19,21 @@
 #include "rcrx/rcrx.h"
 #include "util/util.h"
 
+#include "hardware/gpio.h"
 #include "pico/stdlib.h"
 #include "pico/float.h"
 #include "pico/printf.h"
 
 #define _HWRT_STATUS_PULSE_PERIOD 6999
 
-static bool _dcs_started = false;
+static volatile bool _dcs_started = false;
 
-static cmt_msg_t _input_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE };
-static bool _input_sw_pressed;
+static volatile bool _stop_sw_pressed;
 
 
 // Interrupt handler functions...
 static void _gpio_irq_handler(uint gpio, uint32_t events);
-static void _input_sw_irq_handler(uint32_t events);
+static void _stop_sw_irq_handler(uint32_t events);
 
 // Message handler functions...
 static void _handle_hwrt_housekeeping(cmt_msg_t* msg);
@@ -96,11 +96,11 @@ static void _handle_hwrt_test(cmt_msg_t* msg) {
     times++;
 }
 
-static void _handle_input_sw_debounce(cmt_msg_t* msg) {
-    _input_sw_pressed = user_switch_pressed(); // See if it's still pressed
-    if (_input_sw_pressed) {
+static void _handle_stop_sw_debounce(cmt_msg_t* msg) {
+    _stop_sw_pressed = stop_switch_pressed(); // See if it's still pressed
+    if (_stop_sw_pressed) {
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_INPUT_SW_PRESS);
+        cmt_msg_init(&msg, MSG_STOP_SW_PRESS);
         postDCSMsg(&msg);
     }
 }
@@ -113,27 +113,29 @@ static void _handle_input_sw_debounce(cmt_msg_t* msg) {
 
 void _gpio_irq_handler(uint gpio, uint32_t events) {
     switch (gpio) {
-    case IRQ_INPUT_SW:
-        _input_sw_irq_handler(events);
+    case IRQ_STOP_SW:
+        _stop_sw_irq_handler(events);
         break;
     }
 }
 
-static void _input_sw_irq_handler(uint32_t events) {
+static void _stop_sw_irq_handler(uint32_t events) {
     // The GPIO needs to be low for at least 80ms to be considered a button press.
     if (events & GPIO_IRQ_EDGE_FALL) {
         // Delay to see if it is user input.
         // Check to see if we have already scheduled a debounce message.
-        if (!scheduled_msg_exists(MSG_INPUT_SW_DEBOUNCE)) {
-            schedule_msg_in_ms(80, &_input_sw_debounce_msg);
+        if (!scheduled_msg_exists(MSG_STOP_SW_DEBOUNCE)) {
+            cmt_msg_t msg;
+            cmt_msg_init2(&msg, MSG_STOP_SW_DEBOUNCE, _handle_stop_sw_debounce);
+            schedule_msg_in_ms(80, &msg);
         }
     }
     if (events & GPIO_IRQ_EDGE_RISE) {
-        scheduled_msg_cancel(MSG_INPUT_SW_DEBOUNCE);
-        if (_input_sw_pressed) {
-            _input_sw_pressed = false;
+        scheduled_msg_cancel(MSG_STOP_SW_DEBOUNCE);
+        if (_stop_sw_pressed) {
+            _stop_sw_pressed = false;
             cmt_msg_t msg;
-            cmt_msg_init(&msg, MSG_INPUT_SW_RELEASE);
+            cmt_msg_init(&msg, MSG_STOP_SW_RELEASE);
             postDCSMsg(&msg);
         }
     }
@@ -150,7 +152,8 @@ static void _hwrt_module_init() {
     cmt_msg_hdlr_add(MSG_DCS_STARTED, _handle_dcs_started);
 
 
-    _input_sw_pressed = false;
+    _stop_sw_pressed = false;
+    gpio_set_irq_enabled_with_callback(STOP_INPUT_SW_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &_gpio_irq_handler);
 
     // Remote control
     rcrx_module_init();

@@ -287,7 +287,7 @@ void rxcmn_list_pio_dma_state(void* data) {
 
     if (retrigger) {
         // trigger another report
-        cmt_run_after_ms(7000, rxcmn_list_pio_dma_state, (void*)true);
+        cmt_run_after_ms(12003, rxcmn_list_pio_dma_state, (void*)true);
     }
 }
 

@@ -123,16 +123,16 @@ int board_init() {
     gpio_put(SPI_ADDR_1, 1);
 
     // SPI 0 Pins for Display and Expansion I/O
-    gpio_set_function(SPI_DISP_EXP_SCK, GPIO_FUNC_SPI);
-    gpio_set_function(SPI_DISP_EXP_MOSI, GPIO_FUNC_SPI);
-    gpio_set_function(SPI_DISP_EXP_MISO, GPIO_FUNC_SPI);
+    gpio_set_function(SPI_EXP_DISP_SCK, GPIO_FUNC_SPI);
+    gpio_set_function(SPI_EXP_DISP_MOSI, GPIO_FUNC_SPI);
+    gpio_set_function(SPI_EXP_DISP_MISO, GPIO_FUNC_SPI);
     // SPI 0 Signal drive strengths
-    gpio_set_drive_strength(SPI_DISP_EXP_SCK, GPIO_DRIVE_STRENGTH_2MA);     // Two devices connected
-    gpio_set_drive_strength(SPI_DISP_EXP_MOSI, GPIO_DRIVE_STRENGTH_2MA);    // Two devices connected
+    gpio_set_drive_strength(SPI_EXP_DISP_SCK, GPIO_DRIVE_STRENGTH_2MA);     // Two devices connected
+    gpio_set_drive_strength(SPI_EXP_DISP_MOSI, GPIO_DRIVE_STRENGTH_2MA);    // Two devices connected
     // SPI 0 Data In Pull-Up
-    gpio_pull_up(SPI_DISP_EXP_MISO);
+    gpio_pull_up(SPI_EXP_DISP_MISO);
     // SPI 0 initialization for the Display and IO-Expansion. Use SPI at 5MHz.
-    spi_init(SPI_DISP_EXP_DEVICE, SPI_DISP_EXP_SPEED);
+    spi_init(SPI_EXP_DISP_DEVICE, SPI_EXP_DISP_SPEED);
 
     // I2C Isn't directly used on the board, but is provided on headers for external use.
     //   GPIO config is as recommended in the RP2350 Datasheet.
@@ -210,9 +210,9 @@ int board_init() {
     //
 #if (BOARD_ADDR == 0)
     // STOP input switch
-    gpio_set_function(STOP_INPUT_SW, GPIO_FUNC_SIO);
-    gpio_set_dir(STOP_INPUT_SW, GPIO_IN);
-    gpio_set_pulls(SW_MAIN_USER_GPIO, true, false);
+    gpio_set_function(STOP_INPUT_SW_GPIO, GPIO_FUNC_SIO);
+    gpio_set_dir(STOP_INPUT_SW_GPIO, GPIO_IN);
+    gpio_set_pulls(STOP_INPUT_SW_GPIO, true, false);
     // Sensor and Servo Power Control
     //  Power Distribution board has an enable for 12V, 7.5V, and 5.0V outputs
     gpio_set_function(AUX_PWR_CTRL, GPIO_FUNC_SIO);
@@ -230,10 +230,6 @@ int board_init() {
     gpio_set_drive_strength(SERVO_CTRL_TX_EN_GPIO, GPIO_DRIVE_STRENGTH_2MA);
     //    Initial output state
     gpio_put(SERVO_CTRL_TX_EN_GPIO, SERVO_CTRL_TX_DIS);     // Bus-Servo TX Disabled
-    //    User Switch
-    gpio_set_function(SW_MAIN_USER_GPIO, GPIO_FUNC_SIO);
-    gpio_set_dir(SW_MAIN_USER_GPIO, GPIO_IN);
-    gpio_set_pulls(SW_MAIN_USER_GPIO, false, false);
 #endif
     // This could be an else, but it's only done once and this allows for more than 0 & 1.
 #if (BOARD_ADDR == 1)
@@ -381,10 +377,11 @@ float onboard_temp_f() {
     return (onboard_temp_c() * 9 / 5 + 32);
 }
 
-bool user_switch_pressed() {
-    return (gpio_get(SW_MAIN_USER_GPIO) == SW_MAIN_USER_PRESSED);
+#if (BOARD_ADDR == 0)
+bool stop_switch_pressed() {
+    return (gpio_get(STOP_INPUT_SW_GPIO) == STOP_INPUT_SW_PRESSED);
 }
-
+#endif
 
 void debug_printf(const char* format, ...) {
     if (debug_mode_enabled()) {

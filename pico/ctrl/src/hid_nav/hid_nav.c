@@ -62,8 +62,8 @@ static void _handle_switch_longpress_delay(cmt_msg_t* msg);
 //
 static switch_id_t _sw_pressed = SW_NONE;
 static cmt_msg_t _sw_longpress_msg = { MSG_SW_LONGPRESS_DELAY };
-static bool _input_sw_pressed;
-static cmt_msg_t _input_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE };
+static bool _user_sw_pressed;
+static cmt_msg_t _stop_sw_debounce_msg = { MSG_INPUT_SW_DEBOUNCE };
 
 
 // ====================================================================
@@ -87,13 +87,13 @@ static void _input_sw_irq_handler(uint32_t events) {
         // Delay to see if it is user input or an IR received.
         // Check to see if we have already scheduled a debounce message.
         if (!scheduled_msg_exists(MSG_INPUT_SW_DEBOUNCE)) {
-            schedule_msg_in_ms(80, &_input_sw_debounce_msg);
+            schedule_msg_in_ms(80, &_stop_sw_debounce_msg);
         }
     }
     if (events & GPIO_IRQ_EDGE_RISE) {
         scheduled_msg_cancel(MSG_INPUT_SW_DEBOUNCE);
-        if (_input_sw_pressed) {
-            _input_sw_pressed = false;
+        if (_user_sw_pressed) {
+            _user_sw_pressed = false;
             cmt_msg_t msg;
             cmt_msg_init(&msg, MSG_INPUT_SW_RELEASE);
             postDCSMsg(&msg);
@@ -150,8 +150,8 @@ static void _handle_hid_housekeeping(cmt_msg_t* msg) {
 }
 
 static void _handle_input_sw_debounce(cmt_msg_t* msg) {
-    _input_sw_pressed = user_switch_pressed(); // See if it's still pressed
-    if (_input_sw_pressed) {
+    _user_sw_pressed = false; //user_switch_pressed(); // See if it's still pressed
+    if (_user_sw_pressed) {
         cmt_msg_t msg;
         cmt_msg_init(&msg, MSG_INPUT_SW_PRESS);
         postDCSMsg(&msg);

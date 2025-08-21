@@ -108,12 +108,12 @@ void spi_display_end(void) {
 }
 
 int spi_display_read_buf(uint8_t txval, uint8_t* dst, size_t len) {
-    int r = _read_buf(SPI_DISP_EXP_DEVICE, txval, dst, len);
+    int r = _read_buf(SPI_EXP_DISP_DEVICE, txval, dst, len);
     return r;
 }
 
 uint8_t spi_display_read8(uint8_t txval) {
-    return (_read8(SPI_DISP_EXP_DEVICE, txval));
+    return (_read8(SPI_EXP_DISP_DEVICE, txval));
 }
 
 void spi_display_select() {
@@ -121,22 +121,22 @@ void spi_display_select() {
 }
 
 int spi_display_write8(uint8_t data) {
-    int r = _write8(SPI_DISP_EXP_DEVICE, data);
+    int r = _write8(SPI_EXP_DISP_DEVICE, data);
     return r;
 }
 
 int spi_display_write8_buf(const uint8_t* buf, size_t len) {
-    int r = _write8_buf(SPI_DISP_EXP_DEVICE, buf, len);
+    int r = _write8_buf(SPI_EXP_DISP_DEVICE, buf, len);
     return r;
 }
 
 int spi_display_write16(uint16_t data) {
-    int r = _write16(SPI_DISP_EXP_DEVICE, data);
+    int r = _write16(SPI_EXP_DISP_DEVICE, data);
     return r;
 }
 
 int spi_display_write16_buf(const uint16_t* buf, size_t len) {
-    int r = _write16_buf(SPI_DISP_EXP_DEVICE, buf, len);
+    int r = _write16_buf(SPI_EXP_DISP_DEVICE, buf, len);
     return r;
 }
 
@@ -150,12 +150,12 @@ void spi_expio_end(void) {
 }
 
 int spi_expio_read_buf(uint8_t txval, uint8_t* dst, size_t len) {
-    int r = _read_buf(SPI_DISP_EXP_DEVICE, SPI_HIGH_TXD_FOR_READ, dst, len);
+    int r = _read_buf(SPI_EXP_DISP_DEVICE, SPI_HIGH_TXD_FOR_READ, dst, len);
     return r;
 }
 
 uint8_t spi_expio_read8(uint8_t txval) {
-    return (_read8(SPI_DISP_EXP_DEVICE, txval));
+    return (_read8(SPI_EXP_DISP_DEVICE, txval));
 }
 
 void spi_expio_select() {
@@ -163,12 +163,12 @@ void spi_expio_select() {
 }
 
 int spi_expio_write8(uint8_t data) {
-    int r = _write8(SPI_DISP_EXP_DEVICE, data);
+    int r = _write8(SPI_EXP_DISP_DEVICE, data);
     return r;
 }
 
 int spi_expio_write8_buf(const uint8_t* buf, size_t len) {
-    int r = _write8_buf(SPI_DISP_EXP_DEVICE, buf, len);
+    int r = _write8_buf(SPI_EXP_DISP_DEVICE, buf, len);
     return r;
 }
 

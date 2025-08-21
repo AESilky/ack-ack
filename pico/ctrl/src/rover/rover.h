@@ -37,6 +37,14 @@ extern float rover_aux_pwr_ma();
 extern void rover_aux_pwr_on(bool on);
 
 /**
+ * @brief Get the current state of the Auxilary (Sensor/Servo) Power ON/OFF
+ *
+ * @return true Power is on
+ * @return false Power is off
+ */
+extern bool rover_aux_pwr_is_on();
+
+/**
  * @brief The measured voltage of Battery-1.
  *
  * @return float Battery voltage

@@ -16,6 +16,13 @@ extern "C" {
 
 #include <stdint.h>
 
+// Used for decoding the Sensbank Value.
+
+/** @brief Green User Button sensor bit within Sensbank Value. */
+#define BTN_GREEN_SENSOR_BIT       0x02    // Green button is on Sensor-Bit 1
+/** @brief Green User Button sensor bit within Sensbank Value. */
+#define BTN_YELLOW_SENSOR_BIT      0x04    // Yellow button is on Sensor-Bit 2
+
 /**
  * @brief Pair of bytes that have the current and previous sensor bytes.
  *
