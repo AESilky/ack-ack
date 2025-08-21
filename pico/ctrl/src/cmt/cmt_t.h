@@ -42,12 +42,9 @@ typedef enum MSG_ID_ {
     MSG_EXEC,               // General purpose message that can be used when specifying a handler.
     MSG_CONFIG_CHANGED,
     MSG_DEBUG_CHANGED,
-    MSG_INPUT_SW_PRESS,
-    MSG_INPUT_SW_DEBOUNCE,
-    MSG_INPUT_SW_RELEASE,
     MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed
     MSG_RC_RECEIVED,        // A Radio Control message has been received and processed (ready for use)
-    MSG_SENSBANK_CHG,
+    MSG_SENSBANK_CHG,       // Data has Previous and Current sensor bit values
     MSG_SW_ACTION,
     MSG_SW_LONGPRESS,
     MSG_SW_LONGPRESS_DELAY,
@@ -68,6 +65,9 @@ typedef enum MSG_ID_ {
     MSG_SERVO_READ_ERROR,
     MSG_SERVO_STATUS_RCVD,
     MSG_STDIO_CHAR_READY,
+    MSG_STOP_SW_PRESS,
+    MSG_STOP_SW_DEBOUNCE,
+    MSG_STOP_SW_RELEASE,
     MSG_TOUCH_PANEL,
     //
     // Drive Control System (DCS), Human Interface Devices (HID), and Navigation (NAV) messages 0xC0 - 0xFF
@@ -76,9 +76,14 @@ typedef enum MSG_ID_ {
     MSG_DCS_TEST,
     MSG_DIRECT_CTRL_CHG,
     MSG_FORWARD_ROTATE_REVERSE_CHG,
+    MSG_INPUT_SW_PRESS,
+    MSG_INPUT_SW_DEBOUNCE,
+    MSG_INPUT_SW_RELEASE,
     MSG_ROTARY_CHG,
     MSG_ROTARY_SW_PRESS,
     MSG_DISPLAY_MESSAGE,
+    MSG_UB_GREEN_PR,
+    MSG_UB_YELLOW_PR
 } msg_id_t;
 #define MSG_ID_CNT (0x100)
 

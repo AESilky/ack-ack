@@ -35,7 +35,7 @@
 #define DCS_STATUS_PERIOD 313       // Every 5 seconds (313 * 0.016 = 5.008)
 #define DCS_HOST_STATUS_PERIOD 938  // Send status to host every 15 seconds
 #define RC_CH_RD_PERIOD 3           // Read RC Channels and act on them every 48ms
-#define RC_CH_STATUS_PERIOD 126     // Print the RC Channel values (~2 seconds for now)
+#define RC_CH_STATUS_PERIOD (200 * RC_CH_RD_PERIOD)     // Print the RC Channel values (~9.6 seconds for now)
 
 static bool _hwrt_started = false;
 
@@ -194,7 +194,31 @@ static void _handle_hwrt_started(cmt_msg_t* msg) {
 
 static void _handle_sensbank_change(cmt_msg_t* msg) {
     // Handle changes in the sensor bank bits.
-    printf("SB Chg: %02X -> %02X\n", msg->data.sensbank_chg.prev_bits, msg->data.sensbank_chg.bits);
+    sensbank_cah_t sb = msg->data.sensbank_chg;
+    uint8_t delta = (sb.prev_bits ^ sb.bits);
+    printf("SB Chg: %02X -> %02X  Delta: %02X\n", sb.prev_bits, sb.bits, delta);
+
+    // See if the change is that both Yellow and Green buttons are pressed.
+    uint8_t gy = (BTN_GREEN_SENSOR_BIT | BTN_YELLOW_SENSOR_BIT);
+    if (delta & gy) {
+        // The Green and/or Yellow buttons changed. See if both are pressed.
+        if ((sb.bits & gy) == gy) {
+            // Yes. Toggle the Servo+Sensor Power
+            rover_aux_pwr_on(!rover_aux_pwr_is_on());
+        }
+    }
+}
+
+static void _handle_stop_pressed(cmt_msg_t* msg) {
+    // Stop!
+    //  Turn off the servo power.
+    rover_aux_pwr_on(false);
+    //
+    //  Take the rover out of Direct-Control
+    cmt_msg_t msgdc;
+    cmt_msg_init(&msgdc, MSG_DIRECT_CTRL_CHG);
+    msgdc.data.bv = false; // The Direct Control state is in the Binary Value
+    postDCSMsg(&msgdc);
 }
 
 
@@ -220,6 +244,7 @@ static void _dcs_started() {
     cmt_msg_hdlr_add(MSG_DIRECT_CTRL_CHG, _handle_direct_ctrl_chg);
     cmt_msg_hdlr_add(MSG_FORWARD_ROTATE_REVERSE_CHG, _handle_frr_chg);
     cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
+    cmt_msg_hdlr_add(MSG_STOP_SW_PRESS, _handle_stop_pressed);
     dcs_rc_start();
 
     //

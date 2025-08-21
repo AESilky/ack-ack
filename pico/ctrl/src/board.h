@@ -141,14 +141,16 @@ extern float onboard_temp_c();
  */
 extern float onboard_temp_f();
 
+#if (BOARD_ADDR == 0)
 /**
- * @brief The current state of the User Input Switch
+ * @brief The current state of the Stop Switch
  * @ingroup board
  *
  * @return true The switch is pressed
  * @return false The switch isn't pressed
  */
-extern bool user_switch_pressed();
+extern bool stop_switch_pressed();
+#endif
 
 /** @brief Printf like function that includes the datetime and type prefix */
 extern void debug_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
