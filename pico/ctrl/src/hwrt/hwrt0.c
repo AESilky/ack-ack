@@ -17,6 +17,7 @@
 #include "dcs/dcs.h"
 #include "eeprom/eeprom.h"
 #include "rcrx/rcrx.h"
+#include "tone/melody.h"
 #include "util/util.h"
 
 #include "hardware/gpio.h"
@@ -155,6 +156,9 @@ static void _hwrt_module_init() {
     _stop_sw_pressed = false;
     gpio_set_irq_enabled_with_callback(STOP_INPUT_SW_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &_gpio_irq_handler);
 
+    // tone/melody
+    tone_module_init();
+
     // Remote control
     rcrx_module_init();
 
@@ -162,6 +166,9 @@ static void _hwrt_module_init() {
     cmt_msg_t msg;
     cmt_msg_init(&msg, MSG_HWRT_TEST);
     postHWRTMsgDiscardable(&msg);
+
+    // Play our Start-Up melody
+    tone_play_melody(melody(MELODY_STARTUP));
 }
 
 /**

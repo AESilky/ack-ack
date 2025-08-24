@@ -153,7 +153,7 @@ void neopix_module_init(void) {
         board_panic("ws2312_main - Unable to load PIO program");
     }
     // Initialize the PIO that feeds the data to the Neopixel.
-    ws2812_program_init(PIO_NEOPIX_BLOCK, PIO_NEOPIX_SM, offset, NEOPIXEL_DRIVE, 800000, false);
+    ws2812_program_init(PIO_NEOPIX_BLOCK, PIO_NEOPIX_SM, offset, NEOPIXEL_DRIVE_GPIO, 800000, false);
     // Initialize the DMA that moves data from the frame buffers to the PIO,
     // and from a source buffer to the frame buffer.
     _np_dma_pio_rd = dma_claim_unused_channel(true);

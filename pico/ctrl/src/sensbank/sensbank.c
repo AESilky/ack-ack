@@ -185,13 +185,13 @@ static void _mh_sensbank_chg(cmt_msg_t *msg) {
     if (delta & BTN_GREEN_SENSOR_BIT) {
         // Green button changed
         cmt_msg_init(&ubmsg, MSG_UB_GREEN_PR);
-        ubmsg.data.bv = ((sensdata.bits & BTN_GREEN_SENSOR_BIT) != 0); // True for PRESSED, False for RELEASED
+        ubmsg.data.bv = ((sensdata.bits & BTN_GREEN_SENSOR_BIT) == 0); // True for PRESSED, False for RELEASED
         postDCSMsg(&ubmsg);
     }
     if (delta & BTN_YELLOW_SENSOR_BIT) {
         // Yellow button changed
         cmt_msg_init(&ubmsg, MSG_UB_YELLOW_PR);
-        ubmsg.data.bv = ((sensdata.bits & BTN_YELLOW_SENSOR_BIT) != 0); // True for PRESSED, False for RELEASED
+        ubmsg.data.bv = ((sensdata.bits & BTN_YELLOW_SENSOR_BIT) == 0); // True for PRESSED, False for RELEASED
         postDCSMsg(&ubmsg);
     }
 }
@@ -531,6 +531,12 @@ void sensbank_enable(bool enable) {
 
 sensbank_cah_t sensbank_get(void) {
     return _sensdata;
+}
+
+bool sensbank_sensor_on(uint8_t sensor_bit) {
+    uint8_t raw_bitv = _sensdata.bits & sensor_bit;
+    uint8_t adj_bitv = ~raw_bitv;
+    return ((adj_bitv & sensor_bit) != 0);
 }
 
 void sensbank_update(void) {

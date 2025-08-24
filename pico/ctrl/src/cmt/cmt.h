@@ -187,6 +187,24 @@ extern void schedule_core1_msg_in_ms(int32_t ms, const cmt_msg_t* msg);
 extern void schedule_msg_in_ms(int32_t ms, const cmt_msg_t* msg);
 
 /**
+ * @brief Cancel scheduled message for a message ID and specified handler on a specific core.
+ * @ingroup cmt
+ *
+ * This is the root for `scheduled_msg_cancel` and `scheduled_msg_cancel2` allowing the core
+ * to also be specified.
+ *
+ * This is typically used to cancel a 'MSG_EXEC' that has a handler function specified,
+ * as there could be multiple 'MSG_EXEC' messages scheduled, but a specific one needs
+ * to be cancelled, and can also cancel a message scheduled on a different core.
+ *
+ * @param sched_msg_id The ID of the message that was scheduled.
+ * @param hdlr The handler function that was specified for the scheduled message.
+ * @param corenum The core number to cancel the message for.
+ * @return int32_t Number of milliseconds remaining.
+ */
+extern int32_t scheduled_msg_cancel3(msg_id_t sched_msg_id, msg_handler_fn hdlr, uint8_t corenum);
+
+/**
  * @brief Cancel scheduled message for a message ID.
  * @ingroup cmt
  *
@@ -200,7 +218,10 @@ extern void schedule_msg_in_ms(int32_t ms, const cmt_msg_t* msg);
  * @param sched_msg_id The ID of the message that was scheduled.
  * @return int32_t Number of milliseconds remaining.
  */
-extern int32_t scheduled_msg_cancel(msg_id_t sched_msg_id);
+static inline int32_t scheduled_msg_cancel(msg_id_t sched_msg_id) {
+    uint8_t corenum = (uint8_t)get_core_num();
+    return scheduled_msg_cancel3(sched_msg_id, (msg_handler_fn)NULL, corenum);
+}
 
 /**
  * @brief Cancel scheduled message for a message ID and specified handler.
@@ -217,7 +238,10 @@ extern int32_t scheduled_msg_cancel(msg_id_t sched_msg_id);
  * @param hdlr The handler function that was specified for the scheduled message.
  * @return int32_t Number of milliseconds remaining.
  */
-extern int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr);
+static inline int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr) {
+    uint8_t corenum = (uint8_t)get_core_num();
+    return scheduled_msg_cancel3(sched_msg_id, hdlr, corenum);
+}
 
 /**
  * @brief Indicate if a scheduled message exists.

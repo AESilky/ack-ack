@@ -42,7 +42,7 @@ typedef enum MSG_ID_ {
     MSG_EXEC,               // General purpose message that can be used when specifying a handler.
     MSG_CONFIG_CHANGED,
     MSG_DEBUG_CHANGED,
-    MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed
+    MSG_RC_FAILSAFE_CHG,    // The 'FailSafe' state of the Radio Control has changed. The 'bv' is the state.
     MSG_RC_RECEIVED,        // A Radio Control message has been received and processed (ready for use)
     MSG_SENSBANK_CHG,       // Data has Previous and Current sensor bit values
     MSG_SW_ACTION,

@@ -20,6 +20,7 @@
 #include "rover/rover.h"
 #include "rover/servos.h"
 #include "sensbank/sensbank.h"
+#include "tone/tone.h"
 #include "util/util.h"
 
 #include "lib/json-maker/json-maker.h"
@@ -202,7 +203,7 @@ static void _handle_sensbank_change(cmt_msg_t* msg) {
     uint8_t gy = (BTN_GREEN_SENSOR_BIT | BTN_YELLOW_SENSOR_BIT);
     if (delta & gy) {
         // The Green and/or Yellow buttons changed. See if both are pressed.
-        if ((sb.bits & gy) == gy) {
+        if ((~sb.bits & gy) == gy) {
             // Yes. Toggle the Servo+Sensor Power
             rover_aux_pwr_on(!rover_aux_pwr_is_on());
         }
@@ -221,6 +222,26 @@ static void _handle_stop_pressed(cmt_msg_t* msg) {
     postDCSMsg(&msgdc);
 }
 
+static void _handle_user_btn_pressed(cmt_msg_t* msg) {
+    bool pressed = msg->data.bv;
+    switch (msg->id) {
+        case MSG_UB_GREEN_PR:
+            if (pressed) {
+                // Make sure Yellow isn't also pressed.
+                if (!sensbank_sensor_on(BTN_YELLOW_SENSOR_BIT)) {
+                    tone_play_pitch(TONE_NOTE_A4, 2000);
+                }
+            }
+            break;
+        case MSG_UB_YELLOW_PR:
+            if (pressed) {
+                tone_cancel_play();
+            }
+            break;
+        default:
+            break;
+    }
+}
 
 // ====================================================================
 // Local functions
@@ -245,6 +266,8 @@ static void _dcs_started() {
     cmt_msg_hdlr_add(MSG_FORWARD_ROTATE_REVERSE_CHG, _handle_frr_chg);
     cmt_msg_hdlr_add(MSG_SENSBANK_CHG, _handle_sensbank_change);
     cmt_msg_hdlr_add(MSG_STOP_SW_PRESS, _handle_stop_pressed);
+    cmt_msg_hdlr_add(MSG_UB_GREEN_PR, _handle_user_btn_pressed);
+    cmt_msg_hdlr_add(MSG_UB_YELLOW_PR, _handle_user_btn_pressed);
     dcs_rc_start();
 
     //
