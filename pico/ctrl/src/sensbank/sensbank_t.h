@@ -20,7 +20,7 @@ extern "C" {
 
 /** @brief Green User Button sensor bit within Sensbank Value. */
 #define BTN_GREEN_SENSOR_BIT       0x02    // Green button is on Sensor-Bit 1
-/** @brief Green User Button sensor bit within Sensbank Value. */
+/** @brief Yellow User Button sensor bit within Sensbank Value. */
 #define BTN_YELLOW_SENSOR_BIT      0x04    // Yellow button is on Sensor-Bit 2
 
 /**

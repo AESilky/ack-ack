@@ -299,13 +299,8 @@ void schedule_msg_in_ms(int32_t ms, const cmt_msg_t* msg) {
     _schedule_core_msg_in_ms(core_num, ms, msg);
 }
 
-int32_t scheduled_msg_cancel(msg_id_t sched_msg_id) {
-    return scheduled_msg_cancel2(sched_msg_id, (msg_handler_fn)NULL);
-}
-
-int32_t scheduled_msg_cancel2(msg_id_t sched_msg_id, msg_handler_fn hdlr) {
+int32_t scheduled_msg_cancel3(msg_id_t sched_msg_id, msg_handler_fn hdlr, uint8_t corenum) {
     uint32_t retval = 0;  // We return the time remaining in the scheduled msg
-    uint8_t corenum = (uint8_t)get_core_num();
     uint32_t flags = save_and_disable_interrupts();
     mutex_enter_blocking(&sm_mutex);
     cmt_schmsgdata_ll_ent_t** pnext = &cmt_smd_ll;
@@ -490,9 +485,11 @@ void cmt_module_init() {
     //
     pwm_config cfg = pwm_get_default_config();
     // Calculate the clock divider to achieve a 1µs count rate.
-    uint32_t sys_freq = clock_get_hz(clk_sys);
-    float div = uint2float(sys_freq) / 1000000.0f;
-    pwm_config_set_clkdiv(&cfg, div);
+    // uint32_t sys_freq = clock_get_hz(clk_sys);
+    // float div = uint2float(sys_freq) / 1000000.0f;
+    // pwm_config_set_clkdiv(&cfg, div);
+    uint8_t clkdiv = 150;  // There have been some odd problems using the float divider.
+    pwm_config_set_clkdiv_int(&cfg, clkdiv);
     pwm_config_set_wrap(&cfg, 1000);  // Reach 0 every millisecond
     pwm_init(CMT_PWM_RECINT_SLICE, &cfg, false);
     // These aren't used, but we set them so that they aren't 'just random'...

@@ -109,7 +109,7 @@ extern "C" {
 
 // PWM - Used for a recurring interrupt for scheduled messages, sleep, housekeeping
 //
-#define CMT_PWM_RECINT_SLICE     7              // RP2040 has 8 slices. Use the last one for this.
+#define CMT_PWM_RECINT_SLICE     7              // RP2040 has 8 slices, RP2350 has 12.
 
 // Switch Control
 //
@@ -172,6 +172,13 @@ extern "C" {
 #define IRQn_RCRX_DMA_FROM_PIO      1u              // Use DMA IRQ 1 for finished pulling PIO data
 #define IRQ_STOP_SW                 STOP_INPUT_SW_GPIO
 
+// PWM Slices
+//
+// GPIO 27 is the NEOPXL out which is used for the speaker drive on Board-0. PWM 5B can drive GPIO 27 (5A->26).
+#define SPKRDRV_GPIO            27              // DP-32
+#define PWM_SPKRDRV_SLICE        5
+#define PWM_SPKRDRV_CHAN        PWM_CHAN_B
+
 #endif
 
 // ///////////////////////////////////////////
@@ -208,7 +215,7 @@ extern "C" {
 // Neopixel Display
 // See PIO section for PIO defines...
 //
-#define NEOPIXEL_DRIVE          27              // Neopixel GPIO Drive Pin
+#define NEOPIXEL_DRIVE_GPIO     27              // Neopixel GPIO Drive Pin
 
 // Switch Bank and/or User Switch
 //

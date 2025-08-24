@@ -20,6 +20,7 @@
 #include "cmt/cmt.h"
 #include "rcrx/rcrx.h"
 #include "rover/servos.h"
+#include "tone/tone.h"
 #include "util/util.h"  // For 'constrain' and other macros
 
 #include <math.h>
@@ -38,6 +39,8 @@ static void _frr_msg_proc(cmt_msg_t* msg);
 // Data
 // ====================================================================
 
+// Flag for whether we have ever been connected (since startup)
+static volatile bool _have_been_connected;
 // Direct Control state
 static volatile bool _dc;
 static volatile bool _dc_new;   // For debouncing
@@ -281,9 +284,22 @@ static void _handle_rcrx_update(cmt_msg_t* msg) {
  * @param msg
  */
 static void _handle_rcrx_failsafe_chg(cmt_msg_t* msg) {
+    if (!msg->data.bv) {
+        // Failsafe is off. Indicate that we have been connected.
+        _have_been_connected = true;
+    }
+    // Do all of the actual control first. Then we will play a melody.
     _rc_rd_dc_state();
     _rc_rd_frr_control();
     _rc_rd_yawthrt();
+    if (_have_been_connected) {
+        if (msg->data.bv) {
+            tone_play_melody_id(MELODY_ARMING_FAILURE);
+        }
+        else {
+            tone_play_melody_id(MELODY_ARMING);
+        }
+    }
 }
 
 

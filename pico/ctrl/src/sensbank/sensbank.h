@@ -64,6 +64,19 @@ extern sensbank_dist_t sensbank_dist_get(void);
 extern sensbank_cah_t sensbank_get(void);
 
 /**
+ * @brief Tests for the sensor to be on.
+ * @ingroup sensbank
+ *
+ * This method is helpful compared to checking the bits manually, as it deals
+ * with the fact that the sensor bits are 0 when the sensor is on.
+ *
+ * @param sensor_bit The sensor to check
+ * @return true The sensor is 'ON' (could be 0 or 1 depending on the sensor)
+ * @return false The sensor is 'OFF'
+ */
+extern bool sensbank_sensor_on(uint8_t sensor_bit);
+
+/**
  * @brief Perform sensor housekeeping update.
  *
  * This should be called by the main core processing. This module does

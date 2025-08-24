@@ -40,6 +40,7 @@ add_subdirectory(gfx)
 add_subdirectory(hid_nav)
 add_subdirectory(hwrt)
 add_subdirectory(neopix)
+add_subdirectory(tone)
 add_subdirectory(pio_uart)
 add_subdirectory(rcrx)
 add_subdirectory(rotary_encoder)
@@ -121,6 +122,7 @@ target_link_libraries(hwctrl_0
   dcs
   eeprom
   hwrt0
+  tone
   rcrx
   rover
   servo
