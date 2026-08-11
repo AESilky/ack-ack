@@ -17,14 +17,13 @@
 #include "cmt/cmt.h"
 
 //
-#include "dcs/dcs.h"
-#include "hwos/hwos.h"
+#include "hwrt/hwrt.h"
 //
 #include "display/display.h"
-#include"tests.h"
+#include "termx/termx_min.h"
+#include "tests.h"
 
-//
-#include "neopix/neopix.h"
+#include <stdio.h>
 
 
 #define DOT_MS 60 // Dot at 20 WPM
@@ -51,16 +50,27 @@ static const int32_t say_hi[] = {
 int main()
 {
     // useful information for picotool
-    bi_decl(bi_program_description("OS and Control for Ack-Rover Hardware"));
-
-    // Uncomment to force starting in Debug Mode
-    debug_mode_enable(true);
+#if (BOARD_ADDR == 0)
+    bi_decl(bi_program_description("Runtime and Drive Control for AckAck-Rover"));
+    char board = '0';
+#else
+    bi_decl(bi_program_description("Human Interface Device & Navigation (HID_NAV) for AckAck-Rover"));
+    char board = '1';
+#endif
 
     // Board/base level initialization
     if (board_init() != 0) {
         board_panic("Board init failed.");
     }
+    // Force setting Debug Mode based on Board jumper (override User Switch)
+    if (board_jumper() == 0) {
+        debug_mode_enable(true);
+    }
+    else {
+        debug_mode_enable(false);
+    }
 
+    printf("%sACK-ACK Board %c%s\n", TERMX_START_RED_STR, board, TERMX_DEFAULT_COLOR_STR);
     led_on_off(say_hi);
 
     sleep_ms(800);
@@ -71,29 +81,26 @@ int main()
     // Initialize the Cooperative Multi-Tasking subsystem
     cmt_module_init();
 
-    // Set up the Hardware O.S. (needs to be done before starting the Direction Control System)
-    hwos_module_init();
-
-    // Set up the Drive Control System
-    dcs_module_init();
-
-    // Launch the Drive Control System (core-1 Message Dispatching Loop)
-    //  This also starts the HID and other 'core-1' functionality.
-    start_dcs();
-
-    // Turn the green LED on.
+    // Turn the Secondary 'A' LED on.
     ledA_on(true);
 
-    // Launch the Hardware Operation System (core-0 (endless) Message Dispatching Loop).
+    // Starting Core-1 will run the `core1_main` which is defined for the appropriate
+    // Board-0 or Board-1 functionality.
+    start_core1();
+
+    // Launch the Hardware Runtime (core-0 (endless) Message Dispatching Loop).
+    // The HWRT starts the appropriate secondary operations (core-1 message loop)
     // (!!! THIS NEVER RETURNS !!!)
-    start_hwos();
+    start_hwrt();
 
     // How did we get here?!
     error_printf("hwctrl - Somehow we are out of our endless message loop in `main()`!!!");
+#if (BOARD_ADDR == 1)
     disp_clear(true);
-    disp_string(1, 0, "!!!!!!!!!!!!!!!!", false, true);
-    disp_string(2, 0, "! OS LOOP EXIT !", false, true);
-    disp_string(3, 0, "!!!!!!!!!!!!!!!!", false, true);
+    disp_string(1, 0, "!!!!!!!!!!!!!!!!!!!", false, true);
+    disp_string(2, 0, "! HW RT LOOP EXIT !", false, true);
+    disp_string(3, 0, "!!!!!!!!!!!!!!!!!!!", false, true);
+#endif
     // ZZZ Reboot!!!
     return 0;
 }

@@ -14,8 +14,6 @@ extern "C" {
 #include "stdint.h"
 
 extern volatile uint16_t debugging_flags;
-#define DEBUGGING_MORSE_DECODE 0x0001
-#define DEBUGGING_MORSE_DECODE_SKIP 0x0002
 
 /**
  * @brief Board level debug flag that can be changed by code.

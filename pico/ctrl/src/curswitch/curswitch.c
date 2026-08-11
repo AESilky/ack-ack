@@ -162,7 +162,7 @@ static int _whats_pressed(uint sw_val) {
 }
 
 /**
- * Called from `cmt_sleep_ms` to read the bank again. This is done
+ * Called from `cmt_run_after_ms` to read the bank again. This is done
  * until we get SW_READ_REPEAT_COUNT consistant switch number readings.
  * Note that the readings are the 'switch number' not the specific
  * ADC value.
@@ -197,7 +197,7 @@ void _read_bank_delayed(void* user_data) {
                 _sw_bank_read_index = 0;
             }
         }
-        cmt_sleep_ms(SW_READ_DELAY_MS, _read_bank_delayed, (void*)0);
+        cmt_run_after_ms(SW_READ_DELAY_MS, _read_bank_delayed, (void*)0);
         return;
     }
     //
@@ -211,7 +211,7 @@ void _read_bank_delayed(void* user_data) {
     if (changed) {
         // Figure out what changed and post messages for the actions.
         cmt_msg_t msg;
-        cmt_msg_init(&msg, MSG_SWITCH_ACTION);
+        cmt_msg_init(&msg, MSG_SW_ACTION);
         // debug_printf("csw: => %d\n", sw);
         for (int i=0; i<SW_COUNT; i++) {
             if (changes[i]) {

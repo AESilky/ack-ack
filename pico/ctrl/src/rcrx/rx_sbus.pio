@@ -1,0 +1,99 @@
+;
+; Copyright 2025 AESilky (SilkyDESIGN)
+; SPDX-License-Identifier: MIT
+;
+
+; Receive serial data from an SBUS RC receiver.;
+; The SM clock should be set to 16x the SBUS BAUD rate (100,000 * 20).
+;
+.pio_version RP2350
+
+.program rx_sbus
+; Read serial data that is inverted (idle line and STOP bit is LOW
+;  and START bit is HIGH)
+;
+; SBUS is START-8Data-EvenParity-2STOP ( ___-01234567P__)
+; A single SBUS message is 25 bytes long, and there is a moderately long idle
+; period between messages. Therefore, when the program is started, it will
+; wait for a short idle period before starting to read data. Since the start
+; bit is a 1, if we get 12 0-bits we have reached an idle period.
+;
+; To check the Even-Parity, the OSR is loaded with 1010,1010,1010,0000
+;  (every other bit 1 for 11 bits - reading from the left).
+; Then, as data bits are received, if the bit is a 1, we shift (left) a single
+; bit from the OSR. So, after one '1' bit, the OSR has 0101,0101,0100,0000.
+; This continues as '1' bits are received. At the point we receive the parity
+; bit, the MSb of the OSR should be the inverse of the parity bit value.
+; Having the inverse of the parity allows jumping on '!=' (supported) rather
+; than '==' (not supported).
+;
+; If either a parity error or a framing error occurs, the SM interrupts the
+; system. IRQ bit 0 indicates an error, IRQ bit 4 (in addition) indicates
+; that it was a parity error.
+;
+/**
+ * This define is used by rx_sbus.c to set the clock divider. It should be
+ *  used in the code below in the delays, but using it makes the lines
+ *  cluttered and hard to read. Just make sure it matches the first
+ *  number in the delays.
+ */
+.define PUBLIC BIT_CLK_MULT 20  ; The expected PIO clock multiple of the bit rate
+.define MIN_GAP_BITS 13 ; the bits needed for a 'gap'
+.fifo rx                ; Use both FIFOs for RX
+.in 8 right             ; Shift right, no auto-push
+.out 16 left            ; Shift left, no auto-pull (this is used for the parity check)
+;.mov_status irq set 0   ; Status is from IRQ bit 0
+
+PUBLIC start:
+    set x, MIN_GAP_BITS
+    wait 0 pin 0 [20/2]     ; Stall until we see a 0, then delay 1/2 bit time
+idleloop:
+    jmp pin, start          ; 1. We received a 1 before enough 0's for idle
+    jmp x--, idleloop [20 - 2]  ; 2. Count the 0 [delay 1 bit-time]
+    ; We've received enough 0's for the idle period
+.wrap_target
+    wait 1 pin 0            ; Stall until start bit is received
+    ; Setup for Even-Parity check, put 1010,1010,1010,0000 in the OSR
+    set y, 0b10101          ; 1. Start with 10101 (you can set 5 bits max)
+    in y, 5                 ; 2. Shift 5 bits in  (ISR has 1010,1000,0000,0000)
+    mov y, !y               ; 3. Y gets 1111,1111,1110,1010
+    in y, 6                 ; 4.  shift 6 bits in (ISR has 1010,1010,1010,0000)
+    mov osr, isr            ; 6. Put the 1010,1010,1010,0000 into the OSR
+    mov isr, NULL [20 - 7]  ; 7. Clear ISR (also clears ISR bit-count) - Delay 1 bit
+    set x, 7 [(20/2) - 4]   ; 1. Preload bit counter and delay total of 1.4 bit time at the point we read below
+bit_loop:
+    set y, 0 [3]            ; 1-4. To get 1 or 0 in Y based on the pin (remember PIN is inverse)
+    jmp pin, y_has_bit      ; 5. NOTE: Pin test is 5 clocks in (needed to match below for parity bit)
+    set y, 1                ; 6.
+y_has_bit:
+    in y, 1                 ; 6:7 (0:1 bit). Shift bit value in to the ISR
+    ; Check for a 1-bit and if so, shift the next bit from the OSR (Parity Check Bits)
+    jmp !y, count_bit0      ; 8:9 (0:1 bit).
+bit_is_one:
+    out y, 1                ; 10 (1). The bit was a '1', shift a bit out of the OSR (Parity Check Bits)
+    jmp count_bit           ; 11 (1)
+count_bit0:
+    nop [2]                 ; 9-11 (0)
+count_bit:
+    jmp x-- bit_loop [20 - 12]    ; 12. Get next bit (need 1 bit delay upon jumping).
+    push                    ; 1. Push this byte (this also clears the ISR)
+    ; This next bit is the parity bit
+    out y, 1 [2]            ; 2-4. Get the expected !parity bit from the OSR into Y
+    mov x, PINS             ; 5. Parity bit into X
+chk_parity:
+    ; Check that the parity is correct
+    jmp x!=y bad_parity [(20-9) + (20/2)]  ; 9. Jump if Parity is bad - Else, delay into the 2nd STOP
+chk_stop:
+    jmp pin, framing_error  ; 1. Check stop bit. Should be low (remember SBUS is inverse)
+    ; Good data (already pushed) - Go back to looking for START-BIT (no delay, to help get clock back aligned)
+.wrap
+    ; Either a parity or framing error or a break. Interrupt the system and set the IRQ flags
+bad_parity:
+    in y,4                  ; 6. Put the Y value (the parity we tested with) into ISR low 4 bits
+    in x,4                  ; 7. Put the X value (the parity we got) into the ISR high 4 bits
+    push                    ; 8. Push it so the system can see what we checked
+    irq set 4               ; Set IRQ-4 (in addition to 0 below) for parity error (don't wait yet)
+framing_error:
+    irq wait 0              ; Set IRQ-0 for either error and wait for it to be cleared
+    ; The system will reset this SM PC back to the start when it handles the interrupt
+

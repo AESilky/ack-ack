@@ -28,15 +28,10 @@
 #include "board.h"
 #include "cmt/cmt.h"
 #include "system_defs.h"
+#include "util/util.h"
 
+#include <math.h>
 #include <string.h>
-
-//Macro function  get lower 8 bits of A
-#define GET_LOW_BYTE(A) (uint8_t)((A))
-//Macro function  get higher 8 bits of A
-#define GET_HIGH_BYTE(A) (uint8_t)((A) >> 8)
-//Macro Function  put A as higher 8 bits   B as lower 8 bits   which amalgamated into 16 bits integer
-#define BYTES_TO_WORD(A, B) ((((uint16_t)(A)) << 8) | (uint8_t)(B))
 
 #define BS_BAUDRATE         115200
 #define BS_RXD_TIMEOUT_MS   20  // Timeout if no data received in 20ms (typ=600µs)
@@ -78,6 +73,10 @@
 
 #define BSS_CHKSUM_OFF 3  // 3 more than the data length
 
+const double servo_degs_per_unit = 0.24;
+const double servo_rads_per_unit = radians(servo_degs_per_unit);
+const double servo_rads_to_posv_fctr = (RAD_TO_DEG * SERVO_DEG_PER_UNIT);
+
 
 // ############################################################################
 // Function Declarations
@@ -88,6 +87,7 @@ inline static bool _rxd_input_available(void);
 static void _rxd_discard();
 static void _rxd_stash(uint8_t ch);
 static void _rxd_status_asm_cont();
+static void _rxd_status_asm_to(cmt_msg_t* msg);
 static void _rxd_status_clr(servo_t* rxs);
 static bs_rx_status_t* _store_bs_status(bs_rx_status_t* bs_status);
 static void _uart_drain();
@@ -111,6 +111,10 @@ static servo_t *_servo_in_proc;
 static cmt_msg_t _msg_rxd_to;
 static servo_vv_func _rxd_handler;
 
+/** Message handler function to be posted to when waiting on a servo is complete. */
+static msg_handler_fn _waiting_on_busy_fn;
+static uint8_t _waiting_on_busy_core;
+
 static bool _tx_enabled;
 
 // ############################################################################
@@ -130,19 +134,39 @@ void _on_uart_rx() {
 // ############################################################################
 //
 
+/**
+ * @brief Clears the Servo in Process variable (`_servo_in_proc`) by setting
+ * it to `SERVO_NONE`, and notifies any waiting for the status change.
+ */
+static void _clear_servo_in_proc() {
+    _servo_in_proc = SERVO_NONE;
+    if (_waiting_on_busy_fn) {
+        cmt_msg_t msg;
+        cmt_exec_init(&msg, _waiting_on_busy_fn);
+        _waiting_on_busy_fn = NULL_MSG_HDLR; // Clear out before posting
+        if (_waiting_on_busy_core == 1) {
+            post_to_core1(&msg);
+        }
+        else {
+            post_to_core0(&msg);
+        }
+        _waiting_on_busy_core = 0;
+    }
+}
+
 static uint8_t _gen_checksum(uint8_t buf[]) {
     uint8_t i;
     uint16_t sum = 0;
     for (i = 2; i < buf[3] + 2; i++) {
         sum += buf[i];
     }
-    i = GET_LOW_BYTE(sum);
+    i = lowByte(sum);
     i = ~i;
 
     return i;
 }
 
-static void _post_servo_error_msg(servo_t *servo) {
+static void _post_servo_error_msg(servo_t* servo) {
     if (servo) {
         _rxd_status_clr(servo);
         // Indicate that we encountered an error with this servo
@@ -150,8 +174,9 @@ static void _post_servo_error_msg(servo_t *servo) {
         cmt_msg_t msg;
         cmt_msg_init(&msg, MSG_SERVO_READ_ERROR);
         msg.data.servo_params.servo_id = id;
-        postHWCtrlMsg(&msg);
-        _servo_in_proc = SERVO_NONE;
+        postHWRTMsg(&msg);
+        postDCSMsg(&msg);
+        _clear_servo_in_proc();
     }
 }
 
@@ -203,7 +228,7 @@ static void _rxd_stash(uint8_t ch) {
         if (post_msg) {
             cmt_msg_t msg;
             cmt_msg_init(&msg, MSG_SERVO_DATA_RCVD);
-            postHWCtrlMsg(&msg);
+            postHWRTMsg(&msg);
         }
     }
 }
@@ -211,18 +236,18 @@ static void _rxd_stash(uint8_t ch) {
 /**
  * @brief Begin a Status Read Operation if possible.
  * @ingroup servo
- * 
+ *
  * This checks to see if we are already waiting for an inbound message,
  * and if so, it returns `false`. If not, it enters into the 'tx_mutex'
  * and sets everything up to be ready to receive the response.
- * 
+ *
  * !!! Enters the 'tx_mutex' and doesn't exit it if successful !!!
- * 
+ *
  * @param servo The servo to collect the response into.
  * @return true Ready to receive a response.
  * @return false Already waiting for a response.
  */
-static bool _rxd_status_asm_bgn(servo_t *servo) {
+static bool _rxd_status_asm_bgn(servo_t* servo) {
     // If we are waiting for a status data packet, indicate that we can't begin...
     if (servo_status_inbound_pending()) {
         return false;
@@ -232,14 +257,14 @@ static bool _rxd_status_asm_bgn(servo_t *servo) {
 
     // Clear any pending Status Read timeout message.
     servo_t* pending = _servo_in_proc;
-    _servo_in_proc = SERVO_NONE;
+    _clear_servo_in_proc();
     if (pending) {
         _rxd_status_clr(pending);
     }
     _rxd_status_clr(servo);
     servo->_rxstatus.pending = true;
     _servo_in_proc = servo;
-    scheduled_msg_cancel(MSG_SERVO_DATA_RX_TO);
+    scheduled_msg_cancel2(MSG_SERVO_DATA_RX_TO, _rxd_status_asm_to);
     _rxd_clear();
     _rxd_handler = _rxd_status_asm_cont;
     schedule_core0_msg_in_ms(BS_RXD_TIMEOUT_MS, &_msg_rxd_to);
@@ -267,7 +292,7 @@ static void _rxd_status_asm_cont() {
                 // Receiving 2 header bytes in a row signals the start of a frame.
                 if (_servo_in_proc->_rxstatus.data_off == 2) {
                     _servo_in_proc->_rxstatus.frame_started = true;
-                    scheduled_msg_cancel(MSG_SERVO_DATA_RX_TO);
+                    scheduled_msg_cancel2(MSG_SERVO_DATA_RX_TO, _rxd_status_asm_to);
                 }
             }
             else {
@@ -300,7 +325,7 @@ static void _rxd_status_asm_cont() {
                         cmt_msg_t msg;
                         cmt_msg_init(&msg, MSG_SERVO_STATUS_RCVD);
                         msg.data.servo_params.servo_id = _servo_in_proc->id;
-                        postHWCtrlMsg(&msg);
+                        postHWRTMsg(&msg);
                     }
                     else {
                         _post_servo_error_msg(_servo_in_proc);
@@ -310,7 +335,7 @@ static void _rxd_status_asm_cont() {
             }
         }
     }
-    _servo_in_proc = SERVO_NONE;
+    _clear_servo_in_proc();
     _uart_intr_disable();
     _rxd_handler = _rxd_discard;
     _rxd_clear();
@@ -323,7 +348,7 @@ static void _rxd_status_asm_cont() {
  *
  * @param msg Message
  */
-static void _rxd_status_asm_to(cmt_msg_t *msg) { 
+static void _rxd_status_asm_to(cmt_msg_t *msg) {
     servo_t* servo = _servo_in_proc;
     _post_servo_error_msg(servo);
     mutex_exit(&tx_mutex);  // Exit out of the 'tx_mutex' protected area!
@@ -334,7 +359,7 @@ static void _rxd_discard() {
     _rxd_clear();
 }
 
-static void _rxd_status_clr(servo_t *servo) {
+static void _rxd_status_clr(servo_t* servo) {
     if (servo) {
         servo->_rxstatus.frame_started = false;
         servo->_rxstatus.pending = true;
@@ -386,13 +411,40 @@ static bool _send_action_cmd(uint8_t *buf) {
  * @return true The buffer was able to be sent
  * @return false The buffer could not be sent
  */
-static bool _send_rd_status_cmd(servo_t *servo, uint8_t *buf) {
+static bool _send_rd_status_cmd(servo_t* servo, uint8_t *buf) {
     if (_rxd_status_asm_bgn(servo)) { // Enters the 'tx_mutex' if successful.
         _write_bs(buf);
         _uart_intr_enable();
         return true;
     }
     return false;
+}
+
+/**
+ * @brief Send a 'move with wait' command to a servo.
+ *
+ * @param id The servo ID to control
+ * @param position The position 0 ~ 1000
+ * @param time The time to take (ms)
+ * @return true The command was sent
+ * @return false The command could not be sent
+ */
+bool _servo_move_wait(uint8_t id, uint16_t position, uint16_t time) {
+    uint8_t buf[10];
+    if (position < 0)
+        position = 0;
+    if (position > 1000)
+        position = 1000;
+    buf[0] = buf[1] = BS_FRAME_HEADER;
+    buf[2] = id;
+    buf[3] = 7;
+    buf[4] = BS_MOVE_TIME_WAIT_WRITE;
+    buf[5] = lowByte(position);
+    buf[6] = highByte(position);
+    buf[7] = lowByte(time);
+    buf[8] = highByte(time);
+    buf[9] = _gen_checksum(buf);
+    return (_send_action_cmd(buf));
 }
 
 
@@ -473,17 +525,15 @@ static void _handle_servo_rxd(cmt_msg_t* msg) {
     _rxd_handler();
 }
 
-const msg_handler_entry_t servo_rxd_handler_entry = { MSG_SERVO_DATA_RCVD, _handle_servo_rxd };
-
 // ############################################################################
 // Public Methods
 // ############################################################################
 //
 
-bool servo_load(servo_t* servo) {
+bool servo_load(uint8_t id) {
     uint8_t buf[7];
     buf[0] = buf[1] = BS_FRAME_HEADER;
-    buf[2] = servo->id;
+    buf[2] = id;
     buf[3] = 4;
     buf[4] = BS_LOAD_OR_UNLOAD_WRITE;
     buf[5] = 1;
@@ -491,33 +541,69 @@ bool servo_load(servo_t* servo) {
     return (_send_action_cmd(buf));
 }
 
-bool servo_move(servo_t *servo, int16_t position, uint16_t time) {
+bool servo_move(uint8_t id, int16_t position, uint16_t time) {
     uint8_t buf[10];
     if (position < 0)
         position = 0;
     if (position > 1000)
         position = 1000;
     buf[0] = buf[1] = BS_FRAME_HEADER;
-    buf[2] = servo->id;
+    buf[2] = id;
     buf[3] = 7;
     buf[4] = BS_MOVE_TIME_WRITE;
-    buf[5] = GET_LOW_BYTE(position);
-    buf[6] = GET_HIGH_BYTE(position);
-    buf[7] = GET_LOW_BYTE(time);
-    buf[8] = GET_HIGH_BYTE(time);
+    buf[5] = lowByte(position);
+    buf[6] = highByte(position);
+    buf[7] = lowByte(time);
+    buf[8] = highByte(time);
     buf[9] = _gen_checksum(buf);
     return (_send_action_cmd(buf));
 }
 
-int16_t servo_position(servo_t *servo) {
+bool servo_move_group(uint8_t id[], uint16_t position[], uint16_t time, int count) {
+    if (servo_status_inbound_pending()) {
+        return false;
+    }
+    for (int i = 0; i < count; i++) {
+        if (!_servo_move_wait(id[i], position[i], time)) {
+            return false;
+        }
+    }
+    // Send the 'move now' command as a broadcast to be picked up by all waiting.
+    uint8_t buf[6];
+    buf[0] = buf[1] = BS_FRAME_HEADER;
+    buf[2] = BS_BROADCAST_ID;
+    buf[3] = 3;
+    buf[4] = BS_MOVE_START;
+    buf[5] = _gen_checksum(buf);
+    return (_send_action_cmd(buf));
+}
+
+bool servo_notify_on_ready(msg_handler_fn fn, uint8_t core) {
+    if (_waiting_on_busy_fn) {
+        return false;
+    }
+    _waiting_on_busy_fn = fn;
+    _waiting_on_busy_core = core;
+
+    return true;
+}
+
+void servo_notify_on_ready_clear(msg_handler_fn fn) {
+    if (fn == _waiting_on_busy_fn) {
+        _waiting_on_busy_fn = NULL_MSG_HDLR;
+        _waiting_on_busy_core = 0;
+    }
+}
+
+int16_t servo_position(servo_t* servo) {
     // Make sure this is a position packet.
     if (servo->_rxstatus.buf[BSPKT_CMD] != BS_POS_READ) {
         return (-1);
     }
-    return ((int16_t)BYTES_TO_WORD(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
+    return (wordFromBytes(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
 }
 
-bool servo_position_read(servo_t *servo) {
+bool servo_position_read(servo_t* servo) {
     uint8_t buf[6];
 
     buf[0] = buf[1] = BS_FRAME_HEADER;
@@ -529,8 +615,34 @@ bool servo_position_read(servo_t *servo) {
     return (_send_rd_status_cmd(servo, buf));
 }
 
-bool servo_run(servo_t *servo, int16_t speed) {
-    return (servo_set_mode(servo, BS_MOTOR_MODE, speed));
+uint16_t servo_rads_to_posd(float rads) {
+    return ((uint16_t)round(rads * servo_rads_to_posv_fctr));
+}
+
+bool servo_run(uint8_t id, int16_t speed) {
+    return (servo_set_mode(id, BS_MOTOR_MODE, speed));
+}
+
+bool servo_run_group(uint8_t id[], int16_t speed[], int count) {
+    if (servo_status_inbound_pending()) {
+        return false;
+    }
+    uint8_t buf[10];
+    buf[0] = buf[1] = BS_FRAME_HEADER;
+    buf[3] = 7;
+    buf[4] = BS_SERVO_OR_MOTOR_MODE_WRITE;
+    buf[5] = BS_MOTOR_MODE;
+    buf[6] = 0;
+    for (int i = 0; i < count; i++) {
+        buf[2] = id[i];
+        buf[7] = lowByte((uint16_t)speed[i]);
+        buf[8] = highByte((uint16_t)speed[i]);
+        buf[9] = _gen_checksum(buf);
+        if (!_send_action_cmd(buf)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool servo_set_id(uint8_t oldID, uint8_t newID) {
@@ -544,16 +656,30 @@ bool servo_set_id(uint8_t oldID, uint8_t newID) {
     return (_send_action_cmd(buf));
 }
 
-bool servo_set_mode(servo_t *servo, servo_mode_t mode, int16_t speed) {
+bool servo_set_limits(uint8_t id, uint16_t min, uint16_t max) {
     uint8_t buf[10];
     buf[0] = buf[1] = BS_FRAME_HEADER;
-    buf[2] = servo->id;
+    buf[2] = id;
+    buf[3] = 7;
+    buf[4] = BS_ANGLE_LIMIT_WRITE;
+    buf[5] = lowByte(min);
+    buf[6] = highByte(min);
+    buf[7] = lowByte(max);
+    buf[8] = highByte(max);
+    buf[9] = _gen_checksum(buf);
+    return (_send_action_cmd(buf));
+}
+
+bool servo_set_mode(uint8_t id, servo_mode_t mode, int16_t speed) {
+    uint8_t buf[10];
+    buf[0] = buf[1] = BS_FRAME_HEADER;
+    buf[2] = id;
     buf[3] = 7;
     buf[4] = BS_SERVO_OR_MOTOR_MODE_WRITE;
     buf[5] = mode;
     buf[6] = 0;
-    buf[7] = GET_LOW_BYTE((uint16_t)speed);
-    buf[8] = GET_HIGH_BYTE((uint16_t)speed);
+    buf[7] = lowByte((uint16_t)speed);
+    buf[8] = highByte((uint16_t)speed);
     buf[9] = _gen_checksum(buf);
     return (_send_action_cmd(buf));
 }
@@ -562,20 +688,20 @@ bool servo_status_inbound_pending(void) {
     return (_servo_in_proc != SERVO_NONE);
 }
 
-bool servo_stop_move(servo_t *servo) {
+bool servo_stop_move(uint8_t id) {
     uint8_t buf[6];
     buf[0] = buf[1] = BS_FRAME_HEADER;
-    buf[2] = servo->id;
+    buf[2] = id;
     buf[3] = 3;
     buf[4] = BS_MOVE_STOP;
     buf[5] = _gen_checksum(buf);
     return (_send_action_cmd(buf));
 }
 
-bool servo_unload(servo_t* servo) {
+bool servo_unload(uint8_t id) {
     uint8_t buf[7];
     buf[0] = buf[1] = BS_FRAME_HEADER;
-    buf[2] = servo->id;
+    buf[2] = id;
     buf[3] = 4;
     buf[4] = BS_LOAD_OR_UNLOAD_WRITE;
     buf[5] = 0;
@@ -583,15 +709,15 @@ bool servo_unload(servo_t* servo) {
     return (_send_action_cmd(buf));
 }
 
-int16_t servo_vin(servo_t *servo) {
+int16_t servo_vin(servo_t* servo) {
     // Make sure this is a position packet.
     if (servo->_rxstatus.buf[BSPKT_CMD] != BS_VIN_READ) {
         return (-1);
     }
-    return ((int16_t)BYTES_TO_WORD(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
+    return (wordFromBytes(servo->_rxstatus.buf[BSPKT_DATA + 2], servo->_rxstatus.buf[BSPKT_DATA + 1]));
 }
 
-bool servo_vin_read(servo_t *servo) {
+bool servo_vin_read(servo_t* servo) {
     uint8_t buf[6];
 
     buf[0] = buf[1] = BS_FRAME_HEADER;
@@ -603,20 +729,30 @@ bool servo_vin_read(servo_t *servo) {
     return (_send_rd_status_cmd(servo, buf));
 }
 
+void servo_module_start() {
+    _uart_drain();
+}
+
+
+
 void servo_module_init() {
     static bool _initialized = false;
 
     if (_initialized) {
         board_panic("servo_module_init already called");
     }
+    // Register our message handlers
+    cmt_msg_hdlr_add(MSG_SERVO_DATA_RCVD, _handle_servo_rxd);
     _initialized = true;
     _tx_disable();
+
     //
     // Clear out the servo in progress.
     _servo_in_proc = SERVO_NONE;
+    _waiting_on_busy_fn = NULL_MSG_HDLR;
+    _waiting_on_busy_core = 0;
     _rxd_handler = _rxd_discard;
-    cmt_msg_init(&_msg_rxd_to, MSG_SERVO_DATA_RX_TO);
-    _msg_rxd_to.hdlr = _rxd_status_asm_to;  // Handler for RX receive timeout
+    cmt_msg_init2(&_msg_rxd_to, MSG_SERVO_DATA_RX_TO, _rxd_status_asm_to);  // Handler for RX receive timeout
     // Set up our UART with the required speed.
     uart_init(SERVO_CTRL_UART, BS_BAUDRATE);
     uart_set_hw_flow(SERVO_CTRL_UART, false, false);  // CTS/RTS off
@@ -632,8 +768,3 @@ void servo_module_init() {
     // Now enable the UART to send interrupts - RX only
     uart_set_irq_enables(SERVO_CTRL_UART, true, false);
 }
-
-void servo_module_start() {
-    _uart_drain();
-}
-

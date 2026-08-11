@@ -65,11 +65,12 @@
 #define EIO_DISPLAY_BL_EN               6       // Display Backlight Enable (OUT)
 #define EIO_DISPLAY_BL_EN_MASK          0x40    // Mask for correct bit
 #define EIO_DISPLAY_BL_EN_SHIFT         6       // Shift to move bit to/from 0
-#define EIO_BOARD_ADDR                  7       // Board Address (IN)
-#define EIO_BOARD_ADDR_MASK             0x80    // Mask for correct bit
-#define EIO_BOARD_ADDR_SHIFT            7       // Shift to move bit to/from 0
+#define EIO_BOARD_JUMPER                7       // Board Jumper (IN)
+#define EIO_BOARD_JUMPER_MASK           0x80    // Mask for correct bit
+#define EIO_BOARD_JUMPER_SHIFT          7       // Shift to move bit to/from 0
 //
-#define EIO_GPIO_DIRECTIONS             0x80  // 1000 0011
+#define EIO_GPIO_DIRECTIONS             0x83    // 1000 0011
+#define EIO_GPIO_PULLUPS                0x80    // Weak pull-up on the board jumper
 
 /** Flag to know if the module has been initialized */
 static bool _initialized = false;
@@ -131,10 +132,10 @@ static void _eio_write(uint8_t reg, uint8_t val) {
     _op_end();
 }
 
-uint8_t eio_board_addr(void) {
+uint8_t eio_board_jumper(void) {
     uint8_t r = 0;
     r = _eio_read(EIO_REG_GPIO);
-    r = ((r & EIO_BOARD_ADDR_MASK) > EIO_BOARD_ADDR_SHIFT);
+    r = ((r & EIO_BOARD_JUMPER_MASK) > EIO_BOARD_JUMPER_SHIFT);
     return r;
 }
 
@@ -170,6 +171,7 @@ void expio_module_init(void) {
     _eio_write(EIO_REG_IOCON, EIO_IOCON_SEQOP_DIS_BIT); // Disable sequential write/read operation
     _eio_write(EIO_REG_IODIR, EIO_GPIO_DIRECTIONS);     // Set the Input/Output pin directions
     _eio_write(EIO_REG_IPOL, 0);        // All non-inverting
+    _eio_write(EIO_REG_GPPU, EIO_GPIO_PULLUPS); // Pull-Ups as needed
     _eio_write(EIO_REG_GPINTEN, 0);     // No interrupts from pins
     _eio_write(EIO_REG_DEFVAL, 0);      // 0 defaults for interrupts
     _eio_write(EIO_REG_INTCON, 0xFF);   // Interrupt compare to default

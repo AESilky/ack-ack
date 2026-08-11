@@ -1,0 +1,52 @@
+;
+; Copyright 2025 AESilky (SilkyDESIGN)
+; SPDX-License-Identifier: MIT
+;
+
+; Wait for the serial line to prove that it's active and then start
+; reading into the ISR.
+; This is used by the code to detect the BAUD rate and type of receiver.
+;
+; 400,000 or 115,200 SRXL2
+; 100,000 SBUS
+;
+; The SM clock should be set to 2x the maximum BAUD rate to be detected.
+;
+.define IDLE_BITS_NEEDED 8     ; the detection threshold for a 'frame' burst
+
+.program serial_rd_norm
+; Read serial data that is 'normal' (idle line is HIGH and start bit is LOW)
+.fifo rx            ; Use both FIFOs for RX
+.in 32 right auto   ; Input 32 bits, shift right, auto-push
+
+PUBLIC start:
+    set X, IDLE_BITS_NEEDED
+    ; Wait until we have 'x' 1 Bits followed by a 0 Bit
+    wait 1 pin 0
+wait_loop:
+    jmp pin still_1
+    jmp start           ; Not enough 1 Bits, start over
+still_1:
+    jmp X-- wait_loop   ; Jump until we've had enough 1 Bits
+    wait 0 pin 0        ;  We should be ready for the Start Bit
+.wrap_target
+    in pins, 1 [1]      ; Shift data bit into ISR taking two cycles
+.wrap
+
+.program serial_rd_inv
+; Read serial data that is inverted (idle line is LOW and start bit is HIGH)
+.fifo rx            ; Use both FIFOs for RX
+.in 32 right auto   ; Input 32 bits, shift right, auto-push
+
+PUBLIC start:
+    set X, IDLE_BITS_NEEDED
+    ; Wait until we have 'x' 0 Bits followed by a 1 Bit
+    wait 0 pin 0
+wait_loop:
+    jmp pin start       ; Not enough 0 Bits, start over
+still_0:
+    jmp X-- wait_loop   ; Jump until we've had enough 1 Bits
+    wait 1 pin 0        ;  We should be ready for the Start Bit
+.wrap_target
+    in pins, 1 [1]      ; Shift data bit into ISR taking two cycles
+.wrap

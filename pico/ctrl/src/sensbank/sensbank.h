@@ -2,7 +2,7 @@
  * @brief Multiplexed Sensor - SENSBANK - Functionality.
  * @ingroup sensbank
  *
- * Monitors the sensbank and notifies the HWOS of changes.
+ * Monitors the sensbank and notifies the HWRT of changes.
  *
  * Copyright 2023-25 AESilky
  *
@@ -20,20 +20,69 @@ extern "C" {
 #include <stdint.h>
 
 /**
- * @brief Get the latest bit values read from the sensor bank.
- * @ingroup sensbank
+ * @brief Enable/disable scanning of the sensors. When disabled, S0 is
+ * selected (the sensor board doesn't use S0).
  *
- * @return uint8_t Bit values of the 8 sensor inputs.
+ * @param enable True to enable, false to disable
  */
-extern uint8_t sensbank_get(void);
+extern void sensbank_enable(bool enable);
 
 /**
- * @brief Get the (possible) changes in the sensor bank.
+ * @brief The acceptable delta between distance reads to be considered valid.
  * @ingroup sensbank
  *
- * @return sensbank_chg_t Structure containing the latest and previous bits.
+ * When reading the Sonar and LiDAR it is possible to get false reads. This
+ * delta is considered acceptable between two consecutive reads to be a
+ * valid distance read.
+ *
+ * @see sensbank_dist_delta_accept_set(delta) to set the value.
+ *
+ * @return uint16_t The current acceptable delta in centimeters
  */
-extern sensbank_chg_t sensbank_get_chg(void);
+extern uint16_t sensbank_dist_delta_accept();
+
+/**
+ * @brief Set the acceptable delta between distance reads.
+ *
+ * @param delta The acceptable delta in centimeters
+ */
+extern void sensbank_dist_delta_accept_set(uint16_t delta);
+
+/**
+ * @brief Get the latest distance to obstacle values.
+ *
+ * @return sensbank_dist_t
+ */
+extern sensbank_dist_t sensbank_dist_get(void);
+
+/**
+ * @brief Get the latest and previous bit values read from the sensor bank.
+ * @ingroup sensbank
+ *
+ * @return sensbank_cah_t Bit values of the 8 sensor inputs (.bits) and previous (.prev_bits).
+ */
+extern sensbank_cah_t sensbank_get(void);
+
+/**
+ * @brief Tests for the sensor to be on.
+ * @ingroup sensbank
+ *
+ * This method is helpful compared to checking the bits manually, as it deals
+ * with the fact that the sensor bits are 0 when the sensor is on.
+ *
+ * @param sensor_bit The sensor to check
+ * @return true The sensor is 'ON' (could be 0 or 1 depending on the sensor)
+ * @return false The sensor is 'OFF'
+ */
+extern bool sensbank_sensor_on(uint8_t sensor_bit);
+
+/**
+ * @brief Perform sensor housekeeping update.
+ *
+ * This should be called by the main core processing. This module does
+ * not register a Periodic/Housekeeping message handler.
+ */
+extern void sensbank_update(void);
 
 /**
  * @brief Starts reading the Sensor Bank.

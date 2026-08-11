@@ -23,6 +23,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /**
  * @brief Initialize the board
@@ -35,12 +36,17 @@ extern "C" {
 extern int board_init(void);
 
 /**
- * @brief Get the board address (0=Main, 1=Secondary)
+ * @brief Get the board jumper (0=1-2, 1=2-3)
  * @ingroup board
  *
- * @return uint8_t 0=Main 1=Secondary
+ * @return uint8_t Jumper value
  */
-extern uint8_t board_addr(void);
+extern uint8_t board_jumper(void);
+
+/**
+ * @brief Reboot the board into the 'BOOTSEL' state.
+ */
+extern void boot_to_bootsel();
 
 /**
  * @brief Turn the display backlight ON/OFF.
@@ -49,6 +55,18 @@ extern uint8_t board_addr(void);
  * @param on True=On False=OFF
  */
 extern void display_backlight_on(bool on);
+
+/**
+ * @brief Check if an I2C device is present at an address.
+ *
+ * This uses information obtained during board init, so the device
+ * needs to be present when the board powered up.
+ *
+ * @param addr A 7-bit I2C device address
+ * @return true A device was found at this address
+ * @return false Device not found at this address
+ */
+extern bool i2c_device_present(uint8_t addr);
 
 /**
  * @brief Flash the Pico LED on/off
@@ -123,14 +141,16 @@ extern float onboard_temp_c();
  */
 extern float onboard_temp_f();
 
+#if (BOARD_ADDR == 0)
 /**
- * @brief The current state of the User Input Switch
+ * @brief The current state of the Stop Switch
  * @ingroup board
  *
  * @return true The switch is pressed
  * @return false The switch isn't pressed
  */
-extern bool user_switch_pressed();
+extern bool stop_switch_pressed();
+#endif
 
 /** @brief Printf like function that includes the datetime and type prefix */
 extern void debug_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
@@ -142,11 +162,14 @@ extern void info_printf(const char* format, ...) __attribute__((format(_printf_,
 extern void warn_printf(const char* format, ...) __attribute__((format(_printf_, 1, 2)));
 
 /**
- * @brief Board level (common) panic location.
+ * @brief Board level (common) PANIC.
  * @ingroup board
  *
  * This should be used in preference to directly using the Pico `panic` to make
  * it better for debugging and common fatal error handling.
+ *
+ * This attempts to turn the Pico LED on and Error-Print the message before
+ * performing the `panic`.
  *
  * @param fmt format string (printf-like)
  * @param ...  printf-like arguments

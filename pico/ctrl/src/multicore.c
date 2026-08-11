@@ -8,68 +8,32 @@
  *
 */
 #include "multicore.h"
+#include "cmt/cmt.h"
+#include "hwrt/hwrt.h"  // For `core1_main`
+#include "util/util.h"  // For 'lowByte'
 
-#include "system_defs.h"
 #include "board.h"
 #include "debug_support.h"
 
-#include "cmt/cmt_t.h"
-#include "dcs/core1_main.h"
+#include "pico/util/queue.h"
 
 #include <stdio.h>
 #include <string.h>
 
 #define CORE0_QUEUE_NP_ENTRIES_MAX 64
-#define CORE0_QUEUE_L9_ENTRIES_MAX 8
 #define CORE0_QUEUE_LP_ENTRIES_MAX 8
 #define CORE1_QUEUE_NP_ENTRIES_MAX 64
-#define CORE1_QUEUE_L9_ENTRIES_MAX 8
 #define CORE1_QUEUE_LP_ENTRIES_MAX 8
 
 static int32_t _msg_num;
 // Flag indicating that we don't want to panic if we can't add a message to a queue.
-static bool    _no_qadd_panic;
-static int     _c0_reqmsg_post_errs;
-static int     _c1_reqmsg_post_errs;
+// (the following are global to aid with debugging)
+bool    _no_qadd_panic;
+int     _c0_reqmsg_post_errs;
+int     _c1_reqmsg_post_errs;
 
-static queue_t _core0_np_queue;
-static queue_t _core0_l9_queue;
-static queue_t _core0_lp_queue;
-static queue_t _core1_np_queue;
-static queue_t _core1_l9_queue;
-static queue_t _core1_lp_queue;
-
-static bool _all_q0_mt() {
-    register uint level = queue_get_level(&_core0_l9_queue);
-    if (level) {
-        return false;
-    }
-    level = queue_get_level(&_core0_np_queue);
-    if (level) {
-        return false;
-    }
-    level = queue_get_level(&_core0_lp_queue);
-    if (level) {
-        return false;
-    }
-    return true;
-}
-
-static bool _all_q1_mt() {
-    register uint level = queue_get_level(&_core1_l9_queue);
-    if (level) {
-        return false;
-    }
-    level = queue_get_level(&_core1_np_queue);
-    if (level) {
-        return false;
-    }
-    level = queue_get_level(&_core1_lp_queue);
-    if (level) {
-        return false;
-    }
-    return true;
-}
+queue_t _core0_queue;
+queue_t _core1_queue;
 
 static void _copy_and_set_num_ts(cmt_msg_t* msg, const cmt_msg_t* msgsrc) {
     memcpy(msg, msgsrc, sizeof(cmt_msg_t));
@@ -79,121 +43,52 @@ static void _copy_and_set_num_ts(cmt_msg_t* msg, const cmt_msg_t* msgsrc) {
 
 
 void get_core0_msg_blocking(cmt_msg_t* msg) {
-    // Get a message from the L9 queue if exist, then try the NP, then LP.
-    // If no messages exist, block on L9.
-    register bool retrieved = false;
-    uint32_t flags = save_and_disable_interrupts();
-    retrieved = queue_try_remove(&_core0_l9_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return;
-    }
-    retrieved = queue_try_remove(&_core0_np_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return;
-    }
-    retrieved = queue_try_remove(&_core0_lp_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return;
-    }
-    // No messages existed. Restore interrupts and block on the L9 queue.
-    restore_interrupts_from_disabled(flags);
-    queue_remove_blocking(&_core0_l9_queue,msg);
+    queue_remove_blocking(&_core0_queue,msg);
 }
 
 bool get_core0_msg_nowait(cmt_msg_t* msg) {
-    // Get a message from the L9 queue if exist, then try the NP, then LP.
     // If no messages exist return false.
     register bool retrieved = false;
     uint32_t flags = save_and_disable_interrupts();
-    retrieved = queue_try_remove(&_core0_l9_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return (retrieved);
-    }
-    retrieved = queue_try_remove(&_core0_np_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return (retrieved);
-    }
-    retrieved = queue_try_remove(&_core0_lp_queue, msg);
+    retrieved = queue_try_remove(&_core0_queue, msg);
     restore_interrupts_from_disabled(flags);
     return (retrieved);
 }
 
 void get_core1_msg_blocking(cmt_msg_t* msg) {
-    // Get a message from the L9 queue if exist, then try the NP, then LP.
-    // If no messages exist, block on L9.
-    register bool retrieved = false;
-    uint32_t flags = save_and_disable_interrupts();
-    retrieved = queue_try_remove(&_core1_l9_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return;
-    }
-    retrieved = queue_try_remove(&_core1_np_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return;
-    }
-    retrieved = queue_try_remove(&_core1_lp_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return;
-    }
-    // No messages existed. Restore interrupts and block on the L9 queue.
-    restore_interrupts_from_disabled(flags);
-    queue_remove_blocking(&_core1_l9_queue, msg);
+    queue_remove_blocking(&_core1_queue, msg);
 }
 
 bool get_core1_msg_nowait(cmt_msg_t* msg) {
-    // Get a message from the L9 queue if exist, then try the NP, then LP.
     // If no messages exist return false.
     register bool retrieved = false;
     uint32_t flags = save_and_disable_interrupts();
-    retrieved = queue_try_remove(&_core1_l9_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return (retrieved);
-    }
-    retrieved = queue_try_remove(&_core1_np_queue, msg);
-    if (retrieved) {
-        restore_interrupts_from_disabled(flags);
-        return (retrieved);
-    }
-    retrieved = queue_try_remove(&_core1_lp_queue, msg);
+    retrieved = queue_try_remove(&_core1_queue, msg);
     restore_interrupts_from_disabled(flags);
     return (retrieved);
 }
 
 void post_to_core0(const cmt_msg_t* msg) {
-    // Post to the appropriate queue based on the priority -
-    // however, if all queues are empty, post to the L9 queue, as that
-    // is the queue that will be blocked on by the 'get' method.
-    queue_t* q2use = &_core0_l9_queue;
-    uint32_t flags = save_and_disable_interrupts();
-    if (!_all_q0_mt()) {
-        switch (msg->priority) {
-        case MSG_PRI_NORM:
-            q2use = &_core0_np_queue;
-            break;
-        case MSG_PRI_LP:
-            q2use = &_core0_lp_queue;
-            break;
-        default:
-            break;
-        }
-    }
-    cmt_msg_t m; // queue_add copies the contents, so on the stack is okay.
+    cmt_msg_t m; // queue_add copies the contents, so 'm' on the stack is okay.
     _copy_and_set_num_ts(&m, msg);
-    register bool posted = queue_try_add(q2use, &m);
+    uint32_t flags = save_and_disable_interrupts();
+    register bool posted = queue_try_add(&_core0_queue, &m);
     restore_interrupts_from_disabled(flags);
     if (!posted) {
         _c0_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
-            board_panic("Req C0 msg could not post");
+            // We are going to halt (board panic), so print the message that is
+            // currently being processed by Core1.
+            save_and_disable_interrupts();
+            uint8_t id = lowByte(cmt_curlast_msg(1));
+            uint8_t pid = lowByte(m.id);
+            // Read and print all of the messages in the C1 queue.
+            cmt_msg_t cmsg;
+            while (queue_try_remove(&_core0_queue, &cmsg)) {
+                printf("\n %02X", (unsigned int)cmsg.id);
+            }
+            printf("\nReq Core0 msg '%02X' could not post. Current/Last C0 msg: %02X\n", (unsigned int)pid, (unsigned int)id);
+            board_panic("!!! HALTING !!!");
         }
     }
 }
@@ -203,48 +98,43 @@ bool post_to_core0_nowait(const cmt_msg_t* msg) {
     _copy_and_set_num_ts(&m, msg);
     register bool posted = false;
     uint32_t flags = save_and_disable_interrupts();
-    posted = queue_try_add(&_core0_np_queue, &m);
+    posted = queue_try_add(&_core0_queue, &m);
     restore_interrupts_from_disabled(flags);
 
     return (posted);
 }
 
 void post_to_core1(const cmt_msg_t* msg) {
-    // Post to the appropriate queue based on the priority -
-    // however, if all queues are empty, post to the L9 queue, as that
-    // is the queue that will be blocked on by the 'get' method.
-    queue_t* q2use = &_core1_l9_queue;
-    uint32_t flags = save_and_disable_interrupts();
-    if (!_all_q1_mt()) {
-        switch (msg->priority) {
-        case MSG_PRI_NORM:
-            q2use = &_core1_np_queue;
-            break;
-        case MSG_PRI_LP:
-            q2use = &_core1_lp_queue;
-            break;
-        default:
-            break;
-        }
-    }
-    cmt_msg_t m; // queue_add copies the contents, so on the stack is okay.
+    cmt_msg_t m; // queue_add copies the contents, so 'm' on the stack is okay.
     _copy_and_set_num_ts(&m, msg);
-    register bool posted = queue_try_add(q2use, &m);
+    uint32_t flags = save_and_disable_interrupts();
+    register bool posted = queue_try_add(&_core1_queue, &m);
     restore_interrupts_from_disabled(flags);
     if (!posted) {
         _c1_reqmsg_post_errs++;
         if (!_no_qadd_panic) {
-            board_panic("Req C1 msg could not post");
+            // We are going to halt (board panic), so print the message that is
+            // currently being processed by Core1.
+            save_and_disable_interrupts();
+            uint8_t id = lowByte(cmt_curlast_msg(1));
+            uint8_t pid = lowByte(m.id);
+            // Read and print all of the messages in the C1 queue.
+            cmt_msg_t cmsg;
+            while (queue_try_remove(&_core1_queue, &cmsg)) {
+                printf("\n %02X", (unsigned int)cmsg.id);
+            }
+            printf("\nReq Core1 msg '%02X' could not post. Current/Last C1 msg: %02X\n", (unsigned int)pid, (unsigned int)id);
+            board_panic("!!! HALTING !!!");
         }
     }
 }
 
 bool post_to_core1_nowait(const cmt_msg_t* msg) {
-    cmt_msg_t m; // queue_add copies the contents, so on the stack is okay.
+    cmt_msg_t m; // queue_add copies the contents, so 'm' on the stack is okay.
     _copy_and_set_num_ts(&m, msg);
     register bool posted = false;
     uint32_t flags = save_and_disable_interrupts();
-    posted = queue_try_add(&_core1_lp_queue, &m);
+    posted = queue_try_add(&_core1_queue, &m);
     restore_interrupts_from_disabled(flags);
 
     return (posted);
@@ -281,11 +171,7 @@ void multicore_module_init(bool no_qadd_panic) {
     _no_qadd_panic = no_qadd_panic;
     _c0_reqmsg_post_errs = 0;
     _c1_reqmsg_post_errs = 0;
-    queue_init(&_core0_np_queue, sizeof(cmt_msg_t), CORE0_QUEUE_NP_ENTRIES_MAX);
-    queue_init(&_core0_l9_queue, sizeof(cmt_msg_t), CORE0_QUEUE_L9_ENTRIES_MAX);
-    queue_init(&_core0_lp_queue, sizeof(cmt_msg_t), CORE0_QUEUE_LP_ENTRIES_MAX);
-    queue_init(&_core1_np_queue, sizeof(cmt_msg_t), CORE1_QUEUE_NP_ENTRIES_MAX);
-    queue_init(&_core1_l9_queue, sizeof(cmt_msg_t), CORE1_QUEUE_L9_ENTRIES_MAX);
-    queue_init(&_core1_lp_queue, sizeof(cmt_msg_t), CORE1_QUEUE_LP_ENTRIES_MAX);
+    queue_init(&_core0_queue, sizeof(cmt_msg_t), CORE0_QUEUE_NP_ENTRIES_MAX);
+    queue_init(&_core1_queue, sizeof(cmt_msg_t), CORE1_QUEUE_NP_ENTRIES_MAX);
 }
 
